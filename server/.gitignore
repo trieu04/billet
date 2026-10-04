@@ -1,0 +1,10 @@
+# Local env (never commit)
+.env
+
+# Dependencies & build
+node_modules/
+dist/
+
+# Uploaded images (dev disk storage)
+uploads/*
+!uploads/.gitkeep
