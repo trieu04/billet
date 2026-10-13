@@ -1,0 +1,26 @@
+{
+  "name": "billet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Billet — a visual expense journal.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "pnpm --parallel --stream -r dev",
+    "dev:server": "pnpm --filter @billet/server dev",
+    "dev:web": "pnpm --filter @billet/web dev",
+    "dev:mobile": "pnpm --filter @billet/mobile dev",
+    "build": "pnpm --workspace-concurrency=1 -r build",
+    "lint": "pnpm --workspace-concurrency=1 -r lint",
+    "typecheck": "pnpm --workspace-concurrency=1 -r typecheck",
+    "test": "pnpm --workspace-concurrency=1 -r test",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check ."
+  },
+  "devDependencies": {
+    "oxfmt": "^0.73.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@12.8.1"
+}
