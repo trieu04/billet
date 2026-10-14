@@ -10,6 +10,13 @@ Billet is a visual expense journal: “Locket meets Money Tracker.” The produc
 
 - Keep the pnpm workspace simple. Do not introduce Turborepo.
 - `apps/server` is the API boundary. Organize business capabilities as `src/modules/<feature>` Nest modules. Controllers handle transport, services coordinate use cases, and persistence/integrations sit behind injectable providers.
+- Name server feature folders with a singular capability noun, such as `auth`, `notification`, or `user`.
+- Inside a server feature, use concise conventional entry filenames: `module.ts`, `controller.ts`, `service.ts`, `dto.ts`, `interface.ts`, and `constants.ts`. Keep role-qualified filenames only when the qualifier distinguishes multiple implementations, such as `push.service.ts`.
+- Keep a small feature flat. When a feature contains multiple files or responsibilities of the same role, group them into role folders such as `services/`, `strategies/`, `guards/`, `decorators/`, `providers/`, `dtos/`, or `utils/`. Keep tests beside the implementation they cover.
+- Keep persistence entities in the module that owns them under `src/modules/<feature>/entities/`. Put reusable abstract entity bases in `src/shared/entities/`; do not centralize concrete feature entities in a global `src/entities` folder.
+- Use the shared bigint `BaseEntity` for `id`, `createdAt`, and `updatedAt`. Use `SoftDeleteBaseEntity` when the entity supports deletion; it adds `deletedAt`. Represent PostgreSQL bigint identifiers as strings in TypeScript and API contracts to avoid precision loss. Do not introduce UUID or number-based entity identifiers.
+- Use TypeORM soft-delete methods for user-facing deletion when an entity extends `SoftDeleteBaseEntity`.
+- Put application configuration in `apps/server/src/configs`, reusable cross-cutting primitives in `src/shared/<role>`, and operational adapters or assets in `src/common/<capability>`. Do not move feature-owned code into these folders.
 - `apps/web` is feature-first. Put feature-owned pages, components, API calls, hooks, and types in `src/features/<feature>`. Keep route composition and providers in `src/app`; reserve `src/components` for genuinely shared presentation.
 - `apps/mobile/app` contains Expo Router route entry points only. Put reusable screens, hooks, services, and domain code in `features/<feature>`.
 - Dependency direction flows from app composition to features to shared primitives. Features must not import other feature internals.
@@ -18,6 +25,7 @@ Billet is a visual expense journal: “Locket meets Money Tracker.” The produc
 - Define API contracts deliberately. Do not share database entities with clients.
 - Read configuration from environment variables, validate it near application startup, and never commit secrets. `VITE_*` and `EXPO_PUBLIC_*` values are public.
 - Database schema changes must use migrations once persistence is introduced; never rely on production schema synchronization.
+- Migration history should describe the net schema change from the repository origin to the final local result. When an uncommitted local schema change is revised, update or consolidate its local migration instead of adding another migration for the intermediate local state. Never rewrite migrations that already exist in the shared origin history.
 
 ## Conventions
 
