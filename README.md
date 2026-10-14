@@ -73,13 +73,29 @@ Shared packages should be added under `packages/` only after two or more apps ne
 
 ## Docker
 
-Build and run the server and web application:
+Build and run PostgreSQL, the API, web application, and the production-mode
+Expo/Metro server:
 
 ```sh
 docker compose up --build
 ```
 
-The web container is available on <http://localhost:6701> and the API on <http://localhost:6700>. Mobile development remains outside Docker so Expo can reach simulators and local devices.
+The web container is available on <http://localhost:6701>, the API on
+<http://localhost:6700>, and Expo/Metro on port `6702`. Metro serves minified
+production bundles (`--no-dev --minify`); native App Store and Play Store
+releases should still be built with EAS or the native toolchains.
+
+Expo defaults to advertising `localhost`. To open the Compose-hosted bundle on
+a physical device, provide the development machine's LAN address to both the
+packager and public API URL:
+
+```sh
+EXPO_PACKAGER_HOSTNAME=192.168.1.10 \
+EXPO_PUBLIC_API_BASE_URL=http://192.168.1.10:6700/api/v1 \
+JWT_SECRET=replace-me docker compose up --build
+```
+
+The phone and development machine must be on the same network.
 PostgreSQL is exposed on local port `6710`; the server applies checked-in migrations when it starts.
 
 ## Port allocation

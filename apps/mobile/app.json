@@ -7,10 +7,29 @@
     "scheme": "billet",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "barcodeScannerEnabled": false,
+          "cameraPermission": "Allow Billet to photograph receipts and expense moments.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Billet to choose receipt photos from your library."
+        }
+      ]
+    ],
     "experiments": { "typedRoutes": true },
     "web": { "bundler": "metro", "output": "static" },
     "ios": { "supportsTablet": true, "bundleIdentifier": "app.billet.mobile" },
-    "android": { "package": "app.billet.mobile" }
+    "android": {
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
+      "package": "app.billet.mobile"
+    }
   }
 }
