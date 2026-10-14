@@ -25,6 +25,8 @@ pnpm dev
 The default development URLs are:
 
 - Server health: <http://localhost:6700/api/v1/health>
+- Server API docs: <http://localhost:6700/docs>
+- Server realtime: `ws://localhost:6700/ws`
 - Web: <http://localhost:6701>
 - Web health page: <http://localhost:6701/health>
 - Expo/Metro: port `6702`
@@ -78,6 +80,7 @@ docker compose up --build
 ```
 
 The web container is available on <http://localhost:6701> and the API on <http://localhost:6700>. Mobile development remains outside Docker so Expo can reach simulators and local devices.
+PostgreSQL is exposed on local port `6710`; the server applies checked-in migrations when it starts.
 
 ## Port allocation
 

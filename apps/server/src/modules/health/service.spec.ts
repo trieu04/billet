@@ -1,4 +1,4 @@
-import { HealthService } from './health.service'
+import { HealthService } from './service'
 
 describe('HealthService', () => {
   it('reports a healthy service', () => {
