@@ -1,4 +1,20 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: billet
+      POSTGRES_PASSWORD: billet
+      POSTGRES_USER: billet
+    ports:
+      - '6710:5432'
+    volumes:
+      - billet-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U billet -d billet']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   server:
     build:
       context: .
@@ -7,6 +23,29 @@ services:
       NODE_ENV: production
       PORT: 6700
       CORS_ORIGIN: http://localhost:6701
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: billet
+      DB_PASSWORD: billet
+      DB_NAME: billet
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required for Docker production mode}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_SECURE: ${EMAIL_SECURE:-false}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      SMS_ENABLED: ${SMS_ENABLED:-false}
+      SMS_PROVIDER_URL: ${SMS_PROVIDER_URL:-}
+      SMS_API_TOKEN: ${SMS_API_TOKEN:-}
+      SMS_SENDER: ${SMS_SENDER:-Billet}
+      SMS_TIMEOUT_MS: ${SMS_TIMEOUT_MS:-10000}
+      WS_PATH: ${WS_PATH:-/ws}
+      WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS:-http://localhost:6701}
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '6700:6700'
     healthcheck:
@@ -26,3 +65,6 @@ services:
         condition: service_healthy
     ports:
       - '6701:6701'
+
+volumes:
+  billet-postgres:
