@@ -12,6 +12,7 @@ export interface CreateNotificationInput {
   title: string
   body: string
   metadata?: Record<string, unknown>
+  deduplicationKey?: string
 }
 
 @Injectable()
@@ -24,6 +25,13 @@ export class NotificationsService {
   ) {}
 
   async create(input: CreateNotificationInput): Promise<NotificationResponseDto> {
+    if (input.deduplicationKey) {
+      const existing = await this.notifications.findOneBy({
+        userId: input.userId,
+        deduplicationKey: input.deduplicationKey,
+      })
+      if (existing) return this.toResponse(existing)
+    }
     const saved = await this.notifications.save(
       this.notifications.create({
         ...input,
@@ -32,6 +40,7 @@ export class NotificationsService {
         body: input.body.trim(),
         metadata: input.metadata ?? {},
         readAt: null,
+        deduplicationKey: input.deduplicationKey ?? null,
       }),
     )
     await this.realtime.publish(saved.userId, 'notification.created', {

@@ -51,6 +51,31 @@ Authenticated notification endpoints:
 - `POST /api/v1/notifications/devices` to register an FCM token
 - `DELETE /api/v1/notifications/devices` to deactivate an FCM token
 
+Expense journal endpoints:
+
+- `GET /api/v1/profile` and `GET|PATCH /api/v1/profile/settings`
+- `GET /api/v1/categories`
+- `POST|GET /api/v1/expenses`, `GET|PATCH|DELETE /api/v1/expenses/:id`
+- `GET /api/v1/expenses/calendar`
+- `POST /api/v1/media`, then `PUT /api/v1/media/:id/content`
+- `POST|GET /api/v1/recognition-jobs`
+- `GET /api/v1/reports/spending`
+- `GET|PUT /api/v1/budgets`
+- `POST /api/v1/reminders/sync`
+- `POST /api/v1/exports`, `GET /api/v1/exports/:id`, and the authenticated download route
+
+Amounts use minor currency units encoded as decimal strings, and all identifiers are
+bigint strings. Expense creation requires an idempotency key. Updates require the
+current `version` and return `409 Conflict` after a concurrent edit. Aggregates never
+mix currencies.
+
+Private media and exports use the injectable object-storage boundary. Development
+defaults to owner-only files under `OBJECT_STORAGE_PATH`; Docker persists this path in
+the `billet-storage` volume. Replace the provider with a private S3-compatible adapter
+for production. Receipt recognition is also provider-backed; the default disabled
+provider records bounded retries and a visible failed status without blocking manual
+expense capture.
+
 Set `API_DOCS_ENABLED=false` to disable the OpenAPI UI. `CORS_ORIGINS` accepts a
 comma-separated allowlist. Environment configuration is validated during startup.
 

@@ -46,20 +46,30 @@ export class NotificationsController {
   ) {}
 
   @Post('devices')
-  @ApiOperation({ summary: 'Register or transfer an FCM device token' })
+  @ApiOperation({
+    summary: 'Register or transfer an FCM device token',
+    description:
+      'Associates an FCM token with the authenticated account and transfers it from any previous account registration.',
+  })
   registerDevice(@CurrentUser() user: AuthUser, @Body() input: RegisterPushDeviceDto) {
     return this.push.register(user.id, input.token, input.platform)
   }
 
   @Delete('devices')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Deactivate an FCM device token' })
+  @ApiOperation({
+    summary: 'Deactivate an FCM device token',
+    description: 'Stops push delivery to the supplied device token for the authenticated account.',
+  })
   unregisterDevice(@CurrentUser() user: AuthUser, @Body() input: UnregisterPushDeviceDto) {
     return this.push.unregister(user.id, input.token)
   }
 
   @Get()
-  @ApiOperation({ summary: 'List notifications for the authenticated account' })
+  @ApiOperation({
+    summary: 'List notifications for the authenticated account',
+    description: 'Returns notifications in pages, with the newest notifications first.',
+  })
   @ApiOkResponse({ type: NotificationListResponseDto })
   list(
     @CurrentUser() user: AuthUser,
@@ -69,21 +79,31 @@ export class NotificationsController {
   }
 
   @Get('unread-count')
-  @ApiOperation({ summary: 'Count unread notifications' })
+  @ApiOperation({
+    summary: 'Count unread notifications',
+    description: 'Returns the number of unread notifications for the authenticated account.',
+  })
   @ApiOkResponse({ type: UnreadCountResponseDto })
   unreadCount(@CurrentUser() user: AuthUser): Promise<UnreadCountResponseDto> {
     return this.notifications.unreadCount(user.id)
   }
 
   @Patch('read-all')
-  @ApiOperation({ summary: 'Mark all notifications as read' })
+  @ApiOperation({
+    summary: 'Mark all notifications as read',
+    description:
+      'Marks every unread notification as read and returns the number of notifications updated.',
+  })
   @ApiOkResponse({ type: MarkAllReadResponseDto })
   markAllRead(@CurrentUser() user: AuthUser): Promise<MarkAllReadResponseDto> {
     return this.notifications.markAllRead(user.id)
   }
 
   @Patch(':id/read')
-  @ApiOperation({ summary: 'Mark one notification as read' })
+  @ApiOperation({
+    summary: 'Mark one notification as read',
+    description: 'Marks one notification owned by the authenticated account as read.',
+  })
   @ApiOkResponse({ type: NotificationResponseDto })
   @ApiNotFoundResponse({ description: 'Notification does not belong to the account' })
   markRead(
@@ -95,7 +115,10 @@ export class NotificationsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete one notification' })
+  @ApiOperation({
+    summary: 'Delete one notification',
+    description: 'Soft-deletes one notification owned by the authenticated account.',
+  })
   @ApiNoContentResponse()
   @ApiNotFoundResponse({ description: 'Notification does not belong to the account' })
   remove(@CurrentUser() user: AuthUser, @Param('id', ParseBigIntPipe) id: string): Promise<void> {
