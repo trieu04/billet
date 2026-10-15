@@ -4,7 +4,7 @@ const REGISTRATION_VERIFICATION_POLICIES = ['none', 'email', 'phone', 'one_of', 
 export function validateEnvironment(environment: Record<string, unknown>): Record<string, unknown> {
   const errors: string[] = []
   const nodeEnv = getString(environment, 'NODE_ENV', 'development')
-  const port = getNumber(environment, 'PORT', 6700)
+  const port = getNumber(environment, 'PORT', 6701)
   const apiPrefix = getString(environment, 'API_PREFIX', 'api/v1')
   const docsPath = getString(environment, 'API_DOCS_PATH', 'docs')
   const dbPort = getNumber(environment, 'DB_PORT', 6710)

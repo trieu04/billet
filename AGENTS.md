@@ -21,7 +21,7 @@ Billet is a visual expense journal: “Locket meets Money Tracker.” The produc
 - `apps/mobile/app` contains Expo Router route entry points only. Put reusable screens, hooks, services, and domain code in `features/<feature>`.
 - Dependency direction flows from app composition to features to shared primitives. Features must not import other feature internals.
 - Add `packages/*` only for a stable contract or utility already required by at least two apps. Shared code must not depend on an app.
-- Allocate application-owned internal services from `6700–6709` (currently API `6700`, web `6701`, Expo/Metro `6702`). Allocate external infrastructure such as PostgreSQL, Redis, and emulators from `6710–6719` (PostgreSQL starts at `6710`). Keep local and Docker ports aligned.
+- Allocate application-owned services from `6700–6709`: dedicated gateway container `6700`, API `6701`, web `6702`, and Expo/Metro `6703`. Keep each application service's internal, development, and published port aligned. Allocate external infrastructure such as PostgreSQL, Redis, and emulators from `6710–6719` (PostgreSQL starts at `6710`).
 - Define API contracts deliberately. Do not share database entities with clients.
 - Read configuration from environment variables, validate it near application startup, and never commit secrets. `VITE_*` and `EXPO_PUBLIC_*` values are public.
 - Database schema changes must use migrations once persistence is introduced; never rely on production schema synchronization.
