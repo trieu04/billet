@@ -21,8 +21,8 @@ pnpm --filter @billet/server migration:run
 pnpm --filter @billet/server migration:revert
 ```
 
-- Health check: <http://localhost:6700/api/v1/health>
-- OpenAPI UI: <http://localhost:6700/docs>
+- Health check: <http://localhost:6701/api/v1/health>
+- OpenAPI UI: <http://localhost:6701/docs>
 
 Authentication includes registration/login, email verification, password reset/change,
 and optional email or authenticator-app MFA. See OpenAPI for request schemas. Main routes:

@@ -3,7 +3,7 @@ import { registerAs, type ConfigType } from '@nestjs/config'
 export const appConfig = registerAs('app', () => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
   host: process.env.HOST ?? '0.0.0.0',
-  port: Number(process.env.PORT ?? 6700),
+  port: Number(process.env.PORT ?? 6701),
   apiPrefix: normalizePath(process.env.API_PREFIX ?? 'api/v1'),
   corsOrigins: parseList(process.env.CORS_ORIGINS ?? process.env.CORS_ORIGIN),
   docsPath: normalizePath(process.env.API_DOCS_PATH ?? 'docs'),
@@ -74,7 +74,7 @@ function normalizePath(value: string): string {
 }
 
 function parseList(value: string | undefined): string[] {
-  return (value ?? 'http://localhost:6701')
+  return (value ?? 'http://localhost:6702')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean)

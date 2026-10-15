@@ -1,4 +1,20 @@
 services:
+  gateway:
+    build:
+      context: .
+      dockerfile: infra/gateway/Dockerfile
+    depends_on:
+      - server
+      - web
+      - mobile
+    ports:
+      - '${PUBLISHED_GATEWAY_PORT:-}:6700'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:6700/health']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   postgres:
     image: postgres:17-alpine
     environment:
@@ -6,7 +22,7 @@ services:
       POSTGRES_PASSWORD: billet
       POSTGRES_USER: billet
     ports:
-      - '6710:5432'
+      - '${PUBLISHED_POSTGRES_PORT:-}:5432'
     volumes:
       - billet-postgres:/var/lib/postgresql/data
     healthcheck:
@@ -19,37 +35,22 @@ services:
     build:
       context: .
       dockerfile: apps/server/Dockerfile
+    env_file:
+      - ./apps/server/.env
     environment:
       NODE_ENV: production
-      PORT: 6700
-      CORS_ORIGIN: http://localhost:6701
+      PORT: 6701
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USERNAME: billet
-      DB_PASSWORD: billet
-      DB_NAME: billet
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required for Docker production mode}
-      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
-      EMAIL_HOST: ${EMAIL_HOST:-}
-      EMAIL_PORT: ${EMAIL_PORT:-587}
-      EMAIL_SECURE: ${EMAIL_SECURE:-false}
-      EMAIL_USER: ${EMAIL_USER:-}
-      EMAIL_PASSWORD: ${EMAIL_PASSWORD:-}
-      EMAIL_FROM: ${EMAIL_FROM:-}
-      SMS_ENABLED: ${SMS_ENABLED:-false}
-      SMS_PROVIDER_URL: ${SMS_PROVIDER_URL:-}
-      SMS_API_TOKEN: ${SMS_API_TOKEN:-}
-      SMS_SENDER: ${SMS_SENDER:-Billet}
-      SMS_TIMEOUT_MS: ${SMS_TIMEOUT_MS:-10000}
-      WS_PATH: ${WS_PATH:-/ws}
-      WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS:-http://localhost:6701}
+      OBJECT_STORAGE_PATH: /data/private
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     ports:
-      - '6700:6700'
+      - '${PUBLISHED_API_PORT:-}:6701'
+    volumes:
+      - billet-storage:/data/private
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:6700/api/v1/health']
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:6701/api/v1/health']
       interval: 10s
       timeout: 3s
       retries: 5
@@ -58,32 +59,34 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-      args:
-        VITE_API_BASE_URL: http://localhost:6700/api/v1
-    depends_on:
-      server:
-        condition: service_healthy
+      secrets:
+        - source: web_env
+          target: web_env
     ports:
-      - '6701:6701'
+      - '${PUBLISHED_WEB_PORT:-}:6702'
 
   mobile:
     build:
       context: .
       dockerfile: apps/mobile/Dockerfile
+    env_file:
+      - ./apps/mobile/.env
     environment:
       NODE_ENV: production
-      EXPO_PUBLIC_API_BASE_URL: ${EXPO_PUBLIC_API_BASE_URL:-http://localhost:6700/api/v1}
-      REACT_NATIVE_PACKAGER_HOSTNAME: ${EXPO_PACKAGER_HOSTNAME:-localhost}
     depends_on:
-      server:
-        condition: service_healthy
+      - server
     ports:
-      - '6702:6702'
+      - '${PUBLISHED_EXPO_PORT:-}:6703'
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:6702/status']
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:6703/status']
       interval: 10s
       timeout: 3s
       retries: 5
 
 volumes:
   billet-postgres:
+  billet-storage:
+
+secrets:
+  web_env:
+    file: ./apps/web/.env

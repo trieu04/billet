@@ -1,0 +1,86 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Detect component changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            server:
+              - 'apps/server/**'
+            web:
+              - 'apps/web/**'
+            mobile:
+              - 'apps/mobile/**'
+            gateway:
+              - 'infra/gateway/**'
+            common:
+              - '*'
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.2
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          SERVER_CHANGED: ${{ steps.filter.outputs.server }}
+          WEB_CHANGED: ${{ steps.filter.outputs.web }}
+          MOBILE_CHANGED: ${{ steps.filter.outputs.mobile }}
+          GATEWAY_CHANGED: ${{ steps.filter.outputs.gateway }}
+          COMMON_CHANGED: ${{ steps.filter.outputs.common }}
+          REBUILD_ALL: ${{ github.event_name == 'workflow_dispatch' }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DEPLOY_PATH,SERVER_CHANGED,WEB_CHANGED,MOBILE_CHANGED,GATEWAY_CHANGED,COMMON_CHANGED,REBUILD_ALL
+          script: |
+            set -eu
+            cd "$DEPLOY_PATH"
+            git pull --ff-only
+
+            if [ "$REBUILD_ALL" = "true" ] || [ "$COMMON_CHANGED" = "true" ]; then
+              docker compose up -d --build
+              exit 0
+            fi
+
+            set --
+            if [ "$SERVER_CHANGED" = "true" ]; then
+              set -- "$@" server
+            fi
+            if [ "$WEB_CHANGED" = "true" ]; then
+              set -- "$@" web
+            fi
+            if [ "$MOBILE_CHANGED" = "true" ]; then
+              set -- "$@" mobile
+            fi
+            if [ "$GATEWAY_CHANGED" = "true" ]; then
+              set -- "$@" gateway
+            fi
+
+            if [ "$#" -gt 0 ]; then
+              docker compose up -d --build --no-deps "$@"
+            else
+              # Reconcile the running stack without rebuilding unchanged images.
+              docker compose up -d
+            fi

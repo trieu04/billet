@@ -24,12 +24,12 @@ pnpm dev
 
 The default development URLs are:
 
-- Server health: <http://localhost:6700/api/v1/health>
-- Server API docs: <http://localhost:6700/docs>
-- Server realtime: `ws://localhost:6700/ws`
-- Web: <http://localhost:6701>
-- Web health page: <http://localhost:6701/health>
-- Expo/Metro: port `6702`
+- Server health: <http://localhost:6701/api/v1/health>
+- Server API docs: <http://localhost:6701/docs>
+- Server realtime: `ws://localhost:6701/ws`
+- Web: <http://localhost:6702>
+- Web health page: <http://localhost:6702/health>
+- Expo/Metro: port `6703`
 - Mobile: use the URL or QR code printed by Expo
 
 For a physical phone, change `EXPO_PUBLIC_API_BASE_URL` from `localhost` to the development machine's LAN address.
@@ -77,39 +77,66 @@ Build and run PostgreSQL, the API, web application, and the production-mode
 Expo/Metro server:
 
 ```sh
+cp .env.example .env
+cp apps/server/.env.example apps/server/.env
+cp apps/web/.env.example apps/web/.env
+cp apps/mobile/.env.example apps/mobile/.env
 docker compose up --build
 ```
 
-The web container is available on <http://localhost:6701>, the API on
-<http://localhost:6700>, and Expo/Metro on port `6702`. Metro serves minified
-production bundles (`--no-dev --minify`); native App Store and Play Store
-releases should still be built with EAS or the native toolchains.
+The dedicated Compose gateway container is available on
+<http://localhost:6700>. It proxies `/` to the web container, `/api` to the API,
+`/expo` to Expo/Metro, `/ws` to the realtime server, and `/docs` to the API
+documentation. Each application container also keeps a dedicated published
+port for direct access: API `6701`, web `6702`, and Expo/Metro `6703`. Metro
+serves minified production bundles (`--no-dev --minify`); native App Store and
+Play Store releases should still be built with EAS or the native toolchains.
 
-Expo defaults to advertising `localhost`. To open the Compose-hosted bundle on
-a physical device, provide the development machine's LAN address to both the
-packager and public API URL:
+Each application service reads its own `apps/<app>/.env` file. Before opening
+the Compose-hosted bundle on a physical device, configure
+`apps/mobile/.env` with the reachable gateway and packager host:
 
-```sh
-EXPO_PACKAGER_HOSTNAME=192.168.1.10 \
-EXPO_PUBLIC_API_BASE_URL=http://192.168.1.10:6700/api/v1 \
-JWT_SECRET=replace-me docker compose up --build
+```dotenv
+EXPO_PUBLIC_API_BASE_URL=http://192.168.1.10:6700/api/v1
+EXPO_TOKEN=replace-with-an-expo-access-token
+EXPO_PACKAGER_HOSTNAME=192.168.1.10
 ```
 
 The phone and development machine must be on the same network.
+The mobile container uses `EXPO_TOKEN` to authenticate Expo CLI without an
+interactive login. Keep it in `apps/mobile/.env` on the deployment host; never
+prefix it with `EXPO_PUBLIC_` or commit it. Sign in to the same Expo account in
+Expo Go before opening the project link or scanning its QR code.
 PostgreSQL is exposed on local port `6710`; the server applies checked-in migrations when it starts.
 
 ## Port allocation
 
-Billet reserves ports by service ownership:
+Billet reserves ports by service ownership. For Docker Compose, the published
+application ports are:
 
-- `6700–6709`: application-owned internal services. The initial allocation is API `6700`, web `6701`, and Expo/Metro `6702`.
+- `6700`: main gateway (`billet.devt.vn` in production).
+- `6701`: direct API access.
+- `6702`: direct web access.
+- `6703`: direct Expo/Metro access.
 - `6710–6719`: external infrastructure used by the application, such as PostgreSQL, Redis, or local emulators. PostgreSQL should use `6710` when introduced.
+
+Container, published, and non-Compose development ports are aligned for each
+service: API `6701`, web `6702`, and Expo/Metro `6703`.
 
 Do not assign a port outside these ranges without updating this policy and checking for collisions across local and Docker environments.
 
 ## Environment variables
 
-Every app has a committed `.env.example` containing safe development defaults. Create local `.env` files as needed; all real environment files are ignored. Variables prefixed with `VITE_` or `EXPO_PUBLIC_` are bundled into client applications and must never contain secrets.
+Every app has a committed `.env.example` containing safe development defaults.
+Copy it to `.env` in the same app directory before running Docker Compose; all
+real environment files are ignored. Compose overrides only container-specific
+values such as internal hostnames and ports. Variables prefixed with `VITE_` or
+`EXPO_PUBLIC_` are bundled into client applications and must never contain
+secrets. The web `.env` is mounted only for the Vite build and is not copied
+into the resulting image. The root `.env` is reserved for Docker Compose host
+settings such as `PUBLISHED_*_PORT` values. The example reserves ports
+`6700–6703` and `6710`; clear an individual value to let Docker allocate an
+available host port instead.
 
 ## Architecture notes
 

@@ -13,5 +13,5 @@ WORKDIR /app
 RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
 COPY --from=build --chown=nestjs:nodejs /prod/server ./
 USER nestjs
-EXPOSE 6700
+EXPOSE 6701
 CMD ["node", "dist/main.js"]
