@@ -9,23 +9,11 @@ Billet is a visual expense journal: “Locket meets Money Tracker.” The produc
 ## Architecture rules
 
 - Keep the pnpm workspace simple. Do not introduce Turborepo.
-- `apps/server` is the API boundary. Organize business capabilities as `src/modules/<feature>` Nest modules. Controllers handle transport, services coordinate use cases, and persistence/integrations sit behind injectable providers.
-- Name server feature folders with a singular capability noun, such as `auth`, `notification`, or `user`.
-- Inside a server feature, use concise conventional entry filenames: `module.ts`, `controller.ts`, `service.ts`, `dto.ts`, `interface.ts`, and `constants.ts`. Keep role-qualified filenames only when the qualifier distinguishes multiple implementations, such as `push.service.ts`.
-- Keep a small feature flat. When a feature contains multiple files or responsibilities of the same role, group them into role folders such as `services/`, `strategies/`, `guards/`, `decorators/`, `providers/`, `dtos/`, or `utils/`. Keep tests beside the implementation they cover.
-- Keep persistence entities in the module that owns them under `src/modules/<feature>/entities/`. Put reusable abstract entity bases in `src/shared/entities/`; do not centralize concrete feature entities in a global `src/entities` folder.
-- Use the shared bigint `BaseEntity` for `id`, `createdAt`, and `updatedAt`. Use `SoftDeleteBaseEntity` when the entity supports deletion; it adds `deletedAt`. Represent PostgreSQL bigint identifiers as strings in TypeScript and API contracts to avoid precision loss. Do not introduce UUID or number-based entity identifiers.
-- Use TypeORM soft-delete methods for user-facing deletion when an entity extends `SoftDeleteBaseEntity`.
-- Put application configuration in `apps/server/src/configs`, reusable cross-cutting primitives in `src/shared/<role>`, and operational adapters or assets in `src/common/<capability>`. Do not move feature-owned code into these folders.
-- `apps/web` is feature-first. Put feature-owned pages, components, API calls, hooks, and types in `src/features/<feature>`. Keep route composition and providers in `src/app`; reserve `src/components` for genuinely shared presentation.
-- `apps/mobile/app` contains Expo Router route entry points only. Put reusable screens, hooks, services, and domain code in `features/<feature>`.
 - Dependency direction flows from app composition to features to shared primitives. Features must not import other feature internals.
 - Add `packages/*` only for a stable contract or utility already required by at least two apps. Shared code must not depend on an app.
 - Allocate application-owned services from `6700–6709`: dedicated gateway container `6700`, API `6701`, web `6702`, and Expo/Metro `6703`. Keep each application service's internal, development, and published port aligned. Allocate external infrastructure such as PostgreSQL, Redis, and emulators from `6710–6719` (PostgreSQL starts at `6710`).
 - Define API contracts deliberately. Do not share database entities with clients.
 - Read configuration from environment variables, validate it near application startup, and never commit secrets. `VITE_*` and `EXPO_PUBLIC_*` values are public.
-- Database schema changes must use migrations once persistence is introduced; never rely on production schema synchronization.
-- Migration history should describe the net schema change from the repository origin to the final local result. When an uncommitted local schema change is revised, update or consolidate its local migration instead of adding another migration for the intermediate local state. Never rewrite migrations that already exist in the shared origin history.
 
 ## Conventions
 
@@ -51,14 +39,13 @@ Billet is a visual expense journal: “Locket meets Money Tracker.” The produc
 
 ## Completion checks
 
-Before marking implementation complete:
+Use risk-based checks scoped to the files and applications changed. Follow the closest app-level `AGENTS.md` for its commands.
 
-1. Confirm the requested behavior manually at the relevant boundary.
-2. Run `pnpm format:check`.
-3. Run `pnpm lint`.
-4. Run `pnpm typecheck`.
-5. Run `pnpm test` (and relevant e2e tests when behavior crosses boundaries).
-6. Run `pnpm build`.
-7. Verify `.env.example`, README, and API documentation when configuration or public behavior changed.
-8. Review `git diff` for secrets, generated files, accidental reference-project code, and unrelated edits.
-9. For medium and large tasks, update the Linear issue with results and remaining follow-ups.
+1. Confirm the requested behavior at the relevant boundary when behavior changed.
+2. Format-check changed source or documentation files. Do not require a repository-wide format check for a small, isolated change.
+3. Run lint, typecheck, tests, and build for each affected app when the change can influence that check. Start with the narrowest relevant test; expand only when risk or failures justify it.
+4. Run the root `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` suite only for cross-app changes, shared package or root tooling changes, broad refactors, release validation, or when explicitly requested.
+5. Documentation-only and comment-only changes do not require lint, typecheck, tests, or builds unless they alter executable examples, generated documentation, configuration contracts, or other validated content.
+6. Verify `.env.example`, README, and API documentation when configuration or public behavior changed.
+7. Review `git diff` for secrets, generated files, accidental reference-project code, and unrelated edits.
+8. Report which checks ran and any intentionally skipped checks. For medium and large tasks, update the Linear issue with results and remaining follow-ups.
