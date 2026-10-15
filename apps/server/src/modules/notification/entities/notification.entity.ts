@@ -22,4 +22,7 @@ export class NotificationEntity extends SoftDeleteBaseEntity {
 
   @Column({ type: 'timestamptz', nullable: true })
   readAt: Date | null
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  deduplicationKey: string | null
 }

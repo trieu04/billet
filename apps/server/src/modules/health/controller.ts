@@ -9,7 +9,11 @@ export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Check API availability' })
+  @ApiOperation({
+    summary: 'Check API availability',
+    description:
+      'Returns the API health status and current server timestamp without authentication.',
+  })
   @ApiOkResponse({ type: HealthResponseDto })
   check(): HealthResponseDto {
     return this.healthService.check()

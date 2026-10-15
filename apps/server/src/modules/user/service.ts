@@ -1,8 +1,14 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { DataSource, Repository } from 'typeorm'
 import { UserEntity } from './entities/user.entity'
-import type { UserResponseDto } from './dto'
+import { UserSettingsEntity } from './entities/user-settings.entity'
+import type {
+  ProfileResponseDto,
+  UpdateSettingsDto,
+  UserResponseDto,
+  UserSettingsResponseDto,
+} from './dto'
 
 export interface CreateUserInput {
   username: string
@@ -19,6 +25,8 @@ export class UsersService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
+    @InjectRepository(UserSettingsEntity) private readonly settings: Repository<UserSettingsEntity>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(input: CreateUserInput): Promise<UserEntity> {
@@ -116,6 +124,53 @@ export class UsersService {
     const user = await this.users.findOneBy({ id })
     if (!user) throw new NotFoundException('User not found')
     return user
+  }
+
+  async getSettings(userId: string): Promise<UserSettingsResponseDto> {
+    let settings = await this.settings.findOneBy({ userId })
+    settings ??= await this.settings.save(this.settings.create({ userId }))
+    return this.settingsResponse(settings)
+  }
+
+  async updateSettings(userId: string, input: UpdateSettingsDto): Promise<UserSettingsResponseDto> {
+    if (input.timezone) {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: input.timezone }).format()
+      } catch {
+        throw new ConflictException('Unknown timezone')
+      }
+    }
+    let settings = await this.settings.findOneBy({ userId })
+    settings ??= this.settings.create({ userId })
+    Object.assign(settings, input)
+    if (settings.reminderEnabled && !settings.reminderTime)
+      throw new ConflictException('Reminder time is required when reminders are enabled')
+    await this.settings.save(settings)
+    return this.getSettings(userId)
+  }
+
+  async profile(userId: string): Promise<ProfileResponseDto> {
+    const [user, settings, count] = await Promise.all([
+      this.findById(userId),
+      this.getSettings(userId),
+      this.dataSource.query<{ count: string }[]>(
+        `SELECT count(*)::text AS count FROM expenses WHERE user_id = $1 AND deleted_at IS NULL`,
+        [userId],
+      ),
+    ])
+    return { ...this.toResponse(user), settings, expenseCount: Number(count[0]?.count ?? 0) }
+  }
+
+  private settingsResponse(settings: UserSettingsEntity): UserSettingsResponseDto {
+    return {
+      id: settings.id,
+      defaultCurrency: settings.defaultCurrency,
+      timezone: settings.timezone,
+      locale: settings.locale,
+      appearance: settings.appearance,
+      reminderEnabled: settings.reminderEnabled,
+      reminderTime: settings.reminderTime?.slice(0, 5) ?? null,
+    }
   }
 
   toResponse(user: UserEntity): UserResponseDto {
