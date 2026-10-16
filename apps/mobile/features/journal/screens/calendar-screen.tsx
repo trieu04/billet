@@ -1,123 +1,100 @@
 import { Feather } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { type Href, router } from 'expo-router'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ActivityIndicator,
+  Image,
+  type LayoutChangeEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { apiRequest } from '@/features/api/client'
+import { formatMoney, localDate, localMonth } from '@/features/api/format'
+import { mediaContentSource } from '@/features/api/media'
+import type { Calendar, CalendarHistory } from '@/features/api/types'
+import { useApiResource } from '@/features/api/use-api-resource'
+import { useSession } from '@/features/auth/session'
 import { JournalViewToggle } from '@/features/journal/components/journal-view-toggle'
 import { BottomTabBar } from '@/features/ui/bottom-tab-bar'
+import { AnimatedPressable } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
+import {
+  buildCalendar,
+  calendarGradients as gradients,
+  type CalendarDayModel as Day,
+  type CalendarPhoto,
+} from './calendar-model'
 
 const weekdays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
 const heat = ['#F6CDB9', '#EFA282', '#E36A55', '#C93A3A', '#8F1D24']
-type Gradient = readonly [string, string]
-type Day = { day?: number; dots?: number[]; future?: boolean; month?: number; photos?: Gradient[] }
-const p = colors.peachSoft
-const l = colors.lavender
-const s = colors.sage
-const b = colors.butter
-const days: Day[] = [
-  {},
-  {},
-  {},
-  { day: 1, dots: [3], photos: [[p, l]] },
-  { day: 2, dots: [1] },
-  {
-    day: 3,
-    dots: [4, 3],
-    photos: [
-      [b, p],
-      [s, l],
-    ],
-  },
-  {
-    day: 4,
-    dots: [3, 5, 3],
-    photos: [
-      [s, l],
-      [s, b],
-      [p, l],
-    ],
-  },
-  { day: 5, dots: [1] },
-  { day: 6, dots: [3], photos: [[p, l]] },
-  {
-    day: 7,
-    dots: [3, 4, 3],
-    photos: [
-      [l, s],
-      [b, p],
-      [s, l],
-    ],
-  },
-  { day: 8, dots: [1] },
-  { day: 9, dots: [5], photos: [[s, l]] },
-  {
-    day: 10,
-    dots: [3, 2],
-    photos: [
-      [s, b],
-      [p, l],
-    ],
-  },
-  {
-    day: 11,
-    dots: [5, 4],
-    photos: [
-      [p, l],
-      [l, s],
-    ],
-  },
-  { day: 12, dots: [1] },
-  { day: 13, dots: [3], photos: [[b, p]] },
-  {
-    day: 14,
-    dots: [2, 2, 2],
-    photos: [
-      [s, l],
-      [s, b],
-      [p, l],
-    ],
-  },
-  ...Array.from({ length: 17 }, (_, index) => ({ day: index + 15, future: true })),
-  {},
-]
-const weeks = Array.from({ length: 5 }, (_, index) => days.slice(index * 7, index * 7 + 7))
-const septemberDays: Day[] = [
-  {},
-  ...Array.from({ length: 30 }, (_, index): Day => {
-    const day = index + 1
-    if (day === 28) return { day, dots: [2], month: 9, photos: [[b, p]] }
-    if (day === 29) return { day, dots: [1], month: 9 }
-    if (day === 30)
-      return {
-        day,
-        dots: [3, 2],
-        month: 9,
-        photos: [
-          [s, b],
-          [p, l],
-        ],
-      }
-    return { day, month: 9 }
-  }),
-  ...Array.from({ length: 4 }, () => ({})),
-]
-const septemberWeeks = Array.from({ length: 5 }, (_, index) =>
-  septemberDays.slice(index * 7, index * 7 + 7),
-)
-const novemberDays: Day[] = [
-  ...Array.from({ length: 6 }, () => ({})),
-  ...Array.from({ length: 30 }, (_, index) => ({ day: index + 1, future: true, month: 11 })),
-  ...Array.from({ length: 6 }, () => ({})),
-]
-const novemberWeeks = Array.from({ length: 6 }, (_, index) =>
-  novemberDays.slice(index * 7, index * 7 + 7),
-)
+const todayKey = localDate()
+const fallbackSummaryPhotos: CalendarPhoto[] = gradients.map((gradient) => ({
+  gradient,
+  mediaAssetId: null,
+}))
 
 export function CalendarScreen() {
+  const { token } = useSession()
+  const currentMonth = localMonth()
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Ho_Chi_Minh'
+  const { width } = useWindowDimensions()
+  const boardWidth = Math.min(width - 32, 430)
+  const scrollRef = useRef<ScrollView>(null)
+  const positionedAtCurrentMonth = useRef(false)
+  const [contentHeight, setContentHeight] = useState(0)
+  const [viewportHeight, setViewportHeight] = useState(0)
+  const load = useCallback(
+    (token: string) =>
+      apiRequest<CalendarHistory>(
+        `/expenses/calendar/history?throughMonth=${currentMonth}&currency=VND&timezone=${encodeURIComponent(timezone)}`,
+        { token },
+      ),
+    [currentMonth, timezone],
+  )
+  const { data, error, loading, refresh } = useApiResource(load)
+  const calendars = useMemo(() => data?.months ?? [], [data?.months])
+  const daysByMonth = useMemo(
+    () => calendars.map((calendar) => buildCalendar(calendar.month, calendar)),
+    [calendars],
+  )
+  const allDays = useMemo(() => daysByMonth.flat(), [daysByMonth])
+  const currentDays = daysByMonth.at(-1) ?? []
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const selected =
+    allDays.find((day) => day.date === selectedDate) ??
+    currentDays.find((day) => day.count) ??
+    currentDays.find((day) => day.date === todayKey)
+  const currency = calendars.at(-1)?.currency ?? 'VND'
+
+  useEffect(() => {
+    positionedAtCurrentMonth.current = false
+  }, [data])
+
+  useEffect(() => {
+    if (
+      !calendars.length ||
+      !contentHeight ||
+      !viewportHeight ||
+      contentHeight <= viewportHeight ||
+      positionedAtCurrentMonth.current
+    )
+      return
+    scrollRef.current?.scrollTo({
+      animated: false,
+      y: Math.max(0, contentHeight - viewportHeight),
+    })
+    positionedAtCurrentMonth.current = true
+  }, [calendars.length, contentHeight, viewportHeight])
+
   return (
-    <SafeAreaView edges={['top']} style={styles.safe}>
+    <SafeAreaView edges={[]} style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.title}>Nhật ký</Text>
         <JournalViewToggle active="grid" />
@@ -136,184 +113,293 @@ export function CalendarScreen() {
         </View>
         <Text style={styles.legendText}>Nhiều</Text>
       </View>
-      <View style={styles.weekdays}>
+      <View style={[styles.weekdays, { width: boardWidth }]}>
         {weekdays.map((day) => (
           <Text key={day} style={styles.weekday}>
             {day}
           </Text>
         ))}
       </View>
+
       <ScrollView
         accessibilityLabel="Các tháng trong nhật ký"
         contentContainerStyle={styles.monthsContent}
-        contentOffset={{ x: 0, y: 353 }}
-        nestedScrollEnabled
+        onContentSizeChange={(_width, height) => setContentHeight(height)}
+        onLayout={(event: LayoutChangeEvent) => setViewportHeight(event.nativeEvent.layout.height)}
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         style={styles.monthsViewport}
       >
-        <View style={[styles.boardShadow, styles.previousMonth]}>
-          <View style={styles.monthHeader}>
-            <Text style={styles.month}>Tháng 9, 2026</Text>
-            <Text style={styles.monthTotal}>2.914.000₫</Text>
-          </View>
-          <View style={styles.days}>
-            {septemberWeeks.map((week, wi) => (
-              <View key={wi} style={styles.week}>
-                {week.map((data, di) => (
-                  <MomentCell data={data} key={`september-${wi}-${di}`} />
-                ))}
-              </View>
-            ))}
-          </View>
-        </View>
-        <View style={styles.stringAnchor}>
-          <View style={styles.stringOne} />
-          <View style={styles.stringTwo} />
-        </View>
-        <View style={[styles.boardShadow, styles.calendar]}>
-          <View style={styles.monthHeader}>
-            <Text style={styles.month}>Tháng 10, 2026</Text>
-            <Text style={styles.monthTotal}>3.840.000₫</Text>
-          </View>
-          <View style={styles.days}>
-            {weeks.map((week, wi) => (
-              <View key={wi} style={styles.week}>
-                {week.map((data, di) => (
-                  <MomentCell data={data} key={`${wi}-${di}`} />
-                ))}
-              </View>
-            ))}
-          </View>
-        </View>
-        <View style={[styles.boardShadow, styles.nextCalendar]}>
-          <View style={styles.monthHeader}>
-            <Text style={styles.month}>Tháng 11, 2026</Text>
-            <Text style={styles.monthTotal}>0₫</Text>
-          </View>
-          <View style={styles.days}>
-            {novemberWeeks.map((week, wi) => (
-              <View key={wi} style={styles.week}>
-                {week.map((data, di) => (
-                  <MomentCell data={data} key={`november-${wi}-${di}`} />
-                ))}
-              </View>
-            ))}
-          </View>
-        </View>
+        {loading ? <ActivityIndicator color={colors.link} style={styles.loading} /> : null}
+        {error ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void refresh()}
+            style={styles.errorBox}
+          >
+            <Text style={styles.error}>{error} · Chạm để thử lại</Text>
+          </Pressable>
+        ) : null}
+        {calendars.map((calendar, index) => (
+          <MonthBoard
+            calendar={calendar}
+            days={daysByMonth[index] ?? []}
+            key={calendar.month}
+            onSelectDate={setSelectedDate}
+            selectedDate={selectedDate}
+            token={token}
+          />
+        ))}
       </ScrollView>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push('/expense' as Href)}
-        style={styles.summary}
-      >
-        <View style={styles.summaryPhotos}>
-          {[
-            [s, l],
-            [s, b],
-            [p, l],
-          ].map((gradient, index) => (
-            <LinearGradient
-              colors={gradient as [string, string]}
-              key={index}
-              style={[styles.summaryPhoto, { left: index * 12 }]}
-            />
-          ))}
-        </View>
-        <View style={styles.summaryCopy}>
-          <Text style={styles.summaryDate}>Thứ Tư, 14/10</Text>
-          <Text style={styles.summaryCount}>3 khoản</Text>
-        </View>
-        <Text style={styles.summaryAmount}>248.000₫</Text>
-        <Feather color={colors.textSecondary} name="chevron-right" size={18} />
-      </Pressable>
+
+      {!loading && !error ? (
+        <AnimatedPressable
+          accessibilityRole="button"
+          onPress={() => router.replace('/' as Href)}
+          style={[styles.summary, { left: (width - boardWidth) / 2, width: boardWidth }]}
+        >
+          <PhotoStack photos={selected?.photos ?? fallbackSummaryPhotos} summary token={token} />
+          <View style={styles.summaryCopy}>
+            <Text style={styles.summaryDate}>{formatSelectedDate(selected?.date)}</Text>
+            <Text style={styles.summaryCount}>{selected?.count ?? 0} khoản</Text>
+          </View>
+          <Text style={styles.summaryAmount}>
+            {formatMoney(selected?.totalMinor ?? '0', currency)}
+          </Text>
+          <Feather color={colors.textSecondary} name="chevron-right" size={18} />
+        </AnimatedPressable>
+      ) : null}
       <BottomTabBar active="journal" />
     </SafeAreaView>
   )
 }
 
-function MomentCell({ data }: { data: Day }) {
-  const canOpen = Boolean(data.photos?.length)
+function MonthBoard({
+  calendar,
+  days,
+  onSelectDate,
+  selectedDate,
+  token,
+}: {
+  calendar: Calendar
+  days: Day[]
+  onSelectDate: (date: string) => void
+  selectedDate: string | null
+  token: string | null
+}) {
+  const [year, monthNumber] = calendar.month.split('-').map(Number)
   return (
-    <Pressable
-      accessibilityLabel={data.day ? `Ngày ${data.day} tháng ${data.month ?? 10}` : undefined}
-      disabled={!canOpen}
-      onPress={() => canOpen && router.push('/expense' as Href)}
-      style={[styles.dayCell, data.future && styles.futureDay]}
-    >
-      {data.photos ? <PhotoStack photos={data.photos} /> : null}
-      {data.dots ? (
-        <View style={[styles.expenseDots, !data.photos && styles.centeredDots]}>
-          {data.dots.map((level, index) => (
-            <View
-              key={`${level}-${index}`}
-              style={[
-                styles.expenseDot,
-                { backgroundColor: heat[level - 1], marginLeft: index ? -4 : 0 },
-              ]}
-            />
-          ))}
-        </View>
-      ) : null}
-    </Pressable>
-  )
-}
-
-function PhotoStack({ photos }: { photos: Gradient[] }) {
-  if (photos.length === 1)
-    return <LinearGradient colors={photos[0]} end={{ x: 1, y: 1 }} style={styles.singlePhoto} />
-  const rotations = [-6, 5, -1]
-  const left = [-2, 7, 3]
-  const top = [8, 3, 8]
-  return (
-    <View style={styles.photoStack}>
-      {photos.map((gradient, index) => (
-        <LinearGradient
-          colors={gradient}
-          end={{ x: 1, y: 1 }}
-          key={index}
-          style={[
-            styles.stackedPhoto,
-            {
-              left: left[index],
-              top: top[index],
-              transform: [{ rotate: `${rotations[index]}deg` }],
-            },
-          ]}
-        />
-      ))}
+    <View style={styles.monthBoard}>
+      <View style={styles.monthHeader}>
+        <Text style={styles.month}>
+          Tháng {monthNumber}, {year}
+        </Text>
+        <Text style={styles.monthTotal}>{formatMoney(calendar.totalMinor, calendar.currency)}</Text>
+      </View>
+      <View style={styles.days}>
+        {chunkWeeks(days).map((week, weekIndex) => (
+          <View key={weekIndex} style={styles.week}>
+            {week.map((day, dayIndex) => (
+              <MomentCell
+                data={day}
+                key={day.date ?? `${calendar.month}-blank-${weekIndex}-${dayIndex}`}
+                onPress={() => day.date && onSelectDate(day.date)}
+                selected={day.date === selectedDate}
+                token={token}
+              />
+            ))}
+          </View>
+        ))}
+      </View>
     </View>
   )
 }
 
+function MomentCell({
+  data,
+  onPress,
+  selected,
+  token,
+}: {
+  data: Day
+  onPress: () => void
+  selected: boolean
+  token: string | null
+}) {
+  const hasExpense = Boolean(data.photos?.length || data.count)
+  const isDay = Boolean(data.day)
+  const isSelectable = isDay && !data.future
+  const label = data.day
+    ? `Ngày ${data.day} tháng ${data.month}, ${data.future ? 'chưa tới' : data.count ? `${data.count} khoản` : 'chưa có khoản chi'}`
+    : undefined
+
+  return (
+    <AnimatedPressable
+      accessibilityLabel={label}
+      accessibilityRole={isSelectable ? 'button' : undefined}
+      accessibilityState={{ disabled: !isSelectable, selected }}
+      disabled={!isSelectable}
+      onPress={onPress}
+      pressedScale={isSelectable ? 0.94 : 1}
+      style={[
+        styles.dayCell,
+        data.future && styles.futureDay,
+        selected && hasExpense && styles.selectedDay,
+      ]}
+    >
+      {data.photos ? <PhotoStack photos={data.photos} token={token} /> : null}
+      {isSelectable && !hasExpense ? (
+        <View style={[styles.emptyDayDot, selected && styles.selectedEmptyDayDot]} />
+      ) : null}
+      <View style={styles.dotModule}>
+        {data.dots?.length ? (
+          <View style={styles.expenseDots}>
+            {data.dots.map((level, index) => (
+              <View
+                key={`${level}-${index}`}
+                style={[
+                  styles.expenseDot,
+                  {
+                    backgroundColor: heat[level - 1],
+                    marginLeft: index ? -4 : 0,
+                    width: `${Math.min(20, 90 / data.dots!.length)}%`,
+                    zIndex: index,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        ) : null}
+      </View>
+    </AnimatedPressable>
+  )
+}
+
+function PhotoStack({
+  photos,
+  summary = false,
+  token,
+}: {
+  photos: readonly CalendarPhoto[]
+  summary?: boolean
+  token: string | null
+}) {
+  if (summary) {
+    return (
+      <View style={styles.summaryPhotos}>
+        {photos.slice(0, 3).map((photo, index) => {
+          const style = [styles.summaryPhoto, { left: index * 12 }]
+          return photo.mediaAssetId && token ? (
+            <Image
+              accessibilityLabel="Ảnh khoản chi"
+              key={photo.mediaAssetId}
+              source={mediaContentSource(photo.mediaAssetId, token)}
+              style={style}
+            />
+          ) : (
+            <LinearGradient colors={photo.gradient} key={index} style={style} />
+          )
+        })}
+      </View>
+    )
+  }
+
+  const visiblePhotos = photos.slice(0, 3)
+  const stackSize = visiblePhotos.length
+  const width = stackSize === 1 ? 100 : stackSize === 2 ? 84 : 78
+  const offset = stackSize === 2 ? 16 : stackSize === 3 ? 11 : 0
+  const rotations = stackSize === 2 ? [-4, 4] : stackSize === 3 ? [-6, 5, -1] : [0]
+  const verticalOffsets = stackSize === 2 ? [16, 0] : stackSize === 3 ? [20, 0, 8] : [0]
+  return (
+    <View style={styles.photoStack}>
+      {visiblePhotos.map((photo, index) => {
+        const style = [
+          styles.calendarPhoto,
+          stackSize > 1 && styles.stackedPhoto,
+          {
+            left: `${index * offset}%` as const,
+            top: `${verticalOffsets[index]}%` as const,
+            transform: [{ rotate: `${rotations[index]}deg` }],
+            width: `${width}%` as const,
+            zIndex: index,
+          },
+        ]
+        return photo.mediaAssetId && token ? (
+          <Image
+            accessibilityLabel="Ảnh khoản chi"
+            key={photo.mediaAssetId}
+            source={mediaContentSource(photo.mediaAssetId, token)}
+            style={style}
+          />
+        ) : (
+          <LinearGradient colors={photo.gradient} end={{ x: 1, y: 1 }} key={index} style={style} />
+        )
+      })}
+    </View>
+  )
+}
+
+function chunkWeeks(days: Day[]) {
+  return Array.from({ length: Math.ceil(days.length / 7) }, (_, index) =>
+    days.slice(index * 7, index * 7 + 7),
+  )
+}
+
+function formatSelectedDate(date?: string) {
+  if (!date) return 'Tháng này'
+  const value = new Date(`${date}T12:00:00`)
+  const weekday = value.toLocaleDateString('vi-VN', { weekday: 'long' })
+  return `${weekday.slice(0, 1).toUpperCase()}${weekday.slice(1)}, ${value.getDate()}/${value.getMonth() + 1}`
+}
+
 const styles = StyleSheet.create({
-  boardShadow: {
-    backgroundColor: colors.card,
-    shadowColor: '#5A3C1E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
-  },
-  calendar: {
-    borderRadius: 28,
-    left: 16,
-    overflow: 'hidden',
-    position: 'absolute',
-    top: 459,
-    width: 358,
-  },
-  centeredDots: { top: 31 },
-  dayCell: { height: 69.486, position: 'relative', width: 43.429 },
+  dayCell: { aspectRatio: 0.625, flex: 1, minWidth: 0, position: 'relative' },
   days: { gap: 6, paddingBottom: 12, paddingHorizontal: 12, paddingTop: 10 },
-  expenseDot: { borderColor: colors.card, borderRadius: 4.5, borderWidth: 1, height: 9, width: 9 },
-  expenseDots: { alignSelf: 'center', bottom: 4, flexDirection: 'row', position: 'absolute' },
-  futureDay: { backgroundColor: '#EAE3D8', borderRadius: 10 },
+  emptyDayDot: {
+    backgroundColor: '#CFC7BB',
+    borderRadius: 5,
+    height: 10,
+    left: '50%',
+    marginLeft: -5,
+    marginTop: -5,
+    opacity: 0.58,
+    position: 'absolute',
+    top: '39.0625%',
+    width: 10,
+  },
+  error: { color: '#B3433C', fontFamily: fonts.medium, padding: 8, textAlign: 'center' },
+  errorBox: { marginVertical: 20 },
+  expenseDot: {
+    aspectRatio: 1,
+    borderColor: colors.card,
+    borderRadius: 999,
+    borderWidth: 1,
+    maxWidth: 9,
+  },
+  expenseDots: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    height: '100%',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  dotModule: {
+    alignItems: 'center',
+    bottom: 0,
+    height: '21.875%',
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    width: '100%',
+  },
+  futureDay: { backgroundColor: '#E9E2D7', borderRadius: 10, opacity: 0.72 },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
     height: 41,
     justifyContent: 'space-between',
     marginHorizontal: 20,
-    marginTop: 15,
+    marginTop: 54,
   },
   heatDot: { borderColor: colors.card, borderRadius: 6, borderWidth: 1, height: 12, width: 12 },
   heatScale: { flexDirection: 'row' },
@@ -326,80 +412,59 @@ const styles = StyleSheet.create({
     marginTop: 7,
   },
   legendText: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12 },
+  loading: { marginTop: 40 },
   month: { color: colors.text, fontFamily: fonts.semibold, fontSize: 16 },
+  monthBoard: {
+    alignSelf: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 28,
+    maxWidth: 430,
+    overflow: 'hidden',
+    shadowColor: '#5A3C1E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    width: '100%',
+  },
   monthHeader: {
     alignItems: 'center',
     backgroundColor: colors.peachSoft,
     flexDirection: 'row',
-    height: 40,
+    height: 54,
     justifyContent: 'space-between',
+    paddingHorizontal: 18,
+  },
+  monthsContent: {
+    gap: 18,
+    paddingBottom: 172,
     paddingHorizontal: 16,
+    paddingTop: 5,
   },
-  monthTotal: { color: colors.text, fontFamily: fonts.amount, fontSize: 14 },
-  monthsContent: { height: 1500, position: 'relative' },
-  monthsViewport: { height: 540, marginTop: 5 },
-  nextCalendar: {
-    borderRadius: 28,
-    left: 16,
-    overflow: 'hidden',
-    position: 'absolute',
-    top: 912,
-    width: 358,
-  },
-  photoStack: { height: 54, position: 'relative', width: 43.429 },
-  previousMonth: {
-    borderRadius: 28,
-    left: 16,
-    overflow: 'hidden',
-    position: 'absolute',
-    top: 0,
-    width: 358,
-  },
+  monthsViewport: { flex: 1, marginTop: 5 },
+  monthTotal: { color: colors.text, fontFamily: fonts.amount, fontSize: 15 },
+  photoStack: { height: '78.125%', position: 'relative', width: '100%' },
   safe: { backgroundColor: colors.canvas, flex: 1 },
-  singlePhoto: { borderRadius: 9, height: 50, left: 1, position: 'absolute', top: 3, width: 41 },
+  selectedDay: { borderColor: colors.link, borderWidth: 1.5 },
+  selectedEmptyDayDot: { borderColor: colors.link, borderWidth: 1.5, opacity: 1 },
+  calendarPhoto: {
+    aspectRatio: 0.8,
+    borderRadius: 9,
+    position: 'absolute',
+  },
   stackedPhoto: {
     borderColor: colors.card,
-    borderRadius: 8,
     borderWidth: 1.5,
-    height: 44,
-    position: 'absolute',
-    width: 34,
-  },
-  stringAnchor: { left: 143, position: 'absolute', top: 426 },
-  stringOne: {
-    borderBottomColor: '#C9B59B',
-    borderBottomLeftRadius: 18,
-    borderBottomWidth: 2,
-    borderLeftColor: '#C9B59B',
-    borderLeftWidth: 2,
-    borderStyle: 'dashed',
-    height: 18,
-    transform: [{ rotate: '17deg' }],
-    width: 28,
-  },
-  stringTwo: {
-    borderStyle: 'dashed',
-    borderTopColor: '#C9B59B',
-    borderTopWidth: 2,
-    height: 8,
-    left: 23,
-    position: 'absolute',
-    top: 16,
-    transform: [{ rotate: '20deg' }],
-    width: 29,
   },
   summary: {
     alignItems: 'center',
     backgroundColor: colors.card,
     borderRadius: 22,
-    bottom: 92,
+    bottom: 84,
     flexDirection: 'row',
     gap: 12,
-    height: 54,
-    left: 16,
+    height: 60,
     paddingHorizontal: 16,
     position: 'absolute',
-    right: 16,
     shadowColor: '#5A3C1E',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
@@ -413,9 +478,9 @@ const styles = StyleSheet.create({
     borderColor: colors.card,
     borderRadius: 8,
     borderWidth: 2,
-    height: 32,
+    height: 34,
     position: 'absolute',
-    top: 2,
+    top: 1,
     width: 28,
   },
   summaryPhotos: { height: 36, position: 'relative', width: 52 },
@@ -423,10 +488,16 @@ const styles = StyleSheet.create({
   week: { flexDirection: 'row', gap: 5 },
   weekday: {
     color: colors.textSecondary,
+    flex: 1,
     fontFamily: fonts.medium,
     fontSize: 11,
     textAlign: 'center',
-    width: 43.429,
   },
-  weekdays: { flexDirection: 'row', gap: 5, marginLeft: 28, marginTop: 8 },
+  weekdays: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 5,
+    marginTop: 14,
+    paddingHorizontal: 12,
+  },
 })

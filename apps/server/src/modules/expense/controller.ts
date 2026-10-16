@@ -23,8 +23,10 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import type { AuthUser } from '../auth/interface'
 import {
+  CalendarHistoryQueryDto,
   CalendarQueryDto,
   CreateExpenseDto,
+  ExpenseCalendarHistoryResponseDto,
   ExpenseCalendarResponseDto,
   ExpenseListResponseDto,
   ExpenseQueryDto,
@@ -57,6 +59,16 @@ export class ExpenseController {
   @ApiOkResponse({ type: ExpenseListResponseDto })
   list(@CurrentUser() u: AuthUser, @Query() q: ExpenseQueryDto) {
     return this.expenses.list(u.id, q)
+  }
+  @Get('calendar/history')
+  @ApiOperation({
+    summary: 'Get calendar spending history',
+    description:
+      'Returns every calendar month from the earliest expense through the supplied month, including empty months in between.',
+  })
+  @ApiOkResponse({ type: ExpenseCalendarHistoryResponseDto })
+  calendarHistory(@CurrentUser() u: AuthUser, @Query() q: CalendarHistoryQueryDto) {
+    return this.expenses.calendarHistory(u.id, q.throughMonth, q.currency, q.timezone)
   }
   @Get('calendar')
   @ApiOperation({

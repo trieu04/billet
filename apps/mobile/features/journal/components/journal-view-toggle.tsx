@@ -1,7 +1,8 @@
 import { Feather } from '@expo/vector-icons'
 import { type Href, router } from 'expo-router'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 
+import { AnimatedPressable } from '@/features/ui/motion'
 import { colors } from '@/features/ui/theme'
 
 type JournalView = 'timeline' | 'grid'
@@ -9,7 +10,7 @@ type JournalView = 'timeline' | 'grid'
 export function JournalViewToggle({ active }: { active: JournalView }) {
   return (
     <View accessibilityRole="tablist" style={styles.toggle}>
-      <Pressable
+      <AnimatedPressable
         accessibilityLabel="Dạng thời gian"
         accessibilityRole="tab"
         accessibilityState={{ selected: active === 'timeline' }}
@@ -21,8 +22,8 @@ export function JournalViewToggle({ active }: { active: JournalView }) {
           name="list"
           size={18}
         />
-      </Pressable>
-      <Pressable
+      </AnimatedPressable>
+      <AnimatedPressable
         accessibilityLabel="Dạng bảng"
         accessibilityRole="tab"
         accessibilityState={{ selected: active === 'grid' }}
@@ -34,7 +35,7 @@ export function JournalViewToggle({ active }: { active: JournalView }) {
           name="grid"
           size={18}
         />
-      </Pressable>
+      </AnimatedPressable>
     </View>
   )
 }

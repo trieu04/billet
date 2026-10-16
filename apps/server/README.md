@@ -56,7 +56,7 @@ Expense journal endpoints:
 - `GET /api/v1/profile` and `GET|PATCH /api/v1/profile/settings`
 - `GET /api/v1/categories`
 - `POST|GET /api/v1/expenses`, `GET|PATCH|DELETE /api/v1/expenses/:id`
-- `GET /api/v1/expenses/calendar`
+- `GET /api/v1/expenses/calendar`, `GET /api/v1/expenses/calendar/history`
 - `POST /api/v1/media`, then `PUT /api/v1/media/:id/content`
 - `POST|GET /api/v1/recognition-jobs`
 - `GET /api/v1/reports/spending`

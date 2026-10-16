@@ -1,7 +1,8 @@
 import { Feather } from '@expo/vector-icons'
 import { type Href, router } from 'expo-router'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 
+import { AnimatedPressable } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
 
 type TabKey = 'journal' | 'statistics' | 'profile'
@@ -23,11 +24,12 @@ export function BottomTabBar({ active }: { active: TabKey }) {
       {tabs.map((tab) => {
         const selected = active === tab.key
         return (
-          <Pressable
+          <AnimatedPressable
             accessibilityRole="tab"
             accessibilityState={{ selected }}
             key={tab.key}
             onPress={() => router.replace(tab.route as Href)}
+            pressedScale={0.92}
             style={styles.tab}
           >
             <View style={[styles.pill, selected && styles.selectedPill]}>
@@ -38,7 +40,7 @@ export function BottomTabBar({ active }: { active: TabKey }) {
               />
             </View>
             <Text style={[styles.label, selected && styles.selectedLabel]}>{tab.label}</Text>
-          </Pressable>
+          </AnimatedPressable>
         )
       })}
     </View>
