@@ -62,6 +62,13 @@ export class CalendarQueryDto {
   @ApiProperty({ example: 'VND' }) @Matches(/^[A-Z]{3}$/) currency: string
   @ApiProperty({ example: 'Asia/Ho_Chi_Minh' }) @IsString() @MaxLength(64) timezone: string
 }
+export class CalendarHistoryQueryDto {
+  @ApiProperty({ example: '2026-10' })
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/)
+  throughMonth: string
+  @ApiProperty({ example: 'VND' }) @Matches(/^[A-Z]{3}$/) currency: string
+  @ApiProperty({ example: 'Asia/Ho_Chi_Minh' }) @IsString() @MaxLength(64) timezone: string
+}
 export class ExpenseResponseDto {
   @ApiProperty({ type: String, pattern: '^[1-9]\\d*$' }) id: string
   @ApiProperty({ type: String, pattern: '^[1-9]\\d*$' }) amountMinor: string
@@ -97,6 +104,8 @@ export class CalendarDayDto {
   @ApiProperty() count: number
   @ApiProperty({ type: String, nullable: true, pattern: '^[1-9]\\d*$' })
   representativeMediaId: string | null
+  @ApiProperty({ type: [String], maxItems: 3, pattern: '^[1-9]\\d*$' })
+  mediaAssetIds: string[]
 }
 
 export class ExpenseCalendarResponseDto {
@@ -105,4 +114,8 @@ export class ExpenseCalendarResponseDto {
   @ApiProperty({ type: String, pattern: '^\\d+$' }) totalMinor: string
   @ApiProperty() count: number
   @ApiProperty({ type: [CalendarDayDto] }) days: CalendarDayDto[]
+}
+
+export class ExpenseCalendarHistoryResponseDto {
+  @ApiProperty({ type: [ExpenseCalendarResponseDto] }) months: ExpenseCalendarResponseDto[]
 }

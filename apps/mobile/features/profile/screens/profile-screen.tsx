@@ -1,47 +1,116 @@
 import { Feather } from '@expo/vector-icons'
-import { useState } from 'react'
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native'
+import { useCallback, useEffect, useState } from 'react'
+import { Alert, Animated, StyleSheet, Switch, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { apiRequest } from '@/features/api/client'
+import { formatMoney, localMonth } from '@/features/api/format'
+import type { Budget, Profile } from '@/features/api/types'
+import { useApiResource } from '@/features/api/use-api-resource'
+import { useSession } from '@/features/auth/session'
 import { BottomTabBar } from '@/features/ui/bottom-tab-bar'
 import { cardShadow } from '@/features/ui/card'
+import { AnimatedPressable, useEntranceAnimation, useReducedMotion } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
 
-const settings = [
-  { label: 'Tiền tệ', value: 'VND ₫' },
-  { label: 'Nhắc ghi chép', value: '21:00' },
-  { label: 'Giao diện', value: 'Tự động' },
-] as const
+const currentMonthNumber = new Date().getMonth() + 1
+const daysRemaining =
+  new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() -
+  new Date().getDate() +
+  1
 
 export function ProfileScreen() {
+  const { logout } = useSession()
+  const load = useCallback(async (token: string) => {
+    const profile = await apiRequest<Profile>('/profile', { token })
+    const budget = await apiRequest<Budget>(
+      `/budgets?month=${localMonth()}&currency=${profile.settings.defaultCurrency}`,
+      { token },
+    )
+    return { profile, budget }
+  }, [])
+  const { data, error } = useApiResource(load)
   const [faceIdEnabled, setFaceIdEnabled] = useState(true)
+  const reducedMotion = useReducedMotion()
+  const [progressAnimation] = useState(() => new Animated.Value(0))
+  const identityEntrance = useEntranceAnimation(30, 8)
+  const cardsEntrance = useEntranceAnimation(100, 10)
+  const profile = data?.profile
+  const budget = data?.budget
+  const settings = [
+    { label: 'Tiền tệ', value: profile?.settings.defaultCurrency ?? '…' },
+    {
+      label: 'Nhắc ghi chép',
+      value: profile?.settings.reminderEnabled ? (profile.settings.reminderTime ?? 'Bật') : 'Tắt',
+    },
+    { label: 'Giao diện', value: appearanceLabel(profile?.settings.appearance) },
+  ]
+  const progress = budget?.limitMinor
+    ? Math.min(1, Number(budget.spentMinor) / Number(budget.limitMinor))
+    : 0
+
+  useEffect(() => {
+    if (reducedMotion) {
+      progressAnimation.setValue(progress)
+      return
+    }
+    Animated.spring(progressAnimation, {
+      toValue: progress,
+      damping: 22,
+      stiffness: 180,
+      mass: 0.8,
+      useNativeDriver: false,
+    }).start()
+  }, [progress, progressAnimation, reducedMotion])
 
   return (
-    <SafeAreaView edges={['top']} style={styles.safe}>
+    <SafeAreaView edges={[]} style={styles.safe}>
       <Text style={styles.title}>Hồ sơ</Text>
-      <View style={[cardShadow, styles.identity]}>
+      <Animated.View style={[cardShadow, styles.identity, identityEntrance]}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>M</Text>
+          <Text style={styles.avatarText}>
+            {profile?.displayName.slice(0, 1).toUpperCase() ?? '…'}
+          </Text>
         </View>
         <View style={styles.identityText}>
-          <Text style={styles.name}>Minh Anh</Text>
-          <Text style={styles.moments}>Đã lưu 214 khoảnh khắc</Text>
+          <Text style={styles.name}>
+            {profile?.displayName ?? (error ? 'Không thể tải hồ sơ' : 'Đang tải…')}
+          </Text>
+          <Text style={styles.moments}>Đã lưu {profile?.expenseCount ?? 0} khoảnh khắc</Text>
         </View>
-        <Feather color={colors.textSecondary} name="chevron-right" size={20} />
-      </View>
-      <View style={[cardShadow, styles.budget]}>
-        <Text style={styles.sectionLabel}>Ngân sách tháng 10</Text>
+      </Animated.View>
+
+      <Animated.View style={[cardShadow, styles.budget, cardsEntrance]}>
+        <Text style={styles.sectionLabel}>Ngân sách tháng {currentMonthNumber}</Text>
         <Text style={styles.budgetAmount}>
-          3.840.000₫ <Text style={styles.budgetLimit}>/ 6.000.000₫</Text>
+          {formatMoney(budget?.spentMinor ?? '0', budget?.currency)}{' '}
+          <Text style={styles.budgetLimit}>
+            / {budget?.limitMinor ? formatMoney(budget.limitMinor, budget.currency) : 'Chưa đặt'}
+          </Text>
         </Text>
         <View style={styles.track}>
-          <View style={styles.progress} />
+          <Animated.View
+            style={[
+              styles.progress,
+              {
+                width: progressAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 322],
+                }),
+              },
+            ]}
+          />
         </View>
-        <Text style={styles.budgetHint}>Còn 2.160.000₫ cho 17 ngày</Text>
-      </View>
+        <Text style={styles.budgetHint}>
+          {budget?.remainingMinor
+            ? `Còn ${formatMoney(budget.remainingMinor, budget.currency)} cho ${daysRemaining} ngày`
+            : 'Bạn chưa đặt ngân sách tháng này'}
+        </Text>
+      </Animated.View>
+
       <View style={[cardShadow, styles.group]}>
         {settings.map((setting, index) => (
-          <Pressable
+          <AnimatedPressable
             accessibilityRole="button"
             key={setting.label}
             onPress={() => Alert.alert(setting.label, `Đang dùng ${setting.value}`)}
@@ -50,113 +119,130 @@ export function ProfileScreen() {
             <Text style={styles.rowLabel}>{setting.label}</Text>
             <View style={styles.rowValue}>
               <Text style={styles.value}>{setting.value}</Text>
-              <Feather color="#A0978D" name="chevron-right" size={19} />
+              <Feather color="#A0978D" name="chevron-right" size={18} />
             </View>
-          </Pressable>
+          </AnimatedPressable>
         ))}
       </View>
+
       <View style={[cardShadow, styles.group, styles.lastGroup]}>
         <View style={[styles.row, styles.border]}>
           <Text style={styles.rowLabel}>Khóa bằng Face ID</Text>
           <Switch
             accessibilityLabel="Face ID"
-            onValueChange={setFaceIdEnabled}
             ios_backgroundColor="#DDD5C9"
+            onValueChange={setFaceIdEnabled}
+            thumbColor="white"
             trackColor={{ false: '#DDD5C9', true: '#F2A183' }}
             value={faceIdEnabled}
           />
         </View>
-        <Pressable
+        <AnimatedPressable
           accessibilityRole="button"
           onPress={() => Alert.alert('Xuất dữ liệu', 'Dữ liệu của bạn đang được chuẩn bị.')}
           style={[styles.row, styles.border]}
         >
           <Text style={styles.rowLabel}>Xuất dữ liệu</Text>
-          <Feather color="#A0978D" name="chevron-right" size={19} />
-        </Pressable>
-        <Pressable
+          <Feather color="#A0978D" name="chevron-right" size={18} />
+        </AnimatedPressable>
+        <AnimatedPressable
+          accessibilityHint="Nhấn giữ để đăng xuất"
           accessibilityRole="button"
+          onLongPress={() => void logout()}
           onPress={() => Alert.alert('Billet', 'Phiên bản 1.0')}
           style={styles.row}
         >
           <Text style={styles.rowLabel}>Về Billet</Text>
           <View style={styles.rowValue}>
             <Text style={styles.value}>v1.0</Text>
-            <Feather color="#A0978D" name="chevron-right" size={19} />
+            <Feather color="#A0978D" name="chevron-right" size={18} />
           </View>
-        </Pressable>
+        </AnimatedPressable>
       </View>
       <BottomTabBar active="profile" />
     </SafeAreaView>
   )
 }
 
+function appearanceLabel(appearance: Profile['settings']['appearance'] | undefined) {
+  if (appearance === 'light') return 'Sáng'
+  if (appearance === 'dark') return 'Tối'
+  return 'Tự động'
+}
+
 const styles = StyleSheet.create({
   avatar: {
     alignItems: 'center',
-    backgroundColor: '#F0DCD6',
-    borderRadius: 28,
-    height: 56,
+    backgroundColor: colors.lavender,
+    borderRadius: 30,
+    height: 60,
     justifyContent: 'center',
-    width: 56,
+    width: 60,
   },
-  avatarText: { color: '#6E3521', fontFamily: fonts.bold, fontSize: 22 },
-  border: { borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth },
-  budget: { borderRadius: 22, marginHorizontal: 16, marginTop: 6, padding: 18 },
-  budgetAmount: { color: colors.text, fontFamily: fonts.amount, fontSize: 24, marginTop: 7 },
+  avatarText: { color: '#7A3E22', fontFamily: fonts.bold, fontSize: 24 },
+  border: { borderBottomColor: '#F0EADF', borderBottomWidth: StyleSheet.hairlineWidth },
+  budget: {
+    borderRadius: 22,
+    height: 148,
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 18,
+  },
+  budgetAmount: { color: colors.text, fontFamily: fonts.amount, fontSize: 30, marginTop: 7 },
   budgetHint: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 13,
-    marginTop: 9,
+    fontSize: 14,
+    marginTop: 8,
   },
-  budgetLimit: { color: colors.textSecondary, fontFamily: fonts.semibold, fontSize: 14 },
-  group: { borderRadius: 22, marginHorizontal: 16, marginTop: 18, overflow: 'hidden' },
+  budgetLimit: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 14 },
+  group: {
+    borderRadius: 22,
+    height: 174,
+    marginHorizontal: 16,
+    marginTop: 8,
+    overflow: 'hidden',
+  },
   identity: {
     alignItems: 'center',
     borderRadius: 22,
     flexDirection: 'row',
+    height: 96,
     marginHorizontal: 16,
-    marginTop: 7,
-    padding: 16,
+    marginTop: 20,
+    padding: 18,
   },
-  identityText: { flex: 1, marginLeft: 13 },
-  lastGroup: { marginTop: 20 },
-  moments: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 13, marginTop: 3 },
-  name: { color: colors.text, fontFamily: fonts.semibold, fontSize: 18 },
-  progress: { backgroundColor: colors.peach, borderRadius: 4, height: 8, width: '64%' },
+  identityText: { flex: 1, marginLeft: 16 },
+  lastGroup: { marginTop: 8 },
+  moments: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 14, marginTop: 6 },
+  name: { color: colors.text, fontFamily: fonts.bold, fontSize: 20 },
+  progress: { backgroundColor: colors.peach, borderRadius: 6, height: 12 },
   row: {
     alignItems: 'center',
     backgroundColor: colors.card,
     flexDirection: 'row',
-    height: 54,
+    height: 58,
     justifyContent: 'space-between',
-    paddingHorizontal: 17,
+    paddingHorizontal: 18,
   },
-  rowLabel: { color: colors.text, fontFamily: fonts.regular, fontSize: 15 },
-  rowValue: { alignItems: 'center', flexDirection: 'row', gap: 4 },
+  rowLabel: { color: colors.text, fontFamily: fonts.regular, fontSize: 16 },
+  rowValue: { alignItems: 'center', flexDirection: 'row', gap: 5 },
   safe: { backgroundColor: colors.canvas, flex: 1 },
-  sectionLabel: {
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    letterSpacing: 0,
-    textTransform: 'none',
-  },
+  sectionLabel: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 14 },
   title: {
     color: colors.text,
     fontFamily: fonts.bold,
     fontSize: 34,
     letterSpacing: -0.5,
     marginHorizontal: 20,
-    marginTop: 20,
+    marginTop: 62,
   },
   track: {
-    backgroundColor: '#EAE2D7',
-    borderRadius: 4,
-    height: 8,
-    marginTop: 13,
+    backgroundColor: '#EADFCF',
+    borderRadius: 6,
+    height: 12,
+    marginTop: 12,
     overflow: 'hidden',
   },
-  value: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 14 },
+  value: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 16 },
 })

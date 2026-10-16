@@ -3,16 +3,18 @@ import { Pressable, ScrollView, StyleSheet, Text } from 'react-native'
 
 import { colors, fonts } from '@/features/ui/theme'
 
-const expenseCategories = ['Cà phê', 'Ăn uống', 'Đi lại', 'Mua sắm', 'Giải trí', 'Sức khỏe', 'Khác']
+const defaultCategories = ['Cà phê', 'Ăn uống', 'Đi lại', 'Mua sắm', 'Giải trí', 'Sức khỏe', 'Khác']
 
 export function CategoryChips({
   selected,
   onSelect,
   onAdd,
+  categories = defaultCategories,
 }: {
   selected?: string
   onSelect: (category: string) => void
   onAdd: () => void
+  categories?: string[]
 }) {
   return (
     <ScrollView
@@ -21,7 +23,7 @@ export function CategoryChips({
       showsHorizontalScrollIndicator={false}
       style={styles.scroll}
     >
-      {expenseCategories.map((category) => {
+      {categories.map((category) => {
         const active = category === selected
         return (
           <Pressable

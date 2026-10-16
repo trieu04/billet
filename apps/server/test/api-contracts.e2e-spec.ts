@@ -69,6 +69,16 @@ describe('Expense backend OpenAPI contracts (e2e)', () => {
       },
     })
     expect(document.paths['/api/v1/expenses']?.get?.responses?.['200']).toBeDefined()
+    expect(document.components?.schemas?.CalendarDayDto).toMatchObject({
+      properties: {
+        mediaAssetIds: {
+          items: { type: 'string' },
+          maxItems: 3,
+          type: 'array',
+        },
+      },
+      required: expect.arrayContaining(['mediaAssetIds']),
+    })
     expect(document.paths['/api/v1/expenses/{id}']?.patch?.responses?.['200']).toBeDefined()
     expect(document.paths['/api/v1/reports/spending']?.get?.responses?.['200']).toBeDefined()
     expect(document.paths['/api/v1/recognition-jobs/{id}']?.get?.responses?.['200']).toBeDefined()

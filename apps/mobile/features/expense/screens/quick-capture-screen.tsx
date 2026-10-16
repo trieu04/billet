@@ -3,10 +3,23 @@ import { CameraView, type CameraType, type FlashMode, useCameraPermissions } fro
 import * as ImagePicker from 'expo-image-picker'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import { useRef, useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native'
+import { StatusBar } from 'expo-status-bar'
+import { useEffect, useRef, useState } from 'react'
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { AnimatedPressable, useReducedMotion } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
+
+const useNativeDriver = Platform.OS !== 'web'
 
 export function QuickCaptureScreen() {
   const cameraRef = useRef<CameraView>(null)
@@ -15,6 +28,23 @@ export function QuickCaptureScreen() {
   const [flash, setFlash] = useState<FlashMode>('off')
   const [isCameraReady, setIsCameraReady] = useState(false)
   const [isCapturing, setIsCapturing] = useState(false)
+  const reducedMotion = useReducedMotion()
+  const [focusPulse] = useState(() => new Animated.Value(1))
+
+  useEffect(() => {
+    if (reducedMotion) {
+      focusPulse.setValue(1)
+      return
+    }
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(focusPulse, { toValue: 0.56, duration: 900, useNativeDriver }),
+        Animated.timing(focusPulse, { toValue: 1, duration: 900, useNativeDriver }),
+      ]),
+    )
+    animation.start()
+    return () => animation.stop()
+  }, [focusPulse, reducedMotion])
 
   const openReview = (imageUri: string) => {
     router.push({ pathname: '/review', params: { imageUri } })
@@ -50,20 +80,26 @@ export function QuickCaptureScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={[]} style={styles.safe}>
+      <StatusBar style="light" />
       <View style={styles.header}>
-        <Pressable accessibilityLabel="Đóng" onPress={() => router.back()} style={styles.circle}>
+        <AnimatedPressable
+          accessibilityLabel="Đóng"
+          onPress={() => router.back()}
+          pressedScale={0.9}
+          style={styles.circle}
+        >
           <Feather color="white" name="x" size={22} />
-        </Pressable>
+        </AnimatedPressable>
         <Text style={styles.title}>Chụp hóa đơn</Text>
-        <Pressable
+        <AnimatedPressable
           accessibilityLabel={flash === 'off' ? 'Bật đèn flash' : 'Tắt đèn flash'}
           accessibilityState={{ selected: flash === 'on' }}
           onPress={() => setFlash((current) => (current === 'off' ? 'on' : 'off'))}
           style={[styles.circle, flash === 'on' && styles.activeCircle]}
         >
           <Feather color="white" name={flash === 'off' ? 'zap-off' : 'zap'} size={20} />
-        </Pressable>
+        </AnimatedPressable>
       </View>
       <View style={styles.viewfinder}>
         {permission?.granted ? (
@@ -79,22 +115,22 @@ export function QuickCaptureScreen() {
         ) : (
           <PermissionPrompt loading={!permission} onRequest={requestPermission} />
         )}
-        <Corner position="tl" />
-        <Corner position="tr" />
-        <Corner position="bl" />
-        <Corner position="br" />
+        <Corner opacity={focusPulse} position="tl" />
+        <Corner opacity={focusPulse} position="tr" />
+        <Corner opacity={focusPulse} position="bl" />
+        <Corner opacity={focusPulse} position="br" />
       </View>
       <Text style={styles.hint}>Đặt hóa đơn vào khung · gợi ý hiện sau khi chụp</Text>
-      <Pressable
+      <AnimatedPressable
         accessibilityRole="button"
-        onPress={() => router.push('/expense')}
+        onPress={() => router.push('/review')}
         style={styles.manual}
       >
         <Feather color="white" name="plus" size={18} />
         <Text style={styles.manualText}>Nhập tay</Text>
-      </Pressable>
+      </AnimatedPressable>
       <View style={styles.controls}>
-        <Pressable
+        <AnimatedPressable
           accessibilityLabel="Chọn ảnh từ thư viện"
           onPress={pickImage}
           style={styles.photoPicker}
@@ -104,8 +140,8 @@ export function QuickCaptureScreen() {
             style={StyleSheet.absoluteFill}
           />
           <Feather color="white" name="image" size={21} />
-        </Pressable>
-        <Pressable
+        </AnimatedPressable>
+        <AnimatedPressable
           accessibilityLabel="Chụp ảnh"
           accessibilityState={{ disabled: !isCameraReady || isCapturing }}
           disabled={!isCameraReady || isCapturing}
@@ -117,8 +153,8 @@ export function QuickCaptureScreen() {
           ) : (
             <View style={styles.shutterInner} />
           )}
-        </Pressable>
-        <Pressable
+        </AnimatedPressable>
+        <AnimatedPressable
           accessibilityLabel="Đổi camera"
           onPress={() => {
             setIsCameraReady(false)
@@ -127,7 +163,7 @@ export function QuickCaptureScreen() {
           style={styles.flip}
         >
           <Feather color="white" name="refresh-cw" size={22} />
-        </Pressable>
+        </AnimatedPressable>
       </View>
     </SafeAreaView>
   )
@@ -146,11 +182,18 @@ function PermissionPrompt({ loading, onRequest }: { loading: boolean; onRequest:
     </View>
   )
 }
-function Corner({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) {
+function Corner({
+  opacity,
+  position,
+}: {
+  opacity: Animated.Value
+  position: 'tl' | 'tr' | 'bl' | 'br'
+}) {
   return (
-    <View
+    <Animated.View
       style={[
         styles.corner,
+        { opacity },
         position.includes('t') ? styles.top : styles.bottom,
         position.includes('l') ? styles.left : styles.right,
         position.includes('t')
@@ -201,7 +244,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginHorizontal: 20,
-    marginTop: 11,
+    marginTop: 58,
   },
   hint: {
     color: 'rgba(255,255,255,0.75)',

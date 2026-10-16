@@ -8,6 +8,7 @@ import { RealtimeService } from '../realtime/services/realtime.service'
 import { RecognitionService } from '../recognition/service'
 import type { CreateExpenseDto, ExpenseQueryDto, ExpenseResponseDto, UpdateExpenseDto } from './dto'
 import { ExpenseEntity, ExpenseSource } from './entities/expense.entity'
+import { buildCalendarHistory, type CalendarAggregateRow } from './calendar'
 
 interface Cursor {
   occurredAt: string
@@ -174,9 +175,15 @@ export class ExpenseService {
   async calendar(userId: string, month: string, currency: string, timezone: string) {
     validateTimezone(timezone)
     const rows = await this.dataSource.query<
-      { day: string; total: string; count: string; thumbnail_id: string | null }[]
+      {
+        day: string
+        total: string
+        count: string
+        thumbnail_id: string | null
+        media_ids: string[] | null
+      }[]
     >(
-      `SELECT to_char(occurred_at AT TIME ZONE $4, 'YYYY-MM-DD') AS "day", sum(amount_minor)::text AS total, count(*)::text AS count, min(media_asset_id)::text AS thumbnail_id FROM expenses WHERE user_id=$1 AND currency=$2 AND deleted_at IS NULL AND occurred_at >= ($3::date AT TIME ZONE $4) AND occurred_at < (($3::date + interval '1 month') AT TIME ZONE $4) GROUP BY 1 ORDER BY 1`,
+      `SELECT to_char(occurred_at AT TIME ZONE $4, 'YYYY-MM-DD') AS "day", sum(amount_minor)::text AS total, count(*)::text AS count, min(media_asset_id)::text AS thumbnail_id, (array_agg(media_asset_id::text ORDER BY occurred_at DESC, id DESC) FILTER (WHERE media_asset_id IS NOT NULL))[1:3] AS media_ids FROM expenses WHERE user_id=$1 AND currency=$2 AND deleted_at IS NULL AND occurred_at >= ($3::date AT TIME ZONE $4) AND occurred_at < (($3::date + interval '1 month') AT TIME ZONE $4) GROUP BY 1 ORDER BY 1`,
       [userId, currency, `${month}-01`, timezone],
     )
     return {
@@ -189,8 +196,18 @@ export class ExpenseService {
         totalMinor: row.total,
         count: Number(row.count),
         representativeMediaId: row.thumbnail_id,
+        mediaAssetIds: row.media_ids ?? [],
       })),
     }
+  }
+
+  async calendarHistory(userId: string, throughMonth: string, currency: string, timezone: string) {
+    validateTimezone(timezone)
+    const rows = await this.dataSource.query<CalendarAggregateRow[]>(
+      `SELECT to_char(occurred_at AT TIME ZONE $4, 'YYYY-MM') AS month, to_char(occurred_at AT TIME ZONE $4, 'YYYY-MM-DD') AS day, sum(amount_minor)::text AS total, count(*)::text AS count, min(media_asset_id)::text AS thumbnail_id, (array_agg(media_asset_id::text ORDER BY occurred_at DESC, id DESC) FILTER (WHERE media_asset_id IS NOT NULL))[1:3] AS media_ids FROM expenses WHERE user_id=$1 AND currency=$2 AND deleted_at IS NULL AND occurred_at < (($3::date + interval '1 month') AT TIME ZONE $4) GROUP BY 1, 2 ORDER BY 1, 2`,
+      [userId, currency, `${throughMonth}-01`, timezone],
+    )
+    return { months: buildCalendarHistory(rows, throughMonth, currency) }
   }
 
   async aggregate(userId: string, from?: string, to?: string, currency?: string) {

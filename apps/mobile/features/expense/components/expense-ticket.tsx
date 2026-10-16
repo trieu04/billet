@@ -1,14 +1,15 @@
 import { LinearGradient } from 'expo-linear-gradient'
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-native'
 import Svg, { Line } from 'react-native-svg'
 import { Receipt } from './receipt'
+import { AnimatedPressable } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
 
 type Props = {
   amount?: string
   backdropColor?: string
   compact?: boolean
-  imageUri?: string
+  imageSource?: ImageSourcePropType
   meta?: string
   onPress?: () => void
   store?: string
@@ -18,7 +19,7 @@ export function ExpenseTicket({
   amount = '58.000₫',
   backdropColor,
   compact = false,
-  imageUri,
+  imageSource,
   meta = '08:42 · Cà phê',
   onPress,
   store = 'Highlands Coffee',
@@ -30,16 +31,16 @@ export function ExpenseTicket({
       : ([colors.peachSoft, colors.lavender] as const)
   const resolvedBackdropColor = backdropColor ?? (compact ? colors.camera : colors.canvas)
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole={onPress ? 'button' : undefined}
       onPress={onPress}
       style={[styles.card, compact && styles.compactCard]}
     >
-      {imageUri ? (
+      {imageSource ? (
         <Image
-          accessibilityLabel="Ảnh hóa đơn đã chọn"
+          accessibilityLabel="Ảnh khoản chi"
           resizeMode="cover"
-          source={{ uri: imageUri }}
+          source={imageSource}
           style={[styles.photo, compact && styles.compactPhoto]}
         />
       ) : (
@@ -77,7 +78,7 @@ export function ExpenseTicket({
         </View>
         <Text style={styles.amount}>{amount}</Text>
       </View>
-    </Pressable>
+    </AnimatedPressable>
   )
 }
 const styles = StyleSheet.create({

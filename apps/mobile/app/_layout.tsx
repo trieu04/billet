@@ -9,6 +9,8 @@ import {
 } from '@expo-google-fonts/inter'
 import { Nunito_800ExtraBold, useFonts as useNunitoFonts } from '@expo-google-fonts/nunito'
 
+import { SessionGuard, SessionProvider } from '@/features/auth/session'
+
 export default function RootLayout() {
   const [interLoaded] = useInterFonts({
     Inter_400Regular,
@@ -21,9 +23,16 @@ export default function RootLayout() {
   if (!interLoaded || !nunitoLoaded) return null
 
   return (
-    <>
-      <Stack screenOptions={{ headerShown: false, animation: 'fade' }} />
-      <StatusBar style="dark" />
-    </>
+    <SessionProvider>
+      <SessionGuard>
+        <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+          <Stack.Screen name="capture" options={{ animation: 'fade', gestureEnabled: false }} />
+          <Stack.Screen name="review" options={{ animation: 'fade_from_bottom' }} />
+          <Stack.Screen name="expense" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="calendar" options={{ animation: 'fade' }} />
+        </Stack>
+        <StatusBar style="dark" />
+      </SessionGuard>
+    </SessionProvider>
   )
 }
