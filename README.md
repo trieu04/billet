@@ -147,3 +147,9 @@ The initial conventions follow the supplied VNPreventStroke reference projects w
 - The mobile app uses file-based Expo Router routes and keeps reusable feature logic outside `app/`.
 
 See [AGENTS.md](./AGENTS.md) for repository rules and completion checks.
+
+See [Backend design](./docs/backend-design.md) for the proposed database, module
+boundaries, and data flows derived from the iOS Figma screens (Vietnamese).
+
+See [Business requirements (BRD)](./docs/brd.md) for product goals, scope,
+business rules, and acceptance criteria (Vietnamese).
