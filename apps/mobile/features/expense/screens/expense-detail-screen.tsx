@@ -2,21 +2,12 @@ import { Feather } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
-import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Image,
-  Platform,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native'
+import { ActivityIndicator, Alert, Animated, Platform, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { AuthenticatedImage } from '@/features/api/authenticated-image'
 import { apiRequest } from '@/features/api/client'
 import { formatMoney } from '@/features/api/format'
-import { mediaContentSource } from '@/features/api/media'
 import type { Category, Expense } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
@@ -320,25 +311,33 @@ function Photo({
   return (
     <View style={styles.photo}>
       {expense.mediaAssetId && token ? (
-        <Image
+        <AuthenticatedImage
           accessibilityLabel="Ảnh khoản chi"
+          fallback={<PhotoFallback />}
+          mediaAssetId={expense.mediaAssetId}
           resizeMode="cover"
-          source={mediaContentSource(expense.mediaAssetId, token)}
           style={styles.photoImage}
+          token={token}
         />
       ) : (
-        <LinearGradient
-          colors={[colors.sage, colors.butter]}
-          end={{ x: 1, y: 1 }}
-          style={styles.photoImage}
-        >
-          <Receipt height={210} rotation="3deg" width={150} />
-        </LinearGradient>
+        <PhotoFallback />
       )}
       <View style={styles.photoTimestamp}>
         <Text style={styles.photoTimestampText}>{timestamp}</Text>
       </View>
     </View>
+  )
+}
+
+function PhotoFallback() {
+  return (
+    <LinearGradient
+      colors={[colors.sage, colors.butter]}
+      end={{ x: 1, y: 1 }}
+      style={styles.photoImage}
+    >
+      <Receipt height={210} rotation="3deg" width={150} />
+    </LinearGradient>
   )
 }
 
