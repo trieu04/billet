@@ -95,9 +95,9 @@ export class AuthService {
   }
 
   async login(input: LoginDto): Promise<AuthResponseDto> {
-    const user = await this.users.findByEmailWithPassword(input.email)
+    const user = await this.users.findByLoginIdentifierWithPassword(input.identifier)
     if (!user || !(await compare(input.password, user.passwordHash)))
-      throw new UnauthorizedException('Email or password is incorrect')
+      throw new UnauthorizedException('Identifier or password is incorrect')
     return this.authResponse(user, user.mfaMethods.length > 0)
   }
 

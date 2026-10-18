@@ -29,7 +29,8 @@ and optional email or authenticator-app MFA. See OpenAPI for request schemas. Ma
 
 Registration requires a unique username (3–30 lowercase letters, digits, or underscores,
 starting with a letter). Availability checks accept username, email, or phone number.
-Existing accounts receive a `user_<id>` username during migration. Login remains email based.
+Existing accounts receive a `user_<id>` username during migration. Login accepts a username,
+email address, or E.164 phone number in the `identifier` field.
 
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/register/availability`
@@ -106,7 +107,7 @@ and generated OpenAPI documentation.
 - `database`: PostgreSQL connection and versioned migrations. Schema synchronization
   is always disabled.
 - `user`: owns the private user entity and maps it to public API responses.
-- `auth`: email/password authentication, email verification, password recovery,
+- `auth`: identifier/password authentication, email verification, password recovery,
   purpose-scoped JWTs, and email/TOTP MFA.
 - `email`: provider-neutral delivery contract backed by SMTP when enabled.
 - `sms`: provider-neutral delivery contract backed by a configurable HTTP endpoint.

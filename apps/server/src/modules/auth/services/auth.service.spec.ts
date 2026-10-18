@@ -24,6 +24,7 @@ const user: UserEntity = {
 describe('AuthService', () => {
   const users = {
     create: jest.fn(),
+    findByLoginIdentifierWithPassword: jest.fn(),
     findByEmailWithPassword: jest.fn(),
     findById: jest.fn(),
     toResponse: jest.fn((value: UserEntity) => ({
@@ -110,22 +111,26 @@ describe('AuthService', () => {
     },
   )
 
-  it('logs in with a valid password', async () => {
-    users.findByEmailWithPassword.mockResolvedValue({
-      ...user,
-      passwordHash: await hash('Billet123', 4),
-    })
+  it.each([user.username, user.email, '+84901234567'])(
+    'logs in with identifier %s and a valid password',
+    async (identifier) => {
+      users.findByLoginIdentifierWithPassword.mockResolvedValue({
+        ...user,
+        passwordHash: await hash('Billet123', 4),
+      })
+
+      await expect(service.login({ identifier, password: 'Billet123' })).resolves.toMatchObject({
+        accessToken: 'signed-token',
+      })
+      expect(users.findByLoginIdentifierWithPassword).toHaveBeenCalledWith(identifier)
+    },
+  )
+
+  it('does not reveal whether the identifier or password was wrong', async () => {
+    users.findByLoginIdentifierWithPassword.mockResolvedValue(null)
 
     await expect(
-      service.login({ email: user.email, password: 'Billet123' }),
-    ).resolves.toMatchObject({ accessToken: 'signed-token' })
-  })
-
-  it('does not reveal whether the email or password was wrong', async () => {
-    users.findByEmailWithPassword.mockResolvedValue(null)
-
-    await expect(
-      service.login({ email: 'missing@example.com', password: 'wrong' }),
+      service.login({ identifier: 'missing@example.com', password: 'wrong' }),
     ).rejects.toBeInstanceOf(UnauthorizedException)
   })
 })

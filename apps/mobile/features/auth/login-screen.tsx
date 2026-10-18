@@ -7,7 +7,7 @@ import { useSession } from './session'
 
 export function LoginScreen() {
   const { login } = useSession()
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -16,7 +16,7 @@ export function LoginScreen() {
     setSubmitting(true)
     setError(null)
     try {
-      await login(email, password)
+      await login(identifier, password)
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Không thể đăng nhập')
     } finally {
@@ -31,15 +31,15 @@ export function LoginScreen() {
         <Text style={styles.title}>Chào mừng trở lại</Text>
         <Text style={styles.subtitle}>Đăng nhập để tiếp tục nhật ký chi tiêu của bạn.</Text>
         <TextInput
-          accessibilityLabel="Email"
+          accessibilityLabel="Tên đăng nhập, email hoặc số điện thoại"
           autoCapitalize="none"
-          autoComplete="email"
-          keyboardType="email-address"
-          onChangeText={setEmail}
-          placeholder="Email"
+          autoComplete="username"
+          keyboardType="default"
+          onChangeText={setIdentifier}
+          placeholder="Username, email hoặc số điện thoại"
           placeholderTextColor={colors.textSecondary}
           style={styles.input}
-          value={email}
+          value={identifier}
         />
         <TextInput
           accessibilityLabel="Mật khẩu"
@@ -56,7 +56,7 @@ export function LoginScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Pressable
           accessibilityRole="button"
-          disabled={submitting || !email.trim() || !password}
+          disabled={submitting || !identifier.trim() || !password}
           onPress={() => void submit()}
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}
         >

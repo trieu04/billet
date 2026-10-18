@@ -120,8 +120,10 @@ describe('Auth (e2e)', () => {
   it('logs in and exposes the current account contract', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/login')
-      .send({ email: user.email, password: 'Billet123' })
+      .send({ identifier: ' Ntdm11 ', password: 'Billet123' })
       .expect(200)
+
+    expect(auth.login).toHaveBeenCalledWith({ identifier: 'ntdm11', password: 'Billet123' })
 
     await request(app.getHttpServer()).get('/api/v1/auth/me').expect(200).expect(user)
     expect(auth.currentUser).toHaveBeenCalledWith(user.id)
@@ -162,6 +164,14 @@ describe('Auth (e2e)', () => {
     })
     expect(document.components?.schemas?.RegistrationVerificationRequestDto).not.toMatchObject({
       properties: { username: expect.anything() },
+    })
+    expect(document.components?.schemas?.LoginDto).toMatchObject({
+      properties: {
+        identifier: {
+          description: 'Username, email address, or E.164 phone number',
+        },
+      },
+      required: expect.arrayContaining(['identifier', 'password']),
     })
   })
 })

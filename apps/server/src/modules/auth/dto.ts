@@ -64,13 +64,17 @@ export class RegisterDto {
 }
 
 export class LoginDto {
-  @ApiProperty({ example: 'trieu@example.com' })
+  @ApiProperty({
+    example: 'ntdm11',
+    description: 'Username, email address, or E.164 phone number',
+  })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   )
-  @IsEmail()
+  @IsString()
+  @Length(3, 320)
   @MaxLength(320)
-  email: string
+  identifier: string
 
   @ApiProperty({ example: 'Billet123' })
   @IsString()

@@ -72,40 +72,26 @@ export class UsersService {
   findByEmailWithPassword(email: string): Promise<UserEntity | null> {
     return this.users.findOne({
       where: { email: normalizeEmail(email) },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        displayName: true,
-        passwordHash: true,
-        emailVerified: true,
-        phoneNumber: true,
-        phoneNumberVerified: true,
-        mfaMethods: true,
-        authenticatorSecret: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: authFields,
+    })
+  }
+
+  findByLoginIdentifierWithPassword(identifier: string): Promise<UserEntity | null> {
+    const normalizedIdentifier = identifier.trim().toLowerCase()
+    return this.users.findOne({
+      where: [
+        { username: normalizedIdentifier },
+        { email: normalizedIdentifier },
+        { phoneNumber: normalizedIdentifier },
+      ],
+      select: authFields,
     })
   }
 
   async findAuthFields(id: string): Promise<UserEntity> {
     const user = await this.users.findOne({
       where: { id },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        displayName: true,
-        passwordHash: true,
-        emailVerified: true,
-        phoneNumber: true,
-        phoneNumberVerified: true,
-        mfaMethods: true,
-        authenticatorSecret: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: authFields,
     })
     if (!user) throw new NotFoundException('User not found')
     return user
@@ -190,6 +176,21 @@ export class UsersService {
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()
 }
+
+const authFields = {
+  id: true,
+  email: true,
+  username: true,
+  displayName: true,
+  passwordHash: true,
+  emailVerified: true,
+  phoneNumber: true,
+  phoneNumberVerified: true,
+  mfaMethods: true,
+  authenticatorSecret: true,
+  createdAt: true,
+  updatedAt: true,
+} as const
 
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505'
