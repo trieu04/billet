@@ -32,7 +32,10 @@ The default development URLs are:
 - Expo/Metro: port `6703`
 - Mobile: use the URL or QR code printed by Expo
 
-For a physical phone, change `EXPO_PUBLIC_API_BASE_URL` from `localhost` to the development machine's LAN address.
+In native Expo development, a loopback `EXPO_PUBLIC_API_BASE_URL` automatically
+uses the LAN host advertised by Metro, so the default works on simulators and
+physical phones. You can still set an explicit reachable URL when Metro and the
+API run on different machines.
 
 ## Commands
 
