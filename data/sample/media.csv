@@ -1,0 +1,11 @@
+slug,storage_key,mime_type,size_bytes,width,height
+bookstore.jpg,sample/bookstore.jpg,image/jpeg,190751,800,600
+desk-lamp.jpg,sample/desk-lamp.jpg,image/jpeg,34973,800,600
+electric-bill.jpg,sample/electric-bill.jpg,image/jpeg,59698,800,600
+family-dinner.jpg,sample/family-dinner.jpg,image/jpeg,90393,800,600
+flower-gift.jpg,sample/flower-gift.jpg,image/jpeg,93551,800,600
+grocery-basket.jpg,sample/grocery-basket.jpg,image/jpeg,180248,800,600
+morning-coffee.jpg,sample/morning-coffee.jpg,image/jpeg,79544,800,600
+motorbike-ride.jpg,sample/motorbike-ride.jpg,image/jpeg,71702,800,600
+pho-lunch.jpg,sample/pho-lunch.jpg,image/jpeg,144144,800,600
+weekend-cinema.jpg,sample/weekend-cinema.jpg,image/jpeg,33139,800,600

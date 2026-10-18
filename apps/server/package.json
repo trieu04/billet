@@ -8,6 +8,7 @@
     "start:prod": "node dist/main.js",
     "migration:run": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:run",
     "migration:revert": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:revert",
+    "data:sample": "sh ../../data/sample/load.sh",
     "build": "nest build",
     "lint": "oxlint src test",
     "typecheck": "tsc --noEmit",
