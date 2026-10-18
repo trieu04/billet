@@ -21,7 +21,7 @@ type SessionContextValue = {
   token: string | null
   user: User | null
   ready: boolean
-  login(email: string, password: string): Promise<void>
+  login(identifier: string, password: string): Promise<void>
   logout(): Promise<void>
 }
 
@@ -69,10 +69,10 @@ export function SessionProvider({ children }: PropsWithChildren) {
     })()
   }, [])
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (identifier: string, password: string) => {
     const response = await apiRequest<AuthResponse>('/auth/login', {
       method: 'POST',
-      body: { email, password },
+      body: { identifier, password },
     })
     if (response.requiresMfa) throw new Error('Tài khoản cần xác thực hai bước, chưa được hỗ trợ.')
     await saveToken(response.accessToken)

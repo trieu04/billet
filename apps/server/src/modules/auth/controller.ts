@@ -111,12 +111,12 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Sign in with email and password',
+    summary: 'Sign in with username, email, or phone number',
     description:
-      'Authenticates the account. When MFA is enabled, the returned token is limited to completing the MFA challenge.',
+      'Authenticates the account using a username, email address, or E.164 phone number. When MFA is enabled, the returned token is limited to completing the MFA challenge.',
   })
   @ApiOkResponse({ description: 'Credentials accepted', type: AuthResponseDto })
-  @ApiUnauthorizedResponse({ description: 'Email or password is incorrect' })
+  @ApiUnauthorizedResponse({ description: 'Identifier or password is incorrect' })
   login(@Body() input: LoginDto): Promise<AuthResponseDto> {
     return this.auth.login(input)
   }

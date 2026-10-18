@@ -3,6 +3,30 @@ import { Appearance, type UserSettingsEntity } from './entities/user-settings.en
 import type { UserEntity } from './entities/user.entity'
 import { UsersService } from './service'
 
+describe('UsersService authentication', () => {
+  it.each([
+    [' Ntdm11 ', 'ntdm11'],
+    [' TRIEU@EXAMPLE.COM ', 'trieu@example.com'],
+    [' +84901234567 ', '+84901234567'],
+  ])('looks up %s across every login identifier field', async (identifier, normalized) => {
+    const users = { findOne: jest.fn().mockResolvedValue(null) }
+    const service = new UsersService(
+      users as unknown as Repository<UserEntity>,
+      {} as Repository<UserSettingsEntity>,
+      {} as DataSource,
+    )
+
+    await service.findByLoginIdentifierWithPassword(identifier)
+
+    expect(users.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: [{ username: normalized }, { email: normalized }, { phoneNumber: normalized }],
+        select: expect.objectContaining({ passwordHash: true }),
+      }),
+    )
+  })
+})
+
 describe('UsersService settings', () => {
   it('reloads and returns the complete settings after a partial update', async () => {
     const persisted = {
