@@ -1,6 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient'
-import { Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import Svg, { Line } from 'react-native-svg'
+
+import { AuthenticatedImage } from '@/features/api/authenticated-image'
 import { Receipt } from './receipt'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
@@ -9,7 +11,8 @@ type Props = {
   amount?: string
   backdropColor?: string
   compact?: boolean
-  imageSource?: ImageSourcePropType
+  mediaAssetId?: string
+  mediaToken?: string
   meta?: string
   onPress?: () => void
   store?: string
@@ -19,7 +22,8 @@ export function ExpenseTicket({
   amount = '58.000₫',
   backdropColor,
   compact = false,
-  imageSource,
+  mediaAssetId,
+  mediaToken,
   meta = '08:42 · Cà phê',
   onPress,
   store = 'Highlands Coffee',
@@ -36,25 +40,17 @@ export function ExpenseTicket({
       onPress={onPress}
       style={[styles.card, compact && styles.compactCard]}
     >
-      {imageSource ? (
-        <Image
+      {mediaAssetId && mediaToken ? (
+        <AuthenticatedImage
           accessibilityLabel="Ảnh khoản chi"
+          fallback={<PhotoFallback compact={compact} gradient={gradient} />}
+          mediaAssetId={mediaAssetId}
+          token={mediaToken}
           resizeMode="cover"
-          source={imageSource}
           style={[styles.photo, compact && styles.compactPhoto]}
         />
       ) : (
-        <LinearGradient
-          colors={gradient}
-          end={{ x: 1, y: 1 }}
-          style={[styles.photo, compact && styles.compactPhoto]}
-        >
-          <Receipt
-            height={compact ? 150 : 116}
-            width={compact ? 104 : 84}
-            rotation={compact ? '0deg' : '-4deg'}
-          />
-        </LinearGradient>
+        <PhotoFallback compact={compact} gradient={gradient} />
       )}
       <View style={[styles.ticket, compact && styles.compactTicket]}>
         <View pointerEvents="none" style={styles.perforation}>
@@ -79,6 +75,28 @@ export function ExpenseTicket({
         <Text style={styles.amount}>{amount}</Text>
       </View>
     </AnimatedPressable>
+  )
+}
+
+function PhotoFallback({
+  compact,
+  gradient,
+}: {
+  compact: boolean
+  gradient: readonly [string, string]
+}) {
+  return (
+    <LinearGradient
+      colors={gradient}
+      end={{ x: 1, y: 1 }}
+      style={[styles.photo, compact && styles.compactPhoto]}
+    >
+      <Receipt
+        height={compact ? 150 : 116}
+        width={compact ? 104 : 84}
+        rotation={compact ? '0deg' : '-4deg'}
+      />
+    </LinearGradient>
   )
 }
 const styles = StyleSheet.create({

@@ -14,7 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { apiRequest } from '@/features/api/client'
 import { formatMoney, startOfLocalDay } from '@/features/api/format'
-import { mediaContentSource } from '@/features/api/media'
 import type { ExpenseList } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
@@ -85,11 +84,8 @@ export function JournalScreen() {
           {expenses.map((expense, index) => (
             <ExpenseTicket
               amount={formatMoney(expense.amountMinor, expense.currency)}
-              imageSource={
-                expense.mediaAssetId && token
-                  ? mediaContentSource(expense.mediaAssetId, token)
-                  : undefined
-              }
+              mediaAssetId={expense.mediaAssetId ?? undefined}
+              mediaToken={token ?? undefined}
               key={expense.id}
               meta={new Intl.DateTimeFormat('vi-VN', {
                 hour: '2-digit',

@@ -4,7 +4,6 @@ import { type Href, router } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
-  Image,
   type LayoutChangeEvent,
   Pressable,
   ScrollView,
@@ -15,9 +14,9 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { AuthenticatedImage } from '@/features/api/authenticated-image'
 import { apiRequest } from '@/features/api/client'
 import { formatMoney, localDate, localMonth } from '@/features/api/format'
-import { mediaContentSource } from '@/features/api/media'
 import type { Calendar, CalendarHistory } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
@@ -290,11 +289,13 @@ function PhotoStack({
         {photos.slice(0, 3).map((photo, index) => {
           const style = [styles.summaryPhoto, { left: index * 12 }]
           return photo.mediaAssetId && token ? (
-            <Image
+            <AuthenticatedImage
               accessibilityLabel="Ảnh khoản chi"
+              fallback={<LinearGradient colors={photo.gradient} style={style} />}
               key={photo.mediaAssetId}
-              source={mediaContentSource(photo.mediaAssetId, token)}
+              mediaAssetId={photo.mediaAssetId}
               style={style}
+              token={token}
             />
           ) : (
             <LinearGradient colors={photo.gradient} key={index} style={style} />
@@ -325,11 +326,13 @@ function PhotoStack({
           },
         ]
         return photo.mediaAssetId && token ? (
-          <Image
+          <AuthenticatedImage
             accessibilityLabel="Ảnh khoản chi"
+            fallback={<LinearGradient colors={photo.gradient} end={{ x: 1, y: 1 }} style={style} />}
             key={photo.mediaAssetId}
-            source={mediaContentSource(photo.mediaAssetId, token)}
+            mediaAssetId={photo.mediaAssetId}
             style={style}
+            token={token}
           />
         ) : (
           <LinearGradient colors={photo.gradient} end={{ x: 1, y: 1 }} key={index} style={style} />
