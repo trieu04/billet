@@ -11,3 +11,8 @@ web-build/
 .DS_Store
 .idea/
 .vscode/
+
+# Runtime data is ignored; the curated sample dataset remains versioned.
+data/*
+!data/sample/
+!data/sample/**
