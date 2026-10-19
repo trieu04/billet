@@ -9,3 +9,9 @@ node_modules
 **/.env.*
 !**/.env.example
 *.log
+
+# Keep curated media fixtures, excluding local uploads and generated exports.
+data/sample/object-storage/*
+!data/sample/object-storage/media/
+data/sample/object-storage/media/*
+!data/sample/object-storage/media/sample/
