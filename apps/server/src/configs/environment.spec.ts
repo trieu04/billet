@@ -30,11 +30,40 @@ describe('validateEnvironment', () => {
     [{ SMS_ENABLED: 'true' }, 'SMS_PROVIDER_URL'],
     [{ WS_PATH: 'ws' }, 'WS_PATH'],
     [{ FIREBASE_ENABLED: 'true' }, 'FIREBASE_PROJECT_ID'],
+    [{ RECOGNITION_PROVIDER: 'other' }, 'RECOGNITION_PROVIDER'],
+    [{ RECOGNITION_PROVIDER: 'google-ai-studio' }, 'GOOGLE_AI_STUDIO_API_KEYS'],
+    [{ RECOGNITION_TIMEOUT_MS: '500' }, 'RECOGNITION_TIMEOUT_MS'],
+    [{ RECOGNITION_RPM: '0' }, 'RECOGNITION_RPM'],
+    [{ RECOGNITION_TPM: 'many' }, 'RECOGNITION_TPM'],
     [
       { AUTH_REGISTRATION_VERIFICATION_POLICY: 'sometimes' },
       'AUTH_REGISTRATION_VERIFICATION_POLICY',
     ],
   ])('rejects invalid configuration %p', (environment, expectedMessage) => {
     expect(() => validateEnvironment(environment)).toThrow(expectedMessage)
+  })
+
+  it.each(['', '   ', ', ,'])('rejects an empty recognition key pool %p', (keys) => {
+    expect(() =>
+      validateEnvironment({
+        RECOGNITION_PROVIDER: 'google-ai-studio',
+        GOOGLE_AI_STUDIO_API_KEYS: keys,
+      }),
+    ).toThrow('GOOGLE_AI_STUDIO_API_KEYS is required')
+  })
+
+  it.each(['test-key', 'key-1, key-2'])('accepts recognition keys %p', (keys) => {
+    const environment = {
+      RECOGNITION_PROVIDER: 'google-ai-studio',
+      GOOGLE_AI_STUDIO_API_KEYS: keys,
+      GOOGLE_AI_STUDIO_MODEL: 'gemini-2.5-flash',
+      RECOGNITION_TIMEOUT_MS: '15000',
+      RECOGNITION_RPM: '10',
+      RECOGNITION_TPM: '250000',
+      RECOGNITION_RPD: '250',
+      RECOGNITION_ESTIMATED_TOKENS: '4096',
+    }
+
+    expect(validateEnvironment(environment)).toEqual(environment)
   })
 })

@@ -9,8 +9,13 @@ import {
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { MediaService } from '../media/service'
+import { recognitionConfig, type RecognitionConfig } from '../../configs/app.config'
 import { JobStatus, RecognitionJobEntity } from './entities/recognition-job.entity'
-import { RECOGNITION_PROVIDER, type RecognitionProvider } from './interface'
+import {
+  RecognitionRateLimitError,
+  RECOGNITION_PROVIDER,
+  type RecognitionProvider,
+} from './interface'
 @Injectable()
 export class RecognitionService implements OnModuleInit, OnModuleDestroy {
   private timer?: NodeJS.Timeout
@@ -18,6 +23,7 @@ export class RecognitionService implements OnModuleInit, OnModuleDestroy {
     @InjectRepository(RecognitionJobEntity) private readonly jobs: Repository<RecognitionJobEntity>,
     private readonly media: MediaService,
     @Inject(RECOGNITION_PROVIDER) private readonly provider: RecognitionProvider,
+    @Inject(recognitionConfig.KEY) private readonly config: RecognitionConfig,
   ) {}
   onModuleInit() {
     this.timer = setInterval(() => void this.processNext().catch(() => undefined), 5_000)
@@ -71,13 +77,22 @@ export class RecognitionService implements OnModuleInit, OnModuleDestroy {
     if (!job) return null
     job.attempts += 1
     job.status = JobStatus.Processing
-    job.leaseExpiresAt = new Date(Date.now() + 60_000)
+    // Keep the lease beyond the upstream timeout, with time for media I/O and persistence.
+    job.leaseExpiresAt = new Date(Date.now() + this.config.timeoutMs + 60_000)
     await this.jobs.save(job)
     try {
       job.suggestion = await this.provider.recognize(job.userId, job.mediaAssetId)
       job.status = JobStatus.Succeeded
       job.failureReason = null
     } catch (error: unknown) {
+      if (error instanceof RecognitionRateLimitError) {
+        job.attempts -= 1
+        job.status = JobStatus.Pending
+        job.availableAt = new Date(Date.now() + error.retryAfterMs)
+        job.failureReason = null
+        job.leaseExpiresAt = null
+        return this.response(await this.jobs.save(job))
+      }
       job.status = job.attempts >= job.maxAttempts ? JobStatus.Failed : JobStatus.Pending
       job.availableAt = new Date(Date.now() + 2 ** job.attempts * 5_000)
       job.failureReason =
