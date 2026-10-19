@@ -23,6 +23,9 @@ storage paths are resolved from the workspace root, regardless of the directory
 used to start Nest. Docker Compose continues to use its managed
 `billet-storage` volume.
 
+Only curated files under `object-storage/media/sample/` are versioned. Local user
+uploads and generated exports are excluded from Git and the Docker build context.
+
 The ten sample photographs are cropped development fixtures sourced from
 [Unsplash](https://unsplash.com/license). Their source photo identifiers are
 preserved in `sources.md`.

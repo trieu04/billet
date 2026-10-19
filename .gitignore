@@ -16,3 +16,9 @@ web-build/
 data/*
 !data/sample/
 !data/sample/**
+
+# Only curated media fixtures belong in Git; uploads and exports are runtime data.
+data/sample/object-storage/*
+!data/sample/object-storage/media/
+data/sample/object-storage/media/*
+!data/sample/object-storage/media/sample/
