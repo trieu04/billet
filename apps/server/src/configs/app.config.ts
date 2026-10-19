@@ -69,12 +69,25 @@ export const firebaseConfig = registerAs('firebase', () => ({
 
 export type FirebaseConfig = ConfigType<typeof firebaseConfig>
 
+export const recognitionConfig = registerAs('recognition', () => ({
+  provider: process.env.RECOGNITION_PROVIDER ?? 'disabled',
+  googleAiStudioApiKeys: parseList(process.env.GOOGLE_AI_STUDIO_API_KEYS, ''),
+  googleAiStudioModel: process.env.GOOGLE_AI_STUDIO_MODEL ?? 'gemini-2.5-flash',
+  timeoutMs: Number(process.env.RECOGNITION_TIMEOUT_MS ?? 30_000),
+  requestsPerMinute: Number(process.env.RECOGNITION_RPM ?? 10),
+  tokensPerMinute: Number(process.env.RECOGNITION_TPM ?? 250_000),
+  requestsPerDay: Number(process.env.RECOGNITION_RPD ?? 250),
+  estimatedTokensPerRequest: Number(process.env.RECOGNITION_ESTIMATED_TOKENS ?? 4_096),
+}))
+
+export type RecognitionConfig = ConfigType<typeof recognitionConfig>
+
 function normalizePath(value: string): string {
   return value.trim().replace(/^\/+|\/+$/g, '')
 }
 
-function parseList(value: string | undefined): string[] {
-  return (value ?? 'http://localhost:6702')
+function parseList(value: string | undefined, fallback = 'http://localhost:6702'): string[] {
+  return (value ?? fallback)
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean)

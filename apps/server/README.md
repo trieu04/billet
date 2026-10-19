@@ -77,6 +77,21 @@ for production. Receipt recognition is also provider-backed; the default disable
 provider records bounded retries and a visible failed status without blocking manual
 expense capture.
 
+To enable receipt extraction with a Gemini API key created in Google AI Studio, set
+`RECOGNITION_PROVIDER=google-ai-studio` and `GOOGLE_AI_STUDIO_API_KEYS` (one key or comma-separated keys). The default
+model is `gemini-2.5-flash`; override it with `GOOGLE_AI_STUDIO_MODEL` when needed.
+Images stay behind the authenticated media boundary and the API key is used only by
+the server. `RECOGNITION_TIMEOUT_MS` controls the upstream request timeout.
+`RECOGNITION_RPM`, `RECOGNITION_TPM`, and `RECOGNITION_RPD` apply conservative
+rolling quota guards before each request; no provider request is sent while an aggregate
+limit is exhausted. TPM reservations are reconciled with Gemini's reported token usage.
+`GOOGLE_AI_STUDIO_API_KEYS` accepts a comma-separated key pool and selects keys in pure
+round-robin order. Configure RPM, TPM, and RPD as totals for the whole pool. Gemini
+quotas are commonly scoped to a project/model, so multiple keys from one project do not
+increase those upstream quotas. The built-in counters are process-local and assume the
+current single server worker; use a shared quota store before scaling the recognition
+worker horizontally.
+
 Set `API_DOCS_ENABLED=false` to disable the OpenAPI UI. `CORS_ORIGINS` accepts a
 comma-separated allowlist. Environment configuration is validated during startup.
 

@@ -9,6 +9,7 @@ import {
   emailConfig,
   firebaseConfig,
   realtimeConfig,
+  recognitionConfig,
   smsConfig,
 } from './configs/app.config'
 import { validateEnvironment } from './configs/environment'
@@ -41,6 +42,7 @@ import { UsersModule } from './modules/user/module'
         emailConfig,
         smsConfig,
         realtimeConfig,
+        recognitionConfig,
         firebaseConfig,
       ],
       validate: validateEnvironment,

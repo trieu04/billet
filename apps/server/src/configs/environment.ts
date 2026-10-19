@@ -1,5 +1,6 @@
 const NODE_ENVIRONMENTS = ['development', 'test', 'production'] as const
 const REGISTRATION_VERIFICATION_POLICIES = ['none', 'email', 'phone', 'one_of', 'both'] as const
+const RECOGNITION_PROVIDERS = ['disabled', 'google-ai-studio'] as const
 
 export function validateEnvironment(environment: Record<string, unknown>): Record<string, unknown> {
   const errors: string[] = []
@@ -18,6 +19,14 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
     'AUTH_REGISTRATION_VERIFICATION_POLICY',
     'one_of',
   )
+  const recognitionProvider = getString(environment, 'RECOGNITION_PROVIDER', 'disabled')
+  const recognitionTimeoutMs = getNumber(environment, 'RECOGNITION_TIMEOUT_MS', 30_000)
+  const recognitionLimits = [
+    ['RECOGNITION_RPM', 10],
+    ['RECOGNITION_TPM', 250_000],
+    ['RECOGNITION_RPD', 250],
+    ['RECOGNITION_ESTIMATED_TOKENS', 4_096],
+  ] as const
 
   if (!NODE_ENVIRONMENTS.includes(nodeEnv as (typeof NODE_ENVIRONMENTS)[number])) {
     errors.push(`NODE_ENV must be one of: ${NODE_ENVIRONMENTS.join(', ')}`)
@@ -46,6 +55,22 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
   if (!Number.isInteger(smsTimeoutMs) || smsTimeoutMs < 100 || smsTimeoutMs > 60_000) {
     errors.push('SMS_TIMEOUT_MS must be an integer between 100 and 60000')
   }
+  if (
+    !RECOGNITION_PROVIDERS.includes(recognitionProvider as (typeof RECOGNITION_PROVIDERS)[number])
+  ) {
+    errors.push(`RECOGNITION_PROVIDER must be one of: ${RECOGNITION_PROVIDERS.join(', ')}`)
+  }
+  for (const [key, fallback] of recognitionLimits) {
+    const value = getNumber(environment, key, fallback)
+    if (!Number.isSafeInteger(value) || value < 1) errors.push(`${key} must be a positive integer`)
+  }
+  if (
+    !Number.isInteger(recognitionTimeoutMs) ||
+    recognitionTimeoutMs < 1_000 ||
+    recognitionTimeoutMs > 120_000
+  ) {
+    errors.push('RECOGNITION_TIMEOUT_MS must be an integer between 1000 and 120000')
+  }
   if (!wsPath.startsWith('/') || wsPath.includes('?') || wsPath.includes('#')) {
     errors.push('WS_PATH must be an absolute path without query or fragment')
   }
@@ -73,6 +98,10 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
     errors,
   )
 
+  if (recognitionProvider === 'google-ai-studio' && !hasConfiguredApiKey(environment)) {
+    errors.push('GOOGLE_AI_STUDIO_API_KEYS is required when RECOGNITION_PROVIDER=google-ai-studio')
+  }
+
   validateRequiredWhenEnabled(
     environment,
     'FIREBASE_ENABLED',
@@ -85,6 +114,11 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
   }
 
   return environment
+}
+
+function hasConfiguredApiKey(environment: Record<string, unknown>): boolean {
+  const keys = environment.GOOGLE_AI_STUDIO_API_KEYS
+  return typeof keys === 'string' && keys.split(',').some((value) => value.trim().length > 0)
 }
 
 function validateRequiredWhenEnabled(
