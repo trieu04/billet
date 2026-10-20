@@ -2,13 +2,19 @@
 
 BEGIN;
 
+-- Local development account only. Existing authentication data is preserved.
+INSERT INTO users (username, email, display_name, password_hash, email_verified)
+SELECT :'sample_username', :'sample_user_email', :'sample_username',
+  '$2b$10$qas2iaKMQnjBY5T7Tr6dZ.bi8ayfAz1GEJJFp4f/28S2ohj6WgexC', true
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = :'sample_username');
+
 CREATE TEMP TABLE sample_context AS
-SELECT id AS user_id FROM users WHERE email = :'sample_user_email';
+SELECT id AS user_id FROM users WHERE username = :'sample_username' AND deleted_at IS NULL;
 
 SELECT count(*) AS sample_user_count FROM sample_context \gset
 \if :sample_user_count
 \else
-  \warn Sample user does not exist: :sample_user_email
+  \warn Active sample user does not exist: :sample_username
   \quit false
 \endif
 
@@ -66,17 +72,18 @@ SELECT
   media.id,
   expense.amount_minor,
   'VND',
-  expense.occurred_at::timestamptz,
+  expense.occurred_at::timestamptz - month_offset.value,
   'Asia/Ho_Chi_Minh',
   expense.caption,
   expense.merchant,
   expense.location,
   'manual',
-  'sample-' || expense.slug,
-  md5('sample-' || expense.slug),
+  'sample-' || to_char(expense.occurred_at::timestamptz - month_offset.value, 'YYYY-MM') || '-' || coalesce(expense.slug, 'no-photo'),
+  md5('sample-' || to_char(expense.occurred_at::timestamptz - month_offset.value, 'YYYY-MM') || '-' || coalesce(expense.slug, 'no-photo')),
   '{}'::jsonb
 FROM (
   VALUES
+    (NULL, 'transport', 15000, '2026-10-14T01:00:00Z', 'Gửi xe đi làm, không chụp ảnh', 'Bãi giữ xe', 'Quận 1, TP. Hồ Chí Minh'),
     ('morning-coffee.jpg', 'food', 45000, '2026-10-17T01:15:00Z', 'Cà phê sáng trước giờ làm', 'Quán cà phê góc phố', 'Quận 1, TP. Hồ Chí Minh'),
     ('pho-lunch.jpg', 'food', 65000, '2026-10-16T05:10:00Z', 'Bữa trưa ấm bụng', 'Phở Hà Nội', 'Quận 3, TP. Hồ Chí Minh'),
     ('grocery-basket.jpg', 'shopping', 328000, '2026-10-16T11:30:00Z', 'Đi chợ cho cả tuần', 'Siêu thị An Nam', 'Quận Bình Thạnh, TP. Hồ Chí Minh'),
@@ -84,13 +91,14 @@ FROM (
     ('motorbike-ride.jpg', 'transport', 42000, '2026-10-15T05:45:00Z', 'Chuyến xe sáng đi làm', 'GrabBike', 'TP. Hồ Chí Minh'),
     ('family-dinner.jpg', 'food', 486000, '2026-10-15T12:15:00Z', 'Bữa tối cùng gia đình', 'Bếp Nhà', 'Quận Phú Nhuận, TP. Hồ Chí Minh'),
     ('desk-lamp.jpg', 'shopping', 390000, '2026-10-13T03:05:00Z', 'Đèn mới cho góc làm việc', 'Cửa hàng nội thất', 'Quận 2, TP. Hồ Chí Minh'),
-    ('electric-bill.jpg', 'bills', 742000, '2026-10-13T05:00:00Z', 'Tiền điện tháng 10', 'Điện lực TP.HCM', 'TP. Hồ Chí Minh'),
+    ('electric-bill.jpg', 'bills', 742000, '2026-10-13T05:00:00Z', 'Thanh toán tiền điện trong tháng', 'Điện lực TP.HCM', 'TP. Hồ Chí Minh'),
     ('weekend-cinema.jpg', 'entertainment', 240000, '2026-10-13T09:35:00Z', 'Xem phim cuối tuần', 'Rạp chiếu phim', 'Quận 7, TP. Hồ Chí Minh'),
     ('flower-gift.jpg', 'other', 180000, '2026-10-13T12:40:00Z', 'Một bó hoa nhỏ tặng bạn', 'Tiệm hoa địa phương', 'Quận 3, TP. Hồ Chí Minh')
 ) AS expense(slug, category_code, amount_minor, occurred_at, caption, merchant, location)
+CROSS JOIN (VALUES (interval '0 months'), (interval '1 month')) AS month_offset(value)
 JOIN sample_context context ON true
 JOIN categories category ON category.code = expense.category_code
-JOIN inserted_media media ON media.slug = expense.slug;
+LEFT JOIN inserted_media media ON media.slug = expense.slug;
 
 COMMIT;
 

@@ -10,13 +10,23 @@ Load or reset the dataset while the local PostgreSQL container is running:
 pnpm --filter @billet/server data:sample
 ```
 
-The loader targets the existing user `ntdm11@example.com`, replaces that
-user's expenses and media records, and leaves authentication data untouched.
-Set `SAMPLE_USER_EMAIL` to target another existing development account.
+Run database migrations first (`pnpm --filter @billet/server migration:run`). New
+user IDs start at 101; existing users retain their IDs and higher sequences are
+never rewound.
 
-The ten expenses intentionally exercise calendar photo counts: October 13 has
-four photos, October 15 has three, October 16 has two, October 17 has one, and
-October 14 has none.
+The loader targets username `ntdm` and creates it if missing with email
+`ntdm@example.com` and the local-only demo password `devt` (verified
+email). Existing account credentials are preserved. Set `SAMPLE_USERNAME` to
+choose another development account and `SAMPLE_USER_EMAIL` to customize the email
+when creating it. `DATABASE_URL` overrides the local PostgreSQL connection.
+When `psql` is unavailable and `DATABASE_URL` is unset, the loader uses `psql`
+inside the local Compose PostgreSQL container.
+
+Reloading replaces the target user's expenses, recognition jobs, and media.
+The dataset contains 22 expenses across September and October 2026, linked to ten
+reusable sample photographs. In each month, day 13 has four photos, day 14 has an
+expense without a photo, day 15 has three photos, day 16 has two, and day 17 has
+one. Other days are empty.
 
 Local server development reads media from `data/sample/object-storage`. Relative
 storage paths are resolved from the workspace root, regardless of the directory

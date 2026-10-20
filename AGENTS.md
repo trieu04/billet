@@ -6,6 +6,12 @@ These instructions apply to the entire repository. More specific `AGENTS.md` fil
 
 Billet is a visual expense journal: “Locket meets Money Tracker.” The product should make capture feel immediate and personal while deriving structured expense data and statistics in the background.
 
+## Local development account
+
+- Seed account username: `ntdm`.
+- Seed account password: `devt`.
+- These are local development fixture credentials. Keep the sample seed and its documentation consistent with this account.
+
 ## Architecture rules
 
 - Keep the pnpm workspace simple. Do not introduce Turborepo.
