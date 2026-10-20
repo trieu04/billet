@@ -23,6 +23,7 @@ import { useSession } from '@/features/auth/session'
 import { JournalViewToggle } from '@/features/journal/components/journal-view-toggle'
 import { BottomTabBar } from '@/features/ui/bottom-tab-bar'
 import { AnimatedPressable } from '@/features/ui/motion'
+import { expenseThumbnailAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
 import {
   buildCalendar,
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
   selectedDay: { borderColor: colors.link, borderWidth: 1.5 },
   selectedEmptyDayDot: { borderColor: colors.link, borderWidth: 1.5, opacity: 1 },
   calendarPhoto: {
-    aspectRatio: 0.8,
+    aspectRatio: expenseThumbnailAspectRatio,
     borderRadius: 9,
     position: 'absolute',
   },
@@ -481,7 +482,7 @@ const styles = StyleSheet.create({
     borderColor: colors.card,
     borderRadius: 8,
     borderWidth: 2,
-    height: 34,
+    aspectRatio: expenseThumbnailAspectRatio,
     position: 'absolute',
     top: 1,
     width: 28,

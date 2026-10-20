@@ -11,8 +11,10 @@ import { formatMoney } from '@/features/api/format'
 import type { Category, Expense } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
+import { useCaptureFlow } from '@/features/expense/capture-flow'
 import { Receipt } from '@/features/expense/components/receipt'
 import { AnimatedPressable, useEntranceAnimation, useReducedMotion } from '@/features/ui/motion'
+import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
 
 const useNativeDriver = Platform.OS !== 'web'
@@ -20,6 +22,7 @@ const useNativeDriver = Platform.OS !== 'web'
 export function ExpenseDetailScreen() {
   const params = useLocalSearchParams<{ id?: string }>()
   const { token } = useSession()
+  const { removeCapture } = useCaptureFlow()
   const load = useCallback(
     async (accessToken: string) => {
       if (!params.id) throw new Error('Thiếu mã khoản chi')
@@ -112,7 +115,10 @@ export function ExpenseDetailScreen() {
         onPress: () => {
           if (!token || !expense) return
           void apiRequest(`/expenses/${expense.id}`, { method: 'DELETE', token })
-            .then(() => router.replace('/'))
+            .then(() => {
+              removeCapture(expense.id)
+              router.replace('/')
+            })
             .catch((reason: unknown) =>
               Alert.alert(
                 'Không thể xóa',
@@ -155,7 +161,12 @@ export function ExpenseDetailScreen() {
 
   return (
     <SafeAreaView edges={[]} style={styles.safe}>
-      <Animated.View style={[styles.screen, screenEntrance]}>
+      <Animated.ScrollView
+        contentContainerStyle={styles.screenContent}
+        contentInsetAdjustmentBehavior="automatic"
+        showsVerticalScrollIndicator={false}
+        style={[styles.screen, screenEntrance]}
+      >
         <View style={styles.nav}>
           <AnimatedPressable
             accessibilityLabel="Quay lại Journal"
@@ -180,13 +191,6 @@ export function ExpenseDetailScreen() {
         </View>
 
         <Photo expense={expense} timestamp={timestamp} token={token} />
-
-        <View style={styles.captionCard}>
-          <Text style={styles.fieldLabel}>Hôm nay có gì đáng nhớ?</Text>
-          <Text numberOfLines={2} style={styles.captionValue}>
-            {expense.caption || 'Một khoảnh khắc trong ngày.'}
-          </Text>
-        </View>
 
         <View style={styles.amountCard}>
           <Text style={styles.fieldLabel}>Số tiền</Text>
@@ -215,7 +219,7 @@ export function ExpenseDetailScreen() {
           <Text style={styles.moreText}>Thông tin khác</Text>
           <Feather color="#8C847B" name="chevron-right" size={18} />
         </AnimatedPressable>
-      </Animated.View>
+      </Animated.ScrollView>
 
       {expanded ? (
         <View accessibilityViewIsModal style={StyleSheet.absoluteFill}>
@@ -325,6 +329,11 @@ function Photo({
       <View style={styles.photoTimestamp}>
         <Text style={styles.photoTimestampText}>{timestamp}</Text>
       </View>
+      <View style={styles.photoCaption}>
+        <Text numberOfLines={2} style={styles.photoCaptionText}>
+          {expense.caption || expense.merchant || 'Một khoảnh khắc trong ngày'}
+        </Text>
+      </View>
     </View>
   )
 }
@@ -409,24 +418,6 @@ const styles = StyleSheet.create({
   },
   back: { alignItems: 'center', flexDirection: 'row', height: 40, width: 112 },
   backGlyph: { color: colors.link, fontFamily: fonts.regular, fontSize: 22, marginRight: 5 },
-  captionCard: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    height: 92,
-    marginHorizontal: 16,
-    marginTop: 16,
-    position: 'relative',
-  },
-  captionValue: {
-    color: colors.text,
-    fontFamily: fonts.semibold,
-    fontSize: 17,
-    left: 18,
-    lineHeight: 22,
-    position: 'absolute',
-    right: 18,
-    top: 40,
-  },
   categoryChip: {
     alignItems: 'center',
     backgroundColor: colors.sage,
@@ -518,22 +509,34 @@ const styles = StyleSheet.create({
   navTitle: { color: colors.text, fontFamily: fonts.semibold, fontSize: 17 },
   photo: {
     borderRadius: 30,
-    height: 280,
+    aspectRatio: expensePhotoAspectRatio,
     marginHorizontal: 16,
     marginTop: 16,
     overflow: 'hidden',
     position: 'relative',
   },
   photoImage: { alignItems: 'center', height: '100%', justifyContent: 'center', width: '100%' },
+  photoCaption: {
+    backgroundColor: 'rgba(31,27,24,0.82)',
+    borderRadius: 18,
+    bottom: 14,
+    left: 14,
+    maxWidth: '82%',
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    position: 'absolute',
+  },
+  photoCaptionText: { color: 'white', fontFamily: fonts.medium, fontSize: 14 },
   photoTimestamp: {
     backgroundColor: colors.card,
     borderRadius: 14,
-    bottom: 14,
     height: 28,
     justifyContent: 'center',
     left: 14,
     paddingHorizontal: 12,
     position: 'absolute',
+    top: 14,
   },
   photoTimestampText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 13 },
   placeholder: { color: '#A89E93' },
@@ -551,6 +554,7 @@ const styles = StyleSheet.create({
   },
   saveText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 17 },
   screen: { flex: 1 },
+  screenContent: { paddingBottom: 32 },
   scrim: {
     backgroundColor: colors.camera,
     bottom: 0,
