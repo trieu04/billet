@@ -2,13 +2,13 @@ import { Feather } from '@expo/vector-icons'
 import { CameraView, type CameraType, type FlashMode, useCameraPermissions } from 'expo-camera'
 import * as ImagePicker from 'expo-image-picker'
 import { LinearGradient } from 'expo-linear-gradient'
-import { router } from 'expo-router'
+import { router, useFocusEffect, useIsFocused } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
-  Animated,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -16,84 +16,88 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { AnimatedPressable, useReducedMotion } from '@/features/ui/motion'
+import { AnimatedPressable } from '@/features/ui/motion'
+import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
 
-const useNativeDriver = Platform.OS !== 'web'
-
 export function QuickCaptureScreen() {
+  const focused = useIsFocused()
   const cameraRef = useRef<CameraView>(null)
   const [permission, requestPermission] = useCameraPermissions()
   const [facing, setFacing] = useState<CameraType>('back')
   const [flash, setFlash] = useState<FlashMode>('off')
   const [isCameraReady, setIsCameraReady] = useState(false)
   const [isCapturing, setIsCapturing] = useState(false)
-  const reducedMotion = useReducedMotion()
-  const [focusPulse] = useState(() => new Animated.Value(1))
-
-  useEffect(() => {
-    if (reducedMotion) {
-      focusPulse.setValue(1)
-      return
-    }
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(focusPulse, { toValue: 0.56, duration: 900, useNativeDriver }),
-        Animated.timing(focusPulse, { toValue: 1, duration: 900, useNativeDriver }),
-      ]),
-    )
-    animation.start()
-    return () => animation.stop()
-  }, [focusPulse, reducedMotion])
+  const [cameraError, setCameraError] = useState(false)
+  const captureLock = useRef(false)
+  const active = useRef(true)
+  useFocusEffect(
+    useCallback(() => {
+      active.current = true
+      return () => {
+        active.current = false
+        setIsCameraReady(false)
+      }
+    }, []),
+  )
 
   const openReview = (imageUri: string) => {
-    router.push({ pathname: '/review', params: { imageUri } })
+    router.push({ pathname: '/review', params: { imageUri, capturedAt: new Date().toISOString() } })
   }
 
   const takePicture = async () => {
-    if (!cameraRef.current || !isCameraReady || isCapturing) return
+    if (!cameraRef.current || !isCameraReady || captureLock.current) return
 
     try {
+      captureLock.current = true
       setIsCapturing(true)
       const picture = await cameraRef.current.takePictureAsync({ quality: 0.85 })
-      if (picture?.uri) openReview(picture.uri)
+      if (!picture?.uri) throw new Error('Camera did not return a photo')
+      if (active.current) openReview(picture.uri)
     } catch {
       Alert.alert('Không thể chụp ảnh', 'Hãy thử lại hoặc chọn ảnh từ thư viện.')
     } finally {
       setIsCapturing(false)
+      captureLock.current = false
     }
   }
 
   const pickImage = async () => {
-    const mediaPermission = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!mediaPermission.granted) {
-      Alert.alert('Cần quyền truy cập ảnh', 'Cho phép Billet truy cập thư viện để chọn hóa đơn.')
-      return
+    if (captureLock.current) return
+    captureLock.current = true
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: false,
+        mediaTypes: ['images'],
+        quality: 0.85,
+      })
+      if (active.current && !result.canceled && result.assets[0]?.uri)
+        openReview(result.assets[0].uri)
+    } catch {
+      Alert.alert('Không thể mở thư viện', 'Hãy thử lại hoặc chụp ảnh mới.')
+    } finally {
+      captureLock.current = false
     }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      mediaTypes: ['images'],
-      quality: 0.85,
-    })
-    if (!result.canceled && result.assets[0]?.uri) openReview(result.assets[0].uri)
   }
 
   return (
-    <SafeAreaView edges={[]} style={styles.safe}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
       <StatusBar style="light" />
       <View style={styles.header}>
         <AnimatedPressable
           accessibilityLabel="Đóng"
-          onPress={() => router.back()}
+          accessibilityRole="button"
+          disabled={isCapturing}
+          onPress={() => router.dismissTo('/')}
           pressedScale={0.9}
           style={styles.circle}
         >
           <Feather color="white" name="x" size={22} />
         </AnimatedPressable>
-        <Text style={styles.title}>Chụp hóa đơn</Text>
+        <Text style={styles.title}>Thêm chi tiêu</Text>
         <AnimatedPressable
           accessibilityLabel={flash === 'off' ? 'Bật đèn flash' : 'Tắt đèn flash'}
+          accessibilityRole="button"
           accessibilityState={{ selected: flash === 'on' }}
           onPress={() => setFlash((current) => (current === 'off' ? 'on' : 'off'))}
           style={[styles.circle, flash === 'on' && styles.activeCircle]}
@@ -102,25 +106,42 @@ export function QuickCaptureScreen() {
         </AnimatedPressable>
       </View>
       <View style={styles.viewfinder}>
-        {permission?.granted ? (
+        {permission?.granted && focused && !cameraError ? (
           <CameraView
             facing={facing}
             flash={flash}
             mode="picture"
+            ratio="4:3"
             onCameraReady={() => setIsCameraReady(true)}
-            onMountError={() => setIsCameraReady(false)}
+            onMountError={() => {
+              setIsCameraReady(false)
+              setCameraError(true)
+            }}
             ref={cameraRef}
             style={StyleSheet.absoluteFill}
           />
         ) : (
-          <PermissionPrompt loading={!permission} onRequest={requestPermission} />
+          <PermissionPrompt
+            loading={!permission}
+            unavailable={cameraError}
+            canAskAgain={permission?.canAskAgain ?? true}
+            onRequest={() => {
+              if (cameraError) {
+                setCameraError(false)
+                return
+              }
+              if (permission?.canAskAgain === false && Platform.OS !== 'web')
+                void Linking.openSettings()
+              else void requestPermission()
+            }}
+          />
         )}
-        <Corner opacity={focusPulse} position="tl" />
-        <Corner opacity={focusPulse} position="tr" />
-        <Corner opacity={focusPulse} position="bl" />
-        <Corner opacity={focusPulse} position="br" />
+        <Corner position="tl" />
+        <Corner position="tr" />
+        <Corner position="bl" />
+        <Corner position="br" />
       </View>
-      <Text style={styles.hint}>Đặt hóa đơn vào khung · gợi ý hiện sau khi chụp</Text>
+      <Text style={styles.hint}>Chụp hóa đơn hoặc khoảnh khắc chi tiêu</Text>
       <AnimatedPressable
         accessibilityRole="button"
         onPress={() => router.push('/review')}
@@ -132,6 +153,8 @@ export function QuickCaptureScreen() {
       <View style={styles.controls}>
         <AnimatedPressable
           accessibilityLabel="Chọn ảnh từ thư viện"
+          accessibilityRole="button"
+          disabled={isCapturing}
           onPress={pickImage}
           style={styles.photoPicker}
         >
@@ -143,6 +166,7 @@ export function QuickCaptureScreen() {
         </AnimatedPressable>
         <AnimatedPressable
           accessibilityLabel="Chụp ảnh"
+          accessibilityRole="button"
           accessibilityState={{ disabled: !isCameraReady || isCapturing }}
           disabled={!isCameraReady || isCapturing}
           onPress={takePicture}
@@ -156,6 +180,8 @@ export function QuickCaptureScreen() {
         </AnimatedPressable>
         <AnimatedPressable
           accessibilityLabel="Đổi camera"
+          accessibilityRole="button"
+          disabled={isCapturing}
           onPress={() => {
             setIsCameraReady(false)
             setFacing((current) => (current === 'back' ? 'front' : 'back'))
@@ -169,31 +195,48 @@ export function QuickCaptureScreen() {
   )
 }
 
-function PermissionPrompt({ loading, onRequest }: { loading: boolean; onRequest: () => void }) {
+function PermissionPrompt({
+  loading,
+  unavailable,
+  canAskAgain,
+  onRequest,
+}: {
+  loading: boolean
+  unavailable: boolean
+  canAskAgain: boolean
+  onRequest: () => void
+}) {
   if (loading) return <ActivityIndicator color="white" size="large" />
 
   return (
     <View style={styles.permissionPrompt}>
       <Feather color={colors.peach} name="camera" size={34} />
-      <Text style={styles.permissionText}>Cho phép camera để chụp hóa đơn</Text>
+      <Text style={styles.permissionText}>
+        {unavailable
+          ? 'Camera chưa khả dụng. Bạn có thể chọn ảnh từ thư viện hoặc nhập tay.'
+          : canAskAgain
+            ? 'Cho phép camera để chụp khoản chi'
+            : 'Quyền camera đang tắt. Bật trong Cài đặt hoặc chọn ảnh từ thư viện.'}
+      </Text>
       <Pressable accessibilityRole="button" onPress={onRequest} style={styles.permissionButton}>
-        <Text style={styles.permissionButtonText}>Cho phép camera</Text>
+        <Text style={styles.permissionButtonText}>
+          {unavailable
+            ? 'Thử lại camera'
+            : canAskAgain
+              ? 'Cho phép camera'
+              : Platform.OS === 'web'
+                ? 'Thử lại'
+                : 'Mở Cài đặt'}
+        </Text>
       </Pressable>
     </View>
   )
 }
-function Corner({
-  opacity,
-  position,
-}: {
-  opacity: Animated.Value
-  position: 'tl' | 'tr' | 'bl' | 'br'
-}) {
+function Corner({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) {
   return (
-    <Animated.View
+    <View
       style={[
         styles.corner,
-        { opacity },
         position.includes('t') ? styles.top : styles.bottom,
         position.includes('l') ? styles.left : styles.right,
         position.includes('t')
@@ -215,19 +258,18 @@ const styles = StyleSheet.create({
   circle: {
     alignItems: 'center',
     backgroundColor: '#484440',
-    borderRadius: 20,
-    height: 40,
+    borderRadius: 24,
+    height: 44,
     justifyContent: 'center',
-    width: 40,
+    width: 44,
   },
   controls: {
     alignItems: 'center',
-    bottom: 36,
+    marginTop: 'auto',
+    marginBottom: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    left: 35,
-    position: 'absolute',
-    right: 35,
+    marginHorizontal: 35,
   },
   corner: { borderColor: colors.peach, height: 34, position: 'absolute', width: 34 },
   disabled: { opacity: 0.5 },
@@ -244,7 +286,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginHorizontal: 20,
-    marginTop: 58,
+    marginTop: 12,
   },
   hint: {
     color: 'rgba(255,255,255,0.75)',
@@ -270,6 +312,7 @@ const styles = StyleSheet.create({
   permissionButton: {
     backgroundColor: colors.peach,
     borderRadius: 20,
+    minHeight: 44,
     paddingHorizontal: 18,
     paddingVertical: 11,
   },
@@ -306,10 +349,10 @@ const styles = StyleSheet.create({
   viewfinder: {
     alignItems: 'center',
     borderRadius: 30,
-    height: 400,
+    aspectRatio: expensePhotoAspectRatio,
     justifyContent: 'center',
     marginHorizontal: 28,
-    marginTop: 24,
+    marginTop: 20,
     overflow: 'hidden',
   },
 })

@@ -1,59 +1,137 @@
 import { Feather } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
-import { type Href, router, useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
+import { usePreventRemove } from 'expo-router/react-navigation'
 import { StatusBar } from 'expo-status-bar'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
-  Animated,
   Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { apiRequest } from '@/features/api/client'
-import { formatMoney } from '@/features/api/format'
 import type { Category, Expense, MediaReservation } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
-import { Receipt } from '@/features/expense/components/receipt'
-import { AnimatedPressable, useEntranceAnimation } from '@/features/ui/motion'
+import { useCaptureFlow } from '../capture-flow'
+import { parseCaptureAmount, type PhotoBounds } from '../capture-model'
+import { AnimatedPressable } from '@/features/ui/motion'
+import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
 
-const defaultTimestamp = formatTimestamp(new Date())
-
 export function CaptureReviewScreen() {
-  const { imageUri } = useLocalSearchParams<{ imageUri?: string }>()
+  const { imageUri, capturedAt } = useLocalSearchParams<{
+    imageUri?: string
+    capturedAt?: string
+  }>()
   const { token } = useSession()
+  const { saveCapture } = useCaptureFlow()
+  const insets = useSafeAreaInsets()
   const loadCategories = useCallback(
     (accessToken: string) => apiRequest<Category[]>('/categories', { token: accessToken }),
     [],
   )
-  const { data: categories } = useApiResource(loadCategories)
+  const { data: categories, error: categoryError, refresh } = useApiResource(loadCategories)
   const [caption, setCaption] = useState('')
-  const [amount, setAmount] = useState('58000')
-  const [editingAmount, setEditingAmount] = useState(false)
+  const [captionEditing, setCaptionEditing] = useState(false)
+  const [amount, setAmount] = useState('')
+  const [categoryId, setCategoryId] = useState<string>()
   const [saving, setSaving] = useState(false)
-  const photoEntrance = useEntranceAnimation(30, 8)
-  const formEntrance = useEntranceAnimation(100, 12)
+  const [leaving, setLeaving] = useState(false)
+  const [exitTo, setExitTo] = useState<'camera' | 'journal'>('journal')
+  const [error, setError] = useState<string | null>(null)
+  const [saveStage, setSaveStage] = useState('Đang lưu…')
+  const locked = useRef(false)
+  const captionRef = useRef<TextInput>(null)
+  const photoRef = useRef<View>(null)
+  const reviewScrollRef = useRef<ScrollView>(null)
+  const uploadedMedia = useRef<string | undefined>(undefined)
+  const attempt = useRef<{ fingerprint: string; key: string } | null>(null)
+  const [occurredAt] = useState(() =>
+    capturedAt && Number.isFinite(Date.parse(capturedAt)) ? capturedAt : new Date().toISOString(),
+  )
+  const selectedCategory = categoryId ?? categories?.[0]?.id
+  const dirty = Boolean(imageUri || amount || caption || categoryId)
 
-  const save = async () => {
-    if (!token) return
-    const amountMinor = amount.replace(/\D/g, '')
-    if (!amountMinor || amountMinor === '0') {
-      Alert.alert('Số tiền chưa hợp lệ', 'Nhập số tiền lớn hơn 0.')
+  useEffect(() => {
+    if (!captionEditing) return
+    const frame = requestAnimationFrame(() => captionRef.current?.focus())
+    return () => cancelAnimationFrame(frame)
+  }, [captionEditing])
+
+  const confirmDiscard = (onDiscard: () => void) => {
+    if (Platform.OS === 'web') {
+      if (globalThis.confirm('Bỏ khoản chi đang chỉnh sửa? Ảnh và nội dung chưa lưu sẽ bị bỏ.'))
+        onDiscard()
       return
     }
+    Alert.alert('Bỏ khoản chi này?', 'Ảnh và nội dung chưa lưu sẽ bị bỏ.', [
+      { text: 'Tiếp tục sửa', style: 'cancel' },
+      { text: 'Bỏ khoản chi', style: 'destructive', onPress: onDiscard },
+    ])
+  }
 
+  usePreventRemove(!leaving && (dirty || saving), () => {
+    if (!locked.current) {
+      setExitTo('camera')
+      confirmDiscard(() => setLeaving(true))
+    }
+  })
+
+  // Removal is retried only after the guard has rendered with leaving=true.
+  const finishLeaving = useCallback(() => {
+    if (!leaving) return
+    if (exitTo === 'camera') {
+      router.dismissTo('/capture')
+    } else router.dismissTo('/')
+  }, [exitTo, leaving])
+
+  useEffect(finishLeaving, [finishLeaving])
+
+  const leave = (destination: 'camera' | 'journal') => {
+    if (locked.current) return
+    setExitTo(destination)
+    if (dirty) confirmDiscard(() => setLeaving(true))
+    else setLeaving(true)
+  }
+
+  const save = async () => {
+    if (!token || locked.current) return
+    const amountMinor = parseCaptureAmount(amount)
+    if (!amountMinor) {
+      setError('Nhập số tiền lớn hơn 0, chỉ gồm các chữ số.')
+      return
+    }
+    Keyboard.dismiss()
+    locked.current = true
     setSaving(true)
+    setError(null)
+    const fingerprint = JSON.stringify({
+      amountMinor,
+      caption: caption.trim(),
+      selectedCategory,
+      occurredAt,
+      imageUri,
+    })
+    if (attempt.current?.fingerprint !== fingerprint)
+      attempt.current = {
+        fingerprint,
+        key: `mobile-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+      }
     try {
-      let mediaAssetId: string | undefined
-      if (imageUri) {
+      if (imageUri && !uploadedMedia.current) {
+        setSaveStage('Đang tải ảnh…')
         const image = await fetch(imageUri)
+        if (!image.ok) throw new Error('Không đọc được ảnh. Hãy chọn hoặc chụp lại.')
         const blob = await image.blob()
         const mimeType = blob.type || 'image/jpeg'
         const media = await apiRequest<MediaReservation>('/media', {
@@ -67,269 +145,364 @@ export function CaptureReviewScreen() {
           headers: { 'Content-Type': mimeType },
           body: blob,
         })
-        mediaAssetId = media.id
+        uploadedMedia.current = media.id
       }
-
+      setSaveStage('Đang lưu chi tiêu…')
       const expense = await apiRequest<Expense>('/expenses', {
         method: 'POST',
         token,
         body: {
           amountMinor,
           currency: 'VND',
-          occurredAt: new Date().toISOString(),
+          occurredAt,
           occurredTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Ho_Chi_Minh',
-          categoryId: categories?.[0]?.id,
-          mediaAssetId,
+          categoryId: selectedCategory,
+          mediaAssetId: uploadedMedia.current,
           caption: caption.trim() || undefined,
-          idempotencyKey: `mobile-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+          idempotencyKey: attempt.current.key,
         },
       })
-      router.replace({ pathname: '/expense', params: { id: expense.id } } as Href)
+      const source = await new Promise<PhotoBounds | undefined>((resolve) => {
+        if (!photoRef.current || !imageUri) {
+          resolve(undefined)
+          return
+        }
+        photoRef.current.measureInWindow((x, y, width, height) =>
+          resolve(width > 0 ? { x, y, width, height } : undefined),
+        )
+      })
+      saveCapture({ expense, imageUri }, source)
+      setExitTo('journal')
+      setLeaving(true)
     } catch (reason) {
-      Alert.alert(
-        'Không thể lưu khoản chi',
-        reason instanceof Error ? reason.message : 'Hãy thử lại.',
-      )
-    } finally {
+      setError(reason instanceof Error ? reason.message : 'Không thể lưu. Hãy thử lại.')
+      locked.current = false
       setSaving(false)
     }
   }
 
   return (
-    <SafeAreaView edges={[]} style={styles.safe}>
-      <StatusBar style="light" />
+    <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
+      <StatusBar style="dark" />
       <View style={styles.header}>
         <AnimatedPressable
-          accessibilityLabel="Đóng"
-          onPress={() => router.back()}
-          pressedScale={0.9}
-          style={styles.close}
+          accessibilityLabel="Hủy chỉnh sửa"
+          accessibilityRole="button"
+          disabled={saving}
+          onPress={() => leave('journal')}
+          style={styles.iconButton}
         >
-          <Feather color="white" name="x" size={22} />
+          <Feather color={colors.text} name="x" size={22} />
         </AnimatedPressable>
-        <Text style={styles.title}>Sau khi chụp</Text>
+        <Text style={styles.title}>Chỉnh sửa chi tiêu</Text>
         <AnimatedPressable
           accessibilityRole="button"
-          onPress={() => router.replace('/capture')}
-          pressedScale={0.94}
-          style={styles.retakeButton}
+          disabled={saving}
+          onPress={() => leave('camera')}
+          style={styles.retake}
         >
-          <Text style={styles.retake}>Chụp lại</Text>
+          <Text style={styles.retakeText}>{imageUri ? 'Chụp lại' : 'Chụp ảnh'}</Text>
         </AnimatedPressable>
       </View>
-
-      <Animated.View style={[styles.photo, photoEntrance]}>
-        {imageUri ? (
-          <Image
-            accessibilityLabel="Ảnh hóa đơn vừa chụp"
-            source={{ uri: imageUri }}
-            style={styles.image}
-          />
-        ) : (
-          <LinearGradient
-            colors={[colors.sage, colors.butter]}
-            end={{ x: 1, y: 1 }}
-            style={styles.photoFallback}
-          >
-            <Receipt height={202} rotation="3deg" width={140} />
-          </LinearGradient>
-        )}
-        <View style={styles.timestamp}>
-          <Text style={styles.timestampText}>{defaultTimestamp}</Text>
-        </View>
-      </Animated.View>
-
-      <Animated.View style={formEntrance}>
-        <View style={styles.captionCard}>
-          <Text style={styles.fieldTitle}>Hôm nay có gì đáng nhớ?</Text>
-          <TextInput
-            accessibilityLabel="Caption"
-            multiline
-            onChangeText={setCaption}
-            placeholder="Thêm caption…"
-            placeholderTextColor="#A89E93"
-            style={styles.captionInput}
-            value={caption}
-          />
-        </View>
-
-        <AnimatedPressable
-          accessibilityHint="Mở bàn phím để sửa số tiền"
-          accessibilityRole="button"
-          onPress={() => setEditingAmount(true)}
-          style={styles.amountCard}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.body}
+      >
+        <ScrollView
+          ref={reviewScrollRef}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.amountHeader}>
-            <Text style={styles.amountLabel}>Số tiền</Text>
-            <Text style={styles.editHint}>Chạm để sửa</Text>
-          </View>
-          {editingAmount ? (
-            <View style={styles.amountEditor}>
+          {imageUri ? (
+            <View ref={photoRef} collapsable={false} style={styles.photo}>
+              <Image
+                accessibilityLabel="Ảnh vừa chụp"
+                resizeMode="cover"
+                source={{ uri: imageUri }}
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={styles.photoTimestamp}>
+                <Text style={styles.photoTimestampText}>
+                  Hôm nay ·{' '}
+                  {new Date(occurredAt).toLocaleTimeString('vi-VN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              </View>
+              {captionEditing ? (
+                <View style={styles.captionEditor}>
+                  <TextInput
+                    ref={captionRef}
+                    accessibilityLabel="Ghi chú khoản chi"
+                    editable={!saving}
+                    maxLength={120}
+                    multiline
+                    onChangeText={setCaption}
+                    placeholder="Hôm nay có gì đáng nhớ?"
+                    placeholderTextColor="rgba(255,255,255,0.68)"
+                    style={styles.captionInput}
+                    value={caption}
+                  />
+                  <AnimatedPressable
+                    accessibilityLabel="Xong ghi chú"
+                    accessibilityRole="button"
+                    onPress={() => {
+                      setCaptionEditing(false)
+                      Keyboard.dismiss()
+                      requestAnimationFrame(() =>
+                        reviewScrollRef.current?.scrollTo({ y: 0, animated: true }),
+                      )
+                    }}
+                    style={styles.captionDone}
+                  >
+                    <Feather color="white" name="check" size={18} />
+                  </AnimatedPressable>
+                </View>
+              ) : (
+                <AnimatedPressable
+                  accessibilityLabel={caption ? `Sửa ghi chú: ${caption}` : 'Thêm ghi chú vào ảnh'}
+                  accessibilityRole="button"
+                  disabled={saving}
+                  onPress={() => setCaptionEditing(true)}
+                  style={styles.captionBadge}
+                >
+                  <Feather color="white" name="edit-2" size={15} />
+                  <Text numberOfLines={2} style={styles.captionBadgeText}>
+                    {caption || 'Thêm ghi chú'}
+                  </Text>
+                </AnimatedPressable>
+              )}
+            </View>
+          ) : null}
+          <View style={styles.card}>
+            <Text style={styles.label}>SỐ TIỀN</Text>
+            <View style={styles.amountRow}>
               <TextInput
-                accessibilityLabel="Số tiền"
-                autoFocus
+                accessibilityLabel="Số tiền chi tiêu"
+                editable={!saving}
                 keyboardType="number-pad"
-                onBlur={() => setEditingAmount(false)}
-                onChangeText={setAmount}
-                onSubmitEditing={() => setEditingAmount(false)}
-                selectTextOnFocus
+                maxLength={15}
+                onChangeText={(value) => {
+                  setAmount(value)
+                  setError(null)
+                }}
+                placeholder="0"
+                placeholderTextColor={colors.textSecondary}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
                 style={styles.amountInput}
                 value={amount}
               />
               <Text style={styles.currency}>₫</Text>
             </View>
-          ) : (
-            <Text style={styles.amount}>{formatMoney(amount || '0', 'VND')}</Text>
-          )}
-        </AnimatedPressable>
-
-        <AnimatedPressable
-          accessibilityRole="button"
-          disabled={saving}
-          onPress={() => void save()}
-          pressedScale={0.98}
-          style={styles.primary}
-        >
-          {saving ? (
-            <ActivityIndicator color="#3A1D0E" />
-          ) : (
-            <Text style={styles.primaryText}>Lưu vào Journal</Text>
-          )}
-        </AnimatedPressable>
-      </Animated.View>
+            <Text style={styles.helper}>Nhập số tiền của khoảnh khắc này</Text>
+          </View>
+          <View style={styles.categories}>
+            <Text style={styles.label}>DANH MỤC</Text>
+            <View style={styles.chips}>
+              {categories?.map((category) => (
+                <AnimatedPressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectedCategory === category.id }}
+                  disabled={saving}
+                  key={category.id}
+                  onPress={() => setCategoryId(category.id)}
+                  style={[styles.chip, selectedCategory === category.id && styles.selectedChip]}
+                >
+                  <Text style={styles.chipText}>{category.name}</Text>
+                  {selectedCategory === category.id ? (
+                    <Feather name="check" size={14} color={colors.link} />
+                  ) : null}
+                </AnimatedPressable>
+              ))}
+            </View>
+            {categoryError ? (
+              <AnimatedPressable accessibilityRole="button" onPress={() => void refresh()}>
+                <Text style={styles.helper}>Chưa tải được danh mục · Thử lại</Text>
+              </AnimatedPressable>
+            ) : null}
+          </View>
+        </ScrollView>
+        <View style={[styles.footer, { paddingBottom: Math.max(12, 16 - insets.bottom) }]}>
+          {error ? (
+            <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>
+              {error}
+            </Text>
+          ) : null}
+          <AnimatedPressable
+            accessibilityLabel={saving ? saveStage : 'Lưu chi tiêu'}
+            accessibilityRole="button"
+            accessibilityState={{ busy: saving, disabled: saving }}
+            disabled={saving}
+            onPress={() => void save()}
+            style={styles.primary}
+          >
+            {saving ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <Feather name="check" color={colors.text} size={20} />
+            )}
+            <Text style={styles.primaryText}>{saving ? saveStage : 'Lưu chi tiêu'}</Text>
+          </AnimatedPressable>
+          <Text style={styles.footerHint}>Lưu khoảnh khắc vào dòng thời gian của bạn</Text>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
 
-function formatTimestamp(value: Date) {
-  return `Hôm nay · ${value.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
-}
-
 const styles = StyleSheet.create({
-  amount: {
-    color: colors.text,
-    fontFamily: fonts.amount,
-    fontSize: 30,
-    left: 18,
-    letterSpacing: -0.5,
-    position: 'absolute',
-    top: 35,
+  safe: { flex: 1, backgroundColor: colors.canvas },
+  body: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  amountCard: {
+  iconButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 24,
     backgroundColor: colors.card,
-    borderRadius: 20,
-    height: 88,
-    marginHorizontal: 16,
-    marginTop: 12,
+  },
+  title: { color: colors.text, fontFamily: fonts.semibold, fontSize: 16 },
+  retake: { minHeight: 44, justifyContent: 'center', paddingLeft: 8 },
+  retakeText: { color: colors.link, fontFamily: fonts.semibold, fontSize: 14 },
+  content: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
+  photo: {
+    aspectRatio: expensePhotoAspectRatio,
+    width: '100%',
+    borderRadius: 24,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
-  amountEditor: {
-    alignItems: 'baseline',
-    flexDirection: 'row',
-    left: 18,
+  photoTimestamp: {
+    backgroundColor: 'rgba(255,253,249,0.9)',
+    borderCurve: 'continuous',
+    borderRadius: 14,
+    left: 14,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     position: 'absolute',
-    top: 31,
-  },
-  amountHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    left: 18,
-    position: 'absolute',
-    right: 18,
     top: 14,
   },
+  photoTimestampText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 12 },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    borderCurve: 'continuous',
+    padding: 20,
+    gap: 8,
+  },
+  captionBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(31,27,24,0.82)',
+    borderCurve: 'continuous',
+    borderRadius: 18,
+    bottom: 14,
+    flexDirection: 'row',
+    gap: 8,
+    left: 14,
+    maxWidth: '82%',
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    position: 'absolute',
+  },
+  captionBadgeText: {
+    color: 'white',
+    flexShrink: 1,
+    fontFamily: fonts.medium,
+    fontSize: 14,
+  },
+  captionDone: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  captionEditor: {
+    alignItems: 'flex-end',
+    backgroundColor: 'rgba(31,27,24,0.9)',
+    borderCurve: 'continuous',
+    borderRadius: 20,
+    bottom: 12,
+    flexDirection: 'row',
+    gap: 8,
+    left: 12,
+    padding: 8,
+    position: 'absolute',
+    right: 12,
+  },
+  label: {
+    color: colors.textSecondary,
+    fontFamily: fonts.semibold,
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+  amountRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   amountInput: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 52,
+    padding: 0,
     color: colors.text,
     fontFamily: fonts.amount,
-    fontSize: 30,
-    letterSpacing: -0.5,
-    minWidth: 100,
-    padding: 0,
+    fontSize: 36,
+    fontVariant: ['tabular-nums'],
   },
-  amountLabel: { color: colors.textSecondary, fontFamily: fonts.medium, fontSize: 12 },
-  captionCard: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    height: 92,
-    marginHorizontal: 16,
-    marginTop: 39,
-    overflow: 'hidden',
-  },
+  currency: { color: colors.textSecondary, fontFamily: fonts.amount, fontSize: 28 },
+  helper: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12 },
   captionInput: {
-    bottom: 4,
-    color: colors.text,
+    color: 'white',
+    flex: 1,
     fontFamily: fonts.regular,
     fontSize: 14,
-    left: 18,
-    padding: 0,
-    position: 'absolute',
-    right: 18,
-    top: 44,
+    lineHeight: 19,
+    maxHeight: 76,
+    minHeight: 44,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    textAlignVertical: 'top',
   },
-  close: {
-    alignItems: 'center',
-    backgroundColor: '#A89E93',
-    borderRadius: 20,
-    height: 40,
-    justifyContent: 'center',
-    opacity: 0.9,
-    width: 40,
-  },
-  currency: { color: colors.text, fontFamily: fonts.amount, fontSize: 28 },
-  editHint: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12 },
-  fieldTitle: {
-    color: colors.text,
-    fontFamily: fonts.semibold,
-    fontSize: 16,
-    left: 18,
-    position: 'absolute',
-    top: 16,
-  },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    height: 40,
-    justifyContent: 'space-between',
-    marginHorizontal: 20,
-    marginTop: 54,
-  },
-  image: { height: '100%', width: '100%' },
-  photo: {
-    height: 269,
-    marginLeft: 16,
-    marginTop: 18,
-    overflow: 'visible',
-    width: 344,
-  },
-  photoFallback: {
-    alignItems: 'center',
-    height: '100%',
-    justifyContent: 'center',
-    width: '100%',
-  },
-  primary: {
-    alignItems: 'center',
-    backgroundColor: colors.peach,
-    borderRadius: 29,
-    height: 58,
-    justifyContent: 'center',
-    marginHorizontal: 16,
-    marginTop: 70,
-  },
-  primaryText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 17 },
-  retake: { color: 'white', fontFamily: fonts.medium, fontSize: 14, textAlign: 'right' },
-  retakeButton: { alignItems: 'flex-end', justifyContent: 'center', width: 70 },
-  safe: { backgroundColor: colors.camera, flex: 1 },
-  timestamp: {
+  categories: { padding: 4, gap: 12 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    minHeight: 44,
+    paddingHorizontal: 16,
+    borderRadius: 24,
     backgroundColor: colors.card,
-    borderRadius: 14,
-    bottom: -12,
-    height: 28,
-    justifyContent: 'center',
-    left: 14,
-    paddingHorizontal: 10,
-    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  timestampText: { color: colors.text, fontFamily: fonts.medium, fontSize: 12 },
-  title: { color: 'white', fontFamily: fonts.semibold, fontSize: 16 },
+  selectedChip: { backgroundColor: colors.peachSoft },
+  chipText: { color: colors.text, fontFamily: fonts.medium, fontSize: 13 },
+  error: { color: '#B3433C', fontFamily: fonts.medium, fontSize: 14, padding: 8 },
+  footer: { paddingHorizontal: 16, paddingTop: 12, gap: 8, backgroundColor: colors.canvas },
+  primary: {
+    minHeight: 56,
+    borderRadius: 28,
+    backgroundColor: colors.peach,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  primaryText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 16 },
+  footerHint: {
+    textAlign: 'center',
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 11,
+  },
 })
