@@ -15,6 +15,8 @@ import { Platform } from 'react-native'
 import { apiRequest } from '@/features/api/client'
 import type { AuthResponse, User } from '@/features/api/types'
 
+import { restoreSession } from './restore-session'
+
 const TOKEN_KEY = 'billet.access-token'
 
 type SessionContextValue = {
@@ -55,16 +57,9 @@ export function SessionProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     void (async () => {
-      const storedToken = await loadToken()
-      if (storedToken) {
-        try {
-          const currentUser = await apiRequest<User>('/auth/me', { token: storedToken })
-          setToken(storedToken)
-          setUser(currentUser)
-        } catch {
-          await saveToken(null)
-        }
-      }
+      const session = await restoreSession({ loadToken, saveToken })
+      setToken(session.token)
+      setUser(session.user)
       setReady(true)
     })()
   }, [])

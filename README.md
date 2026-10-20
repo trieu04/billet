@@ -148,6 +148,7 @@ The initial conventions follow the supplied VNPreventStroke reference projects w
 - The server uses Nest modules, global configuration, validation, CORS, and shutdown hooks.
 - The web app uses feature-first folders, centralized routes/providers, React Query, Tailwind CSS, and Vitest.
 - The mobile app uses file-based Expo Router routes and keeps reusable feature logic outside `app/`.
+- Mobile session restoration keeps the saved access token during network or server failures. Only a `401` response from session validation clears the token and requires login again; explicit logout also clears it.
 
 See [AGENTS.md](./AGENTS.md) for repository rules and completion checks.
 
