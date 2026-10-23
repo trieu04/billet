@@ -8,7 +8,19 @@
     "dev": "pnpm --parallel --stream -r dev",
     "dev:server": "pnpm --filter @billet/server dev",
     "dev:web": "pnpm --filter @billet/web dev",
-    "dev:expo": "pnpm --filter @billet/expo dev",
+    "dev:expo": "pnpm --dir apps/expo dev",
+    "android:build": "cd apps/android && ./gradlew lintDebug assembleDebug",
+    "android:test": "cd apps/android && ./gradlew testDebugUnitTest",
+    "ios:generate": "cd apps/ios && xcodegen generate",
+    "ios:open": "cd apps/ios && xcodegen generate && open Billet.xcodeproj",
+    "ios:build": "cd apps/ios && xcodegen generate && xcodebuild -project Billet.xcodeproj -scheme Billet -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO",
+    "ios:test": "cd apps/ios && xcodegen generate && xcodebuild -project Billet.xcodeproj -scheme Billet -destination 'platform=iOS Simulator,name=iPhone 17' test CODE_SIGNING_ALLOWED=NO",
+    "changeset": "changeset",
+    "release:check": "node scripts/sync-ios-version.mjs --check && node scripts/sync-android-version.mjs --check && changeset status",
+    "release:version": "changeset version && pnpm release:sync-native-versions",
+    "release:sync-native-versions": "pnpm release:sync-ios-version && pnpm release:sync-android-version",
+    "release:sync-android-version": "node scripts/sync-android-version.mjs",
+    "release:sync-ios-version": "node scripts/sync-ios-version.mjs",
     "build": "pnpm --workspace-concurrency=1 -r build",
     "lint": "pnpm --workspace-concurrency=1 -r lint",
     "typecheck": "pnpm --workspace-concurrency=1 -r typecheck",
@@ -17,6 +29,7 @@
     "format:check": "oxfmt --check ."
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
     "oxfmt": "^0.73.0"
   },
   "engines": {

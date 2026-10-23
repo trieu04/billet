@@ -1,5 +1,8 @@
 packages:
-  - apps/*
+  - apps/android
+  - apps/ios
+  - apps/server
+  - apps/web
 
 allowBuilds:
   '@parcel/watcher': true
@@ -10,8 +13,6 @@ allowBuilds:
   protobufjs: true
 
 minimumReleaseAgeExclude:
-  - '@oxfmt/binding-android-arm-eabi@0.73.0'
-  - '@oxfmt/binding-android-arm64@0.73.0'
   - '@oxfmt/binding-darwin-arm64@0.73.0'
   - '@oxfmt/binding-darwin-x64@0.73.0'
   - '@oxfmt/binding-freebsd-x64@0.73.0'
@@ -30,14 +31,3 @@ minimumReleaseAgeExclude:
   - '@oxfmt/binding-win32-ia32-msvc@0.73.0'
   - '@oxfmt/binding-win32-x64-msvc@0.73.0'
   - oxfmt@0.73.0
-  - '@expo/cli@57.0.30'
-  - '@expo/prebuild-config@57.0.19'
-  - expo-asset@57.0.20
-  - expo-constants@57.0.22
-  - expo-modules-autolinking@57.0.16
-  - expo-modules-core@57.0.23
-  - expo@57.0.29
-  - '@expo/metro-runtime@57.0.17'
-  - '@expo/ui@57.0.24'
-  - expo-linking@57.0.13
-  - expo-router@57.0.27
