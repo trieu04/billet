@@ -17,7 +17,7 @@ Billet is a visual expense journal: “Locket meets Money Tracker.” The produc
 - Keep the pnpm workspace simple. Do not introduce Turborepo.
 - Dependency direction flows from app composition to features to shared primitives. Features must not import other feature internals.
 - Add `packages/*` only for a stable contract or utility already required by at least two apps. Shared code must not depend on an app.
-- Allocate application-owned services from `6700–6709`: dedicated gateway container `6700`, API `6701`, web `6702`, and Expo/Metro `6703`. Keep each application service's internal, development, and published port aligned. Allocate external infrastructure such as PostgreSQL, Redis, and emulators from `6710–6719` (PostgreSQL starts at `6710`).
+- Allocate application-owned network services from `6700–6709`: dedicated gateway container `6700`, API `6701`, web `6702`, and legacy Expo/Metro `6703`. Keep each service's internal, development, and published port aligned. Native clients do not claim a local service port. Allocate external infrastructure such as PostgreSQL, Redis, and emulators from `6710–6719` (PostgreSQL starts at `6710`).
 - Define API contracts deliberately. Do not share database entities with clients.
 - Read configuration from environment variables, validate it near application startup, and never commit secrets. `VITE_*` and `EXPO_PUBLIC_*` values are public.
 
@@ -37,7 +37,7 @@ Billet is a visual expense journal: “Locket meets Money Tracker.” The produc
 - Project: [Billet](https://linear.app/devtvn/project/billet-9c0b5cc6e4c3) on the `DEV` team.
 - Use Linear issues only for medium and large tasks. Small, low-risk changes such as typo fixes, minor documentation edits, or narrowly scoped configuration tweaks do not require an issue.
 - For medium and large tasks, search existing project issues before work and use the closest matching issue; create a new issue only when no suitable issue exists, and avoid duplicates.
-- Label each issue by application scope: use `server` for `apps/server`, `web` for `apps/web`, and `mobile` for `apps/expo`. Apply every relevant label when work spans multiple apps.
+- Label each issue by application scope: use `server` for `apps/server`, `web` for `apps/web`, and `mobile` for `apps/android`, `apps/ios`, or the preserved legacy `apps/expo`. Apply every relevant label when work spans multiple apps.
 - When an issue is used, move active work to `In Progress` and keep its description or comments current when scope or blockers change.
 - Reference the issue identifier in branches, commits, or pull requests when those are requested.
 - After implementation and the completion checks below pass, move the issue to `In Review`. If the Linear workflow does not yet provide `In Review`, keep the issue in `In Progress`; do not move it directly to `Done`.
