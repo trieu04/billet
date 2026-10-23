@@ -37,7 +37,7 @@ Billet is a visual expense journal: “Locket meets Money Tracker.” The produc
 - Project: [Billet](https://linear.app/devtvn/project/billet-9c0b5cc6e4c3) on the `DEV` team.
 - Use Linear issues only for medium and large tasks. Small, low-risk changes such as typo fixes, minor documentation edits, or narrowly scoped configuration tweaks do not require an issue.
 - For medium and large tasks, search existing project issues before work and use the closest matching issue; create a new issue only when no suitable issue exists, and avoid duplicates.
-- Label each issue by application scope: use `server` for `apps/server`, `web` for `apps/web`, and `mobile` for `apps/mobile`. Apply every relevant label when work spans multiple apps.
+- Label each issue by application scope: use `server` for `apps/server`, `web` for `apps/web`, and `mobile` for `apps/expo`. Apply every relevant label when work spans multiple apps.
 - When an issue is used, move active work to `In Progress` and keep its description or comments current when scope or blockers change.
 - Reference the issue identifier in branches, commits, or pull requests when those are requested.
 - After implementation and the completion checks below pass, move the issue to `In Review`. If the Linear workflow does not yet provide `In Review`, keep the issue in `In Progress`; do not move it directly to `Done`.
