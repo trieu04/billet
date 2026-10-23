@@ -8,7 +8,7 @@
     "dev": "pnpm --parallel --stream -r dev",
     "dev:server": "pnpm --filter @billet/server dev",
     "dev:web": "pnpm --filter @billet/web dev",
-    "dev:mobile": "pnpm --filter @billet/mobile dev",
+    "dev:expo": "pnpm --filter @billet/expo dev",
     "build": "pnpm --workspace-concurrency=1 -r build",
     "lint": "pnpm --workspace-concurrency=1 -r lint",
     "typecheck": "pnpm --workspace-concurrency=1 -r typecheck",

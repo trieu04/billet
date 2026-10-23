@@ -18,7 +18,7 @@ corepack enable
 pnpm install
 cp apps/server/.env.example apps/server/.env
 cp apps/web/.env.example apps/web/.env
-cp apps/mobile/.env.example apps/mobile/.env
+cp apps/expo/.env.example apps/expo/.env
 pnpm dev
 ```
 
@@ -44,7 +44,7 @@ API run on different machines.
 | `pnpm dev`          | Run all apps in parallel        |
 | `pnpm dev:server`   | Run only the NestJS API         |
 | `pnpm dev:web`      | Run only the Vite web app       |
-| `pnpm dev:mobile`   | Run only Expo                   |
+| `pnpm dev:expo`     | Run only Expo                   |
 | `pnpm build`        | Build/export every app          |
 | `pnpm lint`         | Lint every app                  |
 | `pnpm typecheck`    | Type-check every app            |
@@ -57,7 +57,7 @@ Run an app command with pnpm filters, for example:
 ```sh
 pnpm --filter @billet/server test:e2e
 pnpm --filter @billet/web preview
-pnpm --filter @billet/mobile ios
+pnpm --filter @billet/expo ios
 ```
 
 ## Repository structure
@@ -66,7 +66,7 @@ pnpm --filter @billet/mobile ios
 apps/
   server/   NestJS API; domain code belongs in src/modules/<feature>
   web/      Vite + React; product code belongs in src/features/<feature>
-  mobile/   Expo Router; routes live in app and product code in features
+  expo/   Expo Router; routes live in app and product code in features
 .github/workflows/ci.yml
 docker-compose.yml
 pnpm-workspace.yaml
@@ -83,7 +83,7 @@ Expo/Metro server:
 cp .env.example .env
 cp apps/server/.env.example apps/server/.env
 cp apps/web/.env.example apps/web/.env
-cp apps/mobile/.env.example apps/mobile/.env
+cp apps/expo/.env.example apps/expo/.env
 docker compose up --build
 ```
 
@@ -97,7 +97,7 @@ Play Store releases should still be built with EAS or the native toolchains.
 
 Each application service reads its own `apps/<app>/.env` file. Before opening
 the Compose-hosted bundle on a physical device, configure
-`apps/mobile/.env` with the reachable gateway and packager host:
+`apps/expo/.env` with the reachable gateway and packager host:
 
 ```dotenv
 EXPO_PUBLIC_API_BASE_URL=http://192.168.1.10:6700/api/v1
@@ -107,7 +107,7 @@ EXPO_PACKAGER_HOSTNAME=192.168.1.10
 
 The phone and development machine must be on the same network.
 The mobile container uses `EXPO_TOKEN` to authenticate Expo CLI without an
-interactive login. Keep it in `apps/mobile/.env` on the deployment host; never
+interactive login. Keep it in `apps/expo/.env` on the deployment host; never
 prefix it with `EXPO_PUBLIC_` or commit it. Sign in to the same Expo account in
 Expo Go before opening the project link or scanning its QR code.
 PostgreSQL is exposed on local port `6710`; the server applies checked-in migrations when it starts.

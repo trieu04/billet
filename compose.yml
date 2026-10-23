@@ -6,7 +6,7 @@ services:
     depends_on:
       - server
       - web
-      - mobile
+      - expo
     ports:
       - '${PUBLISHED_GATEWAY_PORT:-}:6700'
     healthcheck:
@@ -65,12 +65,12 @@ services:
     ports:
       - '${PUBLISHED_WEB_PORT:-}:6702'
 
-  mobile:
+  expo:
     build:
       context: .
-      dockerfile: apps/mobile/Dockerfile
+      dockerfile: apps/expo/Dockerfile
     env_file:
-      - ./apps/mobile/.env
+      - ./apps/expo/.env
     environment:
       NODE_ENV: production
     depends_on:
