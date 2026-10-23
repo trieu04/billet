@@ -49,7 +49,7 @@ export function buildCalendar(
         future: new Date(year, monthNumber - 1, day) > today,
         month: monthNumber,
         photos: count
-          ? Array.from({ length: Math.min(3, count) }, (_, photo) => ({
+          ? Array.from({ length: Math.min(2, count) }, (_, photo) => ({
               gradient: calendarGradients[photo % calendarGradients.length],
               mediaAssetId: mediaAssetIds[photo] ?? null,
             }))

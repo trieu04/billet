@@ -22,8 +22,8 @@ import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
 import { JournalViewToggle } from '@/features/journal/components/journal-view-toggle'
 import { BottomTabBar } from '@/features/ui/bottom-tab-bar'
-import { AnimatedPressable } from '@/features/ui/motion'
 import { expenseThumbnailAspectRatio } from '@/features/ui/media'
+import { AnimatedPressable } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
 import {
   buildCalendar,
@@ -287,7 +287,7 @@ function PhotoStack({
   if (summary) {
     return (
       <View style={styles.summaryPhotos}>
-        {photos.slice(0, 3).map((photo, index) => {
+        {photos.slice(0, 2).map((photo, index) => {
           const style = [styles.summaryPhoto, { left: index * 12 }]
           return photo.mediaAssetId && token ? (
             <AuthenticatedImage
@@ -306,23 +306,22 @@ function PhotoStack({
     )
   }
 
-  const visiblePhotos = photos.slice(0, 3)
-  const stackSize = visiblePhotos.length
-  const width = stackSize === 1 ? 100 : stackSize === 2 ? 84 : 78
-  const offset = stackSize === 2 ? 16 : stackSize === 3 ? 11 : 0
-  const rotations = stackSize === 2 ? [-4, 4] : stackSize === 3 ? [-6, 5, -1] : [0]
-  const verticalOffsets = stackSize === 2 ? [16, 0] : stackSize === 3 ? [20, 0, 8] : [0]
+  const visiblePhotos = photos.slice(0, 2)
+  const isSinglePhoto = visiblePhotos.length === 1
   return (
-    <View style={styles.photoStack}>
+    <View
+      style={[
+        styles.photoStack,
+        isSinglePhoto ? styles.singlePhotoStack : styles.layeredPhotoStack,
+      ]}
+    >
       {visiblePhotos.map((photo, index) => {
         const style = [
           styles.calendarPhoto,
-          stackSize > 1 && styles.stackedPhoto,
+          isSinglePhoto ? styles.singleCalendarPhoto : styles.layeredCalendarPhoto,
+          index > 0 && styles.stackedPhoto,
           {
-            left: `${index * offset}%` as const,
-            top: `${verticalOffsets[index]}%` as const,
-            transform: [{ rotate: `${rotations[index]}deg` }],
-            width: `${width}%` as const,
+            left: index * 7,
             zIndex: index,
           },
         ]
@@ -357,7 +356,7 @@ function formatSelectedDate(date?: string) {
 }
 
 const styles = StyleSheet.create({
-  dayCell: { aspectRatio: 0.625, flex: 1, minWidth: 0, position: 'relative' },
+  dayCell: { aspectRatio: 0.8, flex: 1, minWidth: 0, position: 'relative' },
   days: { gap: 6, paddingBottom: 12, paddingHorizontal: 12, paddingTop: 10 },
   emptyDayDot: {
     backgroundColor: '#CFC7BB',
@@ -446,15 +445,19 @@ const styles = StyleSheet.create({
   },
   monthsViewport: { flex: 1, marginTop: 5 },
   monthTotal: { color: colors.text, fontFamily: fonts.amount, fontSize: 15 },
-  photoStack: { height: '78.125%', position: 'relative', width: '100%' },
+  photoStack: { alignSelf: 'center', height: 38, marginTop: 3, position: 'relative' },
+  layeredPhotoStack: { width: 41 },
   safe: { backgroundColor: colors.canvas, flex: 1 },
   selectedDay: { borderColor: colors.link, borderWidth: 1.5 },
   selectedEmptyDayDot: { borderColor: colors.link, borderWidth: 1.5, opacity: 1 },
   calendarPhoto: {
-    aspectRatio: expenseThumbnailAspectRatio,
     borderRadius: 9,
+    height: 38,
     position: 'absolute',
   },
+  layeredCalendarPhoto: { width: 34 },
+  singleCalendarPhoto: { width: 38 },
+  singlePhotoStack: { width: 38 },
   stackedPhoto: {
     borderColor: colors.card,
     borderWidth: 1.5,

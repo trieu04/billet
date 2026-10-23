@@ -36,7 +36,7 @@ describe('buildCalendar', () => {
     expect(days.find((day) => day.date === '2026-10-18')).toMatchObject({ future: true })
   })
 
-  it('keeps one spending dot per expense while limiting the visible photo stack to three', () => {
+  it('keeps one spending dot per expense while limiting the visible photo stack to two', () => {
     const busyDayCalendar: Calendar = {
       ...october,
       count: 5,
@@ -54,7 +54,7 @@ describe('buildCalendar', () => {
     )
 
     expect(busyDay?.dots).toHaveLength(5)
-    expect(busyDay?.photos).toHaveLength(3)
-    expect(busyDay?.photos?.map((photo) => photo.mediaAssetId)).toEqual(['13', '12', '11'])
+    expect(busyDay?.photos).toHaveLength(2)
+    expect(busyDay?.photos?.map((photo) => photo.mediaAssetId)).toEqual(['13', '12'])
   })
 })
