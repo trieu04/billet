@@ -1,0 +1,6 @@
+// A simulator can reach the development API through the Mac's loopback address.
+// A physical device cannot, so use the hosted API unless Local.xcconfig overrides it.
+API_BASE_URL = http:/$()/devts-mac-mini.local:6701/api/v1
+API_BASE_URL[sdk=iphonesimulator*] = http:/$()/localhost:6701/api/v1
+
+#include? "Local.xcconfig"
