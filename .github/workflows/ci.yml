@@ -64,6 +64,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 12.8.1
@@ -171,6 +173,8 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
       - name: Install Android SDK
         run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
