@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Animated, ScrollView, type ScrollViewInstance, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Circle } from 'react-native-svg'
@@ -21,7 +21,7 @@ export function StatisticsScreen() {
   const [period, setPeriod] = useState<StatisticsPeriod>('Hôm nay')
   const [rangeAnchor, setRangeAnchor] = useState(() => new Date())
   const firstFocus = useRef(true)
-  const scrollRef = useRef<ScrollView>(null)
+  const scrollRef = useRef<ScrollViewInstance>(null)
   const reducedMotion = useReducedMotion()
   const [chartProgress] = useState(() => new Animated.Value(0))
   const chartEntrance = useEntranceAnimation(50, 8)

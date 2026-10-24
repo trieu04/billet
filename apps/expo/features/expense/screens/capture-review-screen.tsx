@@ -11,10 +11,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   Text,
   TextInput,
+  type TextInputInstance,
   View,
+  type ViewInstance,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -51,9 +54,9 @@ export function CaptureReviewScreen() {
   const [error, setError] = useState<string | null>(null)
   const [saveStage, setSaveStage] = useState('Đang lưu…')
   const locked = useRef(false)
-  const captionRef = useRef<TextInput>(null)
-  const photoRef = useRef<View>(null)
-  const reviewScrollRef = useRef<ScrollView>(null)
+  const captionRef = useRef<TextInputInstance>(null)
+  const photoRef = useRef<ViewInstance>(null)
+  const reviewScrollRef = useRef<ScrollViewInstance>(null)
   const uploadedMedia = useRef<string | undefined>(undefined)
   const attempt = useRef<{ fingerprint: string; key: string } | null>(null)
   const [occurredAt] = useState(() =>

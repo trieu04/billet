@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "scheme": "billet",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "plugins": [
       "expo-router",
       [
@@ -22,11 +21,22 @@
         {
           "photosPermission": "Allow Billet to choose receipt photos from your library."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-secure-store",
+      "expo-status-bar"
     ],
-    "experiments": { "typedRoutes": true },
-    "web": { "bundler": "metro", "output": "static" },
-    "ios": { "supportsTablet": true, "bundleIdentifier": "app.billet.mobile" },
+    "experiments": {
+      "typedRoutes": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.billet.mobile"
+    },
     "android": {
       "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "package": "app.billet.mobile"

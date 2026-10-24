@@ -5,10 +5,12 @@ import {
   Animated,
   Pressable,
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
+  type ViewInstance,
 } from 'react-native'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -32,8 +34,8 @@ export function JournalScreen() {
   const [today] = useState(() => new Date())
   const { width: windowWidth } = useWindowDimensions()
   const insets = useSafeAreaInsets()
-  const scrollRef = useRef<ScrollView>(null)
-  const photoTarget = useRef<View>(null)
+  const scrollRef = useRef<ScrollViewInstance>(null)
+  const photoTarget = useRef<ViewInstance>(null)
   const firstFocus = useRef(true)
   const focused = useIsFocused()
   const { captures, insertingId, insertPhoto, reconcileCaptures } = useCaptureFlow()

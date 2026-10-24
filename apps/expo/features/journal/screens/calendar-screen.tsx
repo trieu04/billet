@@ -7,6 +7,7 @@ import {
   type LayoutChangeEvent,
   Pressable,
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -46,7 +47,7 @@ export function CalendarScreen() {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Ho_Chi_Minh'
   const { width } = useWindowDimensions()
   const boardWidth = Math.min(width - 32, 430)
-  const scrollRef = useRef<ScrollView>(null)
+  const scrollRef = useRef<ScrollViewInstance>(null)
   const positionedAtCurrentMonth = useRef(false)
   const [contentHeight, setContentHeight] = useState(0)
   const [viewportHeight, setViewportHeight] = useState(0)

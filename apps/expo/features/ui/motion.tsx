@@ -27,7 +27,7 @@ export function useReducedMotion() {
 
 type AnimatedPressableProps = Omit<PressableProps, 'style'> & {
   pressedScale?: number
-  style?: StyleProp<ViewStyle>
+  style?: StyleProp<Animated.AnimatedProps<ViewStyle>>
 }
 
 export function AnimatedPressable({
