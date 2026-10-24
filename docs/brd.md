@@ -34,7 +34,7 @@ Giả thuyết sản phẩm là trải nghiệm ghi nhận ít thao tác, có t�
 
 - **Kích hoạt:** tài khoản mới có khoản chi đầu tiên được lưu thành công trong 24 giờ từ khi tạo tài khoản.
 - **Hoàn thành ghi nhận:** số phiên bắt đầu tạo khoản chi và lưu thành công trong 30 phút, chia cho tổng phiên bắt đầu. Một lần thử lại trong cùng phiên không được đếm thành nhiều khoản thành công.
-- **Thời gian ghi nhận:** từ mở luồng tạo đến xác nhận đã lưu; báo cáo trung vị và nhóm 10% chậm nhất, tách nhập tay với ảnh, tách trạng thái mạng và nhận diện lỗi.
+- **Thời gian ghi nhận:** từ mở luồng tạo đến xác nhận đã lưu; báo cáo trung vị và nhóm 10% chậm nhất, tách nhập tay với ảnh và trạng thái mạng.
 - **D7/D30:** tỷ lệ người đã kích hoạt có hoạt động có ý nghĩa vào ngày 7/30 sau kích hoạt; hoạt động gồm lưu khoản chi hoặc xem nhật ký/thống kê, không chỉ mở app hay nhận thông báo. Báo cáo thêm tỷ lệ thực sự ghi khoản chi để tránh nhầm xem với ghi.
 - **Số ngày ghi chép:** số ngày địa phương có ít nhất một khoản chi được tạo thành công trong tuần; không dùng ngày chi tiền được nhập lùi để đo hành vi quay lại.
 
@@ -76,22 +76,24 @@ Các yêu cầu nghiệp vụ về tiền, thời gian, quyền sở hữu và t
 
 **P0:** cần cho bản thử nghiệm đầu tiên hoàn chỉnh về giá trị cốt lõi. **P1:** thuộc hướng sản phẩm nhưng có thể triển khai sau khi luồng cốt lõi ổn định. Thứ tự này chưa phải quyết định loại bỏ tính năng khỏi sản phẩm.
 
-| Nhóm              | Phạm vi                                                         | Ưu tiên |
-| ----------------- | --------------------------------------------------------------- | ------- |
-| Tài khoản         | Truy cập tài khoản cá nhân, đăng xuất, khôi phục truy cập       | P0      |
-| Ghi nhận          | Nhập tay, chụp/chọn ảnh, số tiền, thời gian, caption tùy chọn   | P0      |
-| Nhận diện         | Gợi ý từ hóa đơn, cho phép sửa/bỏ qua, xử lý khi không đọc được | P0      |
-| Nhật ký           | Xem khoản chi theo ngày, tổng ngày, chi tiết và ảnh             | P0      |
-| Quản lý khoản chi | Sửa thông tin, xóa có xác nhận, không tạo trùng khi thử lại     | P0      |
-| Lịch và thống kê  | Xem lịch tháng, tổng kỳ, biểu đồ và phân bổ danh mục            | P0      |
-| Tùy chọn cơ bản   | Hồ sơ, múi giờ, tiền tệ mặc định theo loại được hỗ trợ          | P0      |
-| Ngân sách         | Hạn mức tháng, đã chi, còn lại và vượt hạn mức                  | P1      |
-| Nhắc ghi chép     | Bật/tắt và chọn giờ nhắc                                        | P1      |
-| Cá nhân hóa       | Giao diện và khóa ứng dụng bằng sinh trắc trên thiết bị hỗ trợ  | P1      |
-| Insight           | Nhận xét có bằng chứng về thói quen chi tiêu                    | P1      |
-| Xuất dữ liệu      | Xuất thông tin chi tiêu thành CSV                               | P1      |
+| Nhóm              | Phạm vi                                                        | Ưu tiên |
+| ----------------- | -------------------------------------------------------------- | ------- |
+| Tài khoản         | Truy cập tài khoản cá nhân, đăng xuất, khôi phục truy cập      | P0      |
+| Ghi nhận          | Nhập tay, chụp/chọn ảnh, số tiền, thời gian, caption tùy chọn  | P0      |
+| Suy luận từ ảnh   | Gợi ý cá nhân hóa từ ảnh và lịch sử đã xác nhận                | P1      |
+| Nhật ký           | Xem khoản chi theo ngày, tổng ngày, chi tiết và ảnh            | P0      |
+| Quản lý khoản chi | Sửa thông tin, xóa có xác nhận, không tạo trùng khi thử lại    | P0      |
+| Lịch và thống kê  | Xem lịch tháng, tổng kỳ, biểu đồ và phân bổ danh mục           | P0      |
+| Tùy chọn cơ bản   | Hồ sơ, múi giờ, tiền tệ mặc định theo loại được hỗ trợ         | P0      |
+| Ngân sách         | Hạn mức tháng, đã chi, còn lại và vượt hạn mức                 | P1      |
+| Nhắc ghi chép     | Bật/tắt và chọn giờ nhắc                                       | P1      |
+| Cá nhân hóa       | Giao diện và khóa ứng dụng bằng sinh trắc trên thiết bị hỗ trợ | P1      |
+| Insight           | Nhận xét có bằng chứng về thói quen chi tiêu                   | P1      |
+| Xuất dữ liệu      | Xuất thông tin chi tiêu thành CSV                              | P1      |
 
 Quy trình xử lý yêu cầu xóa tài khoản/dữ liệu và thông báo quyền riêng tư cần được chốt trước thử nghiệm với người dùng bên ngoài; chưa mặc định phải có màn hình tự phục vụ trong P0.
+
+Suy luận cá nhân hóa từ ảnh là giả thuyết mở rộng, chưa phải cam kết triển khai P1. MVP dùng nhập số tiền thủ công vì nhanh và chắc chắn hơn việc chờ suy luận rồi xác nhận. Dữ liệu ảnh và khoản chi đã được người dùng xác nhận có thể tạo nền tảng đánh giá tính khả thi sau này.
 
 ### Ngoài phạm vi ban đầu
 
@@ -104,13 +106,13 @@ Mô hình thu phí, gói premium, quảng cáo và mục tiêu doanh thu chưa �
 | Hành trình                 | Luồng chính                                                                                 | Ngoại lệ phải xử lý                                                           |
 | -------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | J1 — Bắt đầu               | Truy cập tài khoản → hiểu cách ghi nhận → lưu khoản chi đầu tiên → thấy trong nhật ký       | Chưa có dữ liệu cần lời hướng dẫn; lỗi tài khoản có cách xử lý                |
-| J2 — Ghi nhanh             | Chụp/chọn ảnh hoặc nhập tay → kiểm tra tiền và thời gian → thêm caption nếu muốn → lưu      | Từ chối quyền camera, không có hóa đơn, nhận diện chậm/lỗi vẫn nhập tay được  |
+| J2 — Ghi nhanh             | Chụp/chọn ảnh → xác nhận dùng ảnh → nhập tiền → thêm caption nếu muốn → lưu                 | Có thể chụp/chọn lại trước upload; từ chối camera vẫn nhập tay được           |
 | J3 — Xem lại và sửa        | Mở nhật ký/lịch → chọn khoản chi → sửa hoặc xóa → thấy kết quả cập nhật                     | Thay đổi từ thiết bị khác không bị ghi đè âm thầm; hủy xóa giữ nguyên dữ liệu |
 | J4 — Hiểu chi tiêu         | Chọn kỳ → xem tổng và danh mục → so với kỳ trước → xem khoản chi liên quan qua nhật ký/lịch | Kỳ rỗng hoặc chưa có cơ sở so sánh phải thể hiện rõ                           |
 | J5 — Duy trì thói quen     | Đặt ngân sách/giờ nhắc → ghi thêm khoản chi → xem mức sử dụng                               | Tắt quyền thông báo hoặc vượt ngân sách không chặn ghi nhận                   |
 | J6 — Mang dữ liệu ra ngoài | Chọn phạm vi xuất → chờ hoàn tất → tải file                                                 | Tác vụ lỗi hoặc liên kết hết hạn có hướng thử lại                             |
 
-Luồng ghi nhận thành công kết thúc khi khoản chi được xác nhận đã lưu và có thể xem lại. Chụp ảnh, tải ảnh hoặc nhận diện xong chưa được coi là đã ghi chi tiêu.
+Luồng ghi nhận thành công kết thúc khi khoản chi được xác nhận đã lưu và có thể xem lại. Chụp hoặc tải ảnh xong chưa được coi là đã ghi chi tiêu.
 
 ## 6. Yêu cầu chức năng và tiêu chí nghiệm thu
 
@@ -118,14 +120,14 @@ Mã yêu cầu dùng để liên kết với thiết kế, backlog và kiểm th
 
 ### Tài khoản và ghi nhận
 
-| Mã    | Yêu cầu                                                            | Tiêu chí nghiệm thu                                                                                                                                           |
-| ----- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FR-01 | Người dùng truy cập tài khoản cá nhân và có thể khôi phục truy cập | Có thể đăng nhập, đăng xuất và đi qua quy trình khôi phục; người chưa xác thực không xem được nhật ký cá nhân                                                 |
-| FR-02 | Tạo khoản chi bằng nhập tay                                        | Không bắt buộc ảnh, caption, cửa hàng hoặc GPS; tiền và thời gian hợp lệ thì lưu được; khoản mới xuất hiện trong ngày tương ứng                               |
-| FR-03 | Chụp hoặc chọn ảnh để ghi nhận                                     | Có preview và chụp/chọn lại; hủy trước lưu không tạo khoản chi; từ chối camera vẫn có lựa chọn nhập tay                                                       |
-| FR-04 | Nhận gợi ý từ hóa đơn                                              | Có trạng thái đang xử lý/thất bại; mọi gợi ý có thể sửa hoặc bỏ qua; nhận diện lỗi không chặn nhập tay; kết quả muộn không đổi nội dung người dùng đã sửa/lưu |
-| FR-05 | Lưu ảnh và caption cùng khoản chi                                  | Sau lưu, mở chi tiết thấy đúng ảnh và caption; caption trống vẫn hợp lệ; ghi nhận một ảnh mỗi khoản ở MVP                                                     |
-| FR-06 | Biết rõ trạng thái lưu và thử lại an toàn                          | Phân biệt chưa lưu, đang lưu, đã lưu và lỗi; mất mạng không báo thành công; thử lại cùng thao tác không tạo thêm khoản chi                                    |
+| Mã    | Yêu cầu                                                            | Tiêu chí nghiệm thu                                                                                                                                        |
+| ----- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-01 | Người dùng truy cập tài khoản cá nhân và có thể khôi phục truy cập | Có thể đăng nhập, đăng xuất và đi qua quy trình khôi phục; người chưa xác thực không xem được nhật ký cá nhân                                              |
+| FR-02 | Tạo khoản chi bằng nhập tay                                        | Không bắt buộc ảnh, caption, cửa hàng hoặc GPS; tiền và thời gian hợp lệ thì lưu được; khoản mới xuất hiện trong ngày tương ứng                            |
+| FR-03 | Chụp hoặc chọn ảnh để ghi nhận                                     | Có preview và chụp/chọn lại; hủy trước lưu không tạo khoản chi; từ chối camera vẫn có lựa chọn nhập tay                                                    |
+| FR-04 | Nhận gợi ý cá nhân hóa từ ảnh — P1                                 | Chỉ xử lý từ xa sau khi người dùng chấp nhận ảnh; chạy bất đồng bộ; nêu cơ sở và độ tin cậy; mọi gợi ý có thể sửa/bỏ qua; không ghi đè dữ liệu đã nhập/lưu |
+| FR-05 | Lưu ảnh và caption cùng khoản chi                                  | Sau lưu, mở chi tiết thấy đúng ảnh và caption; caption trống vẫn hợp lệ; ghi nhận một ảnh mỗi khoản ở MVP                                                  |
+| FR-06 | Biết rõ trạng thái lưu và thử lại an toàn                          | Phân biệt chưa lưu, đang lưu, đã lưu và lỗi; mất mạng không báo thành công; thử lại cùng thao tác không tạo thêm khoản chi                                 |
 
 ### Nhật ký và tổng hợp
 
@@ -172,15 +174,15 @@ Quy tắc đề xuất trong BRD và thiết kế backend cần được cập n
 
 ## 8. Yêu cầu chất lượng
 
-| Mã     | Yêu cầu                     | Cách nghiệm thu                                                                                                                                                                        |
-| ------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| NFR-01 | Đúng và nhất quán           | Đối soát cùng dữ liệu trên nhật ký/lịch/thống kê/ngân sách, trước và sau sửa/xóa; không chấp nhận sai tiền hoặc khoản trùng trong kịch bản nghiệm thu                                  |
-| NFR-02 | Phản hồi rõ ràng            | Mọi tác vụ chờ có trạng thái; nhận diện không khóa thao tác nhập; lỗi giữ thông tin đang nhập trong phiên để thử lại                                                                   |
-| NFR-03 | Hiệu năng phù hợp ghi nhanh | Đo riêng thời gian phản hồi, upload, nhận diện và lưu trên thiết bị/mạng đại diện; ngưỡng và bộ điều kiện đo cần chốt trước pilot, không lấy thời gian OCR làm điều kiện chặn nhập tay |
-| NFR-04 | Riêng tư và quyền truy cập  | Kiểm tra chéo hai tài khoản: không xem/sửa/xóa/tải dữ liệu của nhau; ảnh/file không công khai; không lộ thông tin cá nhân qua log hoặc analytics                                       |
-| NFR-05 | Khả năng phục hồi           | Mất mạng/thử lại/đóng mở app không báo lưu thành công giả; khoản đã xác nhận lưu có thể xem lại; đề xuất giữ draft qua lần mở app, cần kiểm chứng trên nền tảng phát hành              |
-| NFR-06 | Dễ tiếp cận và bản địa hóa  | Nhãn điều khiển rõ, đọc được tiền/ngày, không chỉ dùng màu để truyền đạt; luồng chính dùng được với trình đọc màn hình; web có bàn phím nếu thuộc scope phát hành                      |
-| NFR-07 | Minh bạch dữ liệu           | Có chính sách về xử lý ảnh, nhà cung cấp nhận diện, thời hạn lưu/xóa và file xuất; quy trình yêu cầu xóa tài khoản/dữ liệu được xác định trước thử nghiệm bên ngoài                    |
+| Mã     | Yêu cầu                     | Cách nghiệm thu                                                                                                                                                           |
+| ------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NFR-01 | Đúng và nhất quán           | Đối soát cùng dữ liệu trên nhật ký/lịch/thống kê/ngân sách, trước và sau sửa/xóa; không chấp nhận sai tiền hoặc khoản trùng trong kịch bản nghiệm thu                     |
+| NFR-02 | Phản hồi rõ ràng            | Mọi tác vụ chờ có trạng thái; upload không khóa thao tác nhập; lỗi giữ thông tin đang nhập trong phiên để thử lại                                                         |
+| NFR-03 | Hiệu năng phù hợp ghi nhanh | Đo riêng thời gian phản hồi, upload và lưu trên thiết bị/mạng đại diện; suy luận ảnh trong tương lai không được chặn nhập tiền hoặc lưu khoản chi                         |
+| NFR-04 | Riêng tư và quyền truy cập  | Kiểm tra chéo hai tài khoản: không xem/sửa/xóa/tải dữ liệu của nhau; ảnh/file không công khai; không lộ thông tin cá nhân qua log hoặc analytics                          |
+| NFR-05 | Khả năng phục hồi           | Mất mạng/thử lại/đóng mở app không báo lưu thành công giả; khoản đã xác nhận lưu có thể xem lại; đề xuất giữ draft qua lần mở app, cần kiểm chứng trên nền tảng phát hành |
+| NFR-06 | Dễ tiếp cận và bản địa hóa  | Nhãn điều khiển rõ, đọc được tiền/ngày, không chỉ dùng màu để truyền đạt; luồng chính dùng được với trình đọc màn hình; web có bàn phím nếu thuộc scope phát hành         |
+| NFR-07 | Minh bạch dữ liệu           | Có chính sách về xử lý ảnh, nhà cung cấp nhận diện, thời hạn lưu/xóa và file xuất; quy trình yêu cầu xóa tài khoản/dữ liệu được xác định trước thử nghiệm bên ngoài       |
 
 Độ sẵn sàng dịch vụ, thời gian khôi phục và mức mất dữ liệu tối đa cần được Product và vận hành thống nhất theo quy mô thử nghiệm. Không tự coi các ngưỡng chưa xác định là đã đạt hoặc dùng BRD này như cam kết SLA.
 
@@ -202,55 +204,56 @@ Không yêu cầu thu thập vị trí chính xác để ghi chi tiêu. Không l
 
 Product và QA dùng các kịch bản sau để đánh giá; đây là tiêu chí cho sản phẩm tương lai, chưa phải các kiểm thử sản phẩm đã chạy trong lần viết BRD.
 
-| Kịch bản                                                   | Kết quả mong đợi                                                        | Yêu cầu liên quan                 |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------- |
-| Tài khoản mới chưa có khoản chi                            | Có hướng dẫn ghi khoản đầu tiên, không tạo sẵn số chi giả               | FR-01, FR-02, FR-07               |
-| Tạo ba khoản 58.000, 95.000 và 95.000 VND cùng ngày        | Tổng 248.000 VND, số khoản 3 trên các nơi liên quan                     | FR-07, FR-10, FR-11; BR-03, BR-08 |
-| Sửa khoản 58.000 thành 60.000, sau đó xóa một khoản 95.000 | Tổng lần lượt 250.000 rồi 155.000; số khoản cuối là 2                   | FR-08, FR-09; BR-08               |
-| OCR lỗi hoặc trả kết quả sau khi người dùng sửa            | Vẫn lưu bằng nhập tay; giá trị đã sửa không bị thay đổi                 | FR-02, FR-04; BR-06               |
-| Mạng lỗi ngay sau khi bấm lưu, người dùng thử lại          | Chỉ có một khoản chi; trạng thái cuối phản ánh đúng kết quả             | FR-06; BR-07                      |
-| Chuyển khoản chi sang ngày thuộc tháng khác                | Ngày/tháng cũ giảm đúng, ngày/tháng mới tăng đúng                       | FR-08, FR-10, FR-11; BR-04, BR-08 |
-| Chưa có chi tiêu kỳ trước hoặc ngân sách bị vượt           | Không chia cho không; phần ngân sách còn lại âm và vẫn ghi thêm được    | FR-12, FR-14                      |
-| Người dùng B mở khoản chi/ảnh/file của A                   | B không truy cập được dữ liệu                                           | BR-01; NFR-04                     |
-| Tắt nhắc hoặc đổi giờ — P1                                 | Lịch sau thay đổi đúng, không tạo nhắc lặp cùng ngày                    | FR-16                             |
-| Xuất trong lúc lịch sử đang được sửa — P1                  | File nhất quán với thời điểm xuất được công bố; chỉ chủ sở hữu tải được | FR-18; BR-14                      |
+| Kịch bản                                                    | Kết quả mong đợi                                                        | Yêu cầu liên quan                 |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------- |
+| Tài khoản mới chưa có khoản chi                             | Có hướng dẫn ghi khoản đầu tiên, không tạo sẵn số chi giả               | FR-01, FR-02, FR-07               |
+| Tạo ba khoản 58.000, 95.000 và 95.000 VND cùng ngày         | Tổng 248.000 VND, số khoản 3 trên các nơi liên quan                     | FR-07, FR-10, FR-11; BR-03, BR-08 |
+| Sửa khoản 58.000 thành 60.000, sau đó xóa một khoản 95.000  | Tổng lần lượt 250.000 rồi 155.000; số khoản cuối là 2                   | FR-08, FR-09; BR-08               |
+| Suy luận ảnh P1 lỗi hoặc trả kết quả sau khi người dùng sửa | Vẫn lưu bằng nhập tay; giá trị đã sửa không bị thay đổi                 | FR-02, FR-04; BR-06               |
+| Mạng lỗi ngay sau khi bấm lưu, người dùng thử lại           | Chỉ có một khoản chi; trạng thái cuối phản ánh đúng kết quả             | FR-06; BR-07                      |
+| Chuyển khoản chi sang ngày thuộc tháng khác                 | Ngày/tháng cũ giảm đúng, ngày/tháng mới tăng đúng                       | FR-08, FR-10, FR-11; BR-04, BR-08 |
+| Chưa có chi tiêu kỳ trước hoặc ngân sách bị vượt            | Không chia cho không; phần ngân sách còn lại âm và vẫn ghi thêm được    | FR-12, FR-14                      |
+| Người dùng B mở khoản chi/ảnh/file của A                    | B không truy cập được dữ liệu                                           | BR-01; NFR-04                     |
+| Tắt nhắc hoặc đổi giờ — P1                                  | Lịch sau thay đổi đúng, không tạo nhắc lặp cùng ngày                    | FR-16                             |
+| Xuất trong lúc lịch sử đang được sửa — P1                   | File nhất quán với thời điểm xuất được công bố; chỉ chủ sở hữu tải được | FR-18; BR-14                      |
 
 ### Điều kiện chuyển sang thử nghiệm người dùng
 
 - Các yêu cầu P0 trong phạm vi nền tảng đã chọn có bằng chứng nghiệm thu; không còn lỗi gây sai tiền, mất khoản đã lưu, tạo trùng hoặc truy cập chéo tài khoản.
-- Luồng ghi nhận, nhận diện lỗi, mất mạng, sửa/xóa và dữ liệu rỗng đã được kiểm chứng trên thiết bị đại diện.
+- Luồng ghi nhận, upload lỗi, mất mạng, sửa/xóa và dữ liệu rỗng đã được kiểm chứng trên thiết bị đại diện.
 - Các quyết định chặn phát hành ở mục 12 được chốt hoặc có giới hạn phạm vi được Product chấp nhận rõ ràng.
 - Có người phụ trách hỗ trợ, cách tiếp nhận lỗi và cơ chế đo các chỉ số đã thống nhất.
 - Tính năng P1 chưa hoàn thành được ghi rõ, không trình bày như khả năng đã có. Việc duyệt BRD, duyệt UAT và quyết định phát hành là ba bước riêng.
 
 ## 11. Phụ thuộc và rủi ro
 
-| Phụ thuộc / rủi ro                               | Ảnh hưởng                                   | Hướng xử lý nghiệp vụ                                                                                     |
-| ------------------------------------------------ | ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Chất lượng hóa đơn/nhận diện không ổn định       | Gợi ý sai hoặc người dùng mất thời gian sửa | Luôn cho nhập tay; đo tỷ lệ chấp nhận/sửa gợi ý; thử trên hóa đơn thực tế được phép sử dụng               |
-| Người dùng quên ghi hoặc thấy quá nhiều thao tác | Dữ liệu thiếu, khó hình thành thói quen     | Giảm thông tin bắt buộc; pilot luồng ghi nhận trước mở rộng tính năng                                     |
-| Mạng, quyền camera hoặc thông báo bị chặn        | Luồng chụp/nhắc không hoàn tất              | Có phương án nhập tay, trạng thái rõ và thử lại; không hứa nhắc offline                                   |
-| Phân loại chưa thống nhất                        | Biểu đồ gây hiểu nhầm                       | Chốt bộ danh mục và cách diễn giải insight trước nghiệm thu                                               |
-| Chi phí lưu ảnh và nhận diện                     | Khó duy trì dịch vụ khi tăng sử dụng        | Đánh giá chi phí trên mỗi người dùng/ảnh trong pilot; quota nếu có phải được Product duyệt và thể hiện rõ |
-| Ảnh chứa dữ liệu nhạy cảm                        | Rủi ro riêng tư và mất niềm tin             | Giới hạn thu thập, chọn nhà cung cấp phù hợp, minh bạch xử lý/xóa dữ liệu                                 |
-| Phạm vi mobile/web chưa chốt                     | Kế hoạch và tiêu chí nghiệm thu bị mở rộng  | Chốt nền tảng phát hành và mức tương đương chức năng trước ước lượng                                      |
+| Phụ thuộc / rủi ro                               | Ảnh hưởng                                   | Hướng xử lý nghiệp vụ                                                                            |
+| ------------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Suy luận cá nhân hóa từ ảnh không ổn định        | Gợi ý sai hoặc người dùng mất thời gian sửa | Luôn cho nhập tay; chỉ thử nghiệm sau khi có dữ liệu đã xác nhận và đo tỷ lệ chấp nhận/sửa gợi ý |
+| Người dùng quên ghi hoặc thấy quá nhiều thao tác | Dữ liệu thiếu, khó hình thành thói quen     | Giảm thông tin bắt buộc; pilot luồng ghi nhận trước mở rộng tính năng                            |
+| Mạng, quyền camera hoặc thông báo bị chặn        | Luồng chụp/nhắc không hoàn tất              | Có phương án nhập tay, trạng thái rõ và thử lại; không hứa nhắc offline                          |
+| Phân loại chưa thống nhất                        | Biểu đồ gây hiểu nhầm                       | Chốt bộ danh mục và cách diễn giải insight trước nghiệm thu                                      |
+| Chi phí lưu ảnh và suy luận trong tương lai      | Khó duy trì dịch vụ khi tăng sử dụng        | Đánh giá chi phí trên mỗi người dùng/ảnh trước thử nghiệm; quota nếu có phải được Product duyệt  |
+| Ảnh chứa dữ liệu nhạy cảm                        | Rủi ro riêng tư và mất niềm tin             | Giới hạn thu thập, chọn nhà cung cấp phù hợp, minh bạch xử lý/xóa dữ liệu                        |
+| Phạm vi mobile/web chưa chốt                     | Kế hoạch và tiêu chí nghiệm thu bị mở rộng  | Chốt nền tảng phát hành và mức tương đương chức năng trước ước lượng                             |
 
 Các chức năng xác thực, thông báo và realtime đã có nền tảng kỹ thuật; điều đó chưa chứng minh hành trình sản phẩm tương ứng đã hoàn chỉnh. Cần kiểm chứng tích hợp thực tế, không nghiệm thu chỉ bằng sự hiện diện của module.
 
 ## 12. Giả định và quyết định cần chốt
 
-| Mã  | Quyết định                                         | Đề xuất hiện tại                                      | Thời điểm cần chốt                      |
-| --- | -------------------------------------------------- | ----------------------------------------------------- | --------------------------------------- |
-| D1  | Người dùng và nền tảng thử nghiệm đầu tiên         | Cá nhân ghi chi tiêu trên mobile, iOS làm tham chiếu  | Trước lập kế hoạch pilot                |
-| D2  | Điều kiện lưu khi chưa có số tiền                  | Chưa ghi thành khoản chính thức; giữ nháp             | Trước chốt luồng ghi nhận               |
-| D3  | Loại tiền được hỗ trợ                              | VND cho MVP; không quy đổi                            | Trước chốt phạm vi P0                   |
-| D4  | Danh mục và nhận xét về bữa ăn                     | Danh mục phẳng; insight suy ra phải ghi là ước tính   | Trước hoàn thiện thống kê               |
-| D5  | Múi giờ và kỳ so sánh                              | Theo tài khoản; so cùng phần kỳ trước                 | Trước nghiệm thu tổng hợp               |
-| D6  | Độ bền draft offline và nhiều thiết bị             | Giữ nháp; chưa hỗ trợ sửa offline hai chiều           | Trước nghiệm thu mất mạng               |
-| D7  | Cách lặp ngân sách và nhắc                         | Ngân sách đặt từng tháng, một lịch nhắc/ngày          | Trước triển khai P1 tương ứng           |
-| D8  | Xóa tài khoản, retention và nhà cung cấp nhận diện | Cần chính sách và quy trình rõ; chưa chốt thời hạn    | Trước thử nghiệm bên ngoài              |
-| D9  | KPI, hiệu năng và điều kiện đo                     | Thu baseline pilot; chốt ngưỡng hiệu năng trước pilot | Trước pilot và trước đánh giá phát hành |
-| D10 | Mức đầu tư, lịch phát hành, người phê duyệt        | Chưa xác định; không suy ra từ roadmap kỹ thuật       | Trước cam kết kế hoạch                  |
+| Mã  | Quyết định                                         | Đề xuất hiện tại                                               | Thời điểm cần chốt                      |
+| --- | -------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------- |
+| D1  | Người dùng và nền tảng thử nghiệm đầu tiên         | Cá nhân ghi chi tiêu trên mobile, iOS làm tham chiếu           | Trước lập kế hoạch pilot                |
+| D2  | Điều kiện lưu khi chưa có số tiền                  | Chưa ghi thành khoản chính thức; giữ nháp                      | Trước chốt luồng ghi nhận               |
+| D3  | Loại tiền được hỗ trợ                              | VND cho MVP; không quy đổi                                     | Trước chốt phạm vi P0                   |
+| D4  | Danh mục và nhận xét về bữa ăn                     | Danh mục phẳng; insight suy ra phải ghi là ước tính            | Trước hoàn thiện thống kê               |
+| D5  | Múi giờ và kỳ so sánh                              | Theo tài khoản; so cùng phần kỳ trước                          | Trước nghiệm thu tổng hợp               |
+| D6  | Độ bền draft offline và nhiều thiết bị             | Giữ nháp; chưa hỗ trợ sửa offline hai chiều                    | Trước nghiệm thu mất mạng               |
+| D7  | Cách lặp ngân sách và nhắc                         | Ngân sách đặt từng tháng, một lịch nhắc/ngày                   | Trước triển khai P1 tương ứng           |
+| D8  | Xóa tài khoản, retention và nhà cung cấp nhận diện | Cần chính sách và quy trình rõ; chưa chốt thời hạn             | Trước thử nghiệm bên ngoài              |
+| D9  | KPI, hiệu năng và điều kiện đo                     | Thu baseline pilot; chốt ngưỡng hiệu năng trước pilot          | Trước pilot và trước đánh giá phát hành |
+| D10 | Mức đầu tư, lịch phát hành, người phê duyệt        | Chưa xác định; không suy ra từ roadmap kỹ thuật                | Trước cam kết kế hoạch                  |
+| D11 | Vai trò AI trong luồng ghi nhận                    | MVP nhập tiền thủ công; AI cá nhân hóa là hướng thử nghiệm sau | Trước khi đưa suy luận ảnh vào backlog  |
 
 Product owner chốt các quyết định cùng thiết kế, phát triển và vận hành tùy nội dung. Chưa có người được chỉ định hoặc ngày cam kết trong BRD này.
 

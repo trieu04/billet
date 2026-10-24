@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Animated, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useFocusEffect } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Circle } from 'react-native-svg'
 
@@ -8,21 +9,23 @@ import { cardShadow } from '@/features/ui/card'
 import { AnimatedPressable, useEntranceAnimation, useReducedMotion } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
 import { apiRequest } from '@/features/api/client'
-import { formatMoney, startOfLocalDay } from '@/features/api/format'
+import { formatMoney } from '@/features/api/format'
 import type { SpendingReport } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
+import { reportRange, statisticsPeriods, type StatisticsPeriod } from './statistics-model'
 
-const periods = ['Tuần', 'Tháng', 'Năm'] as const
 const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
 const palette = [colors.peach, colors.sage, colors.lavender, colors.butter]
 
 export function StatisticsScreen() {
-  const [period, setPeriod] = useState<(typeof periods)[number]>('Tuần')
+  const [period, setPeriod] = useState<StatisticsPeriod>('Hôm nay')
+  const [rangeAnchor, setRangeAnchor] = useState(() => new Date())
+  const firstFocus = useRef(true)
+  const scrollRef = useRef<ScrollView>(null)
   const reducedMotion = useReducedMotion()
   const [chartProgress] = useState(() => new Animated.Value(0))
   const chartEntrance = useEntranceAnimation(50, 8)
-  const detailEntrance = useEntranceAnimation(120, 10)
-  const range = useMemo(() => reportRange(period), [period])
+  const range = useMemo(() => reportRange(period, rangeAnchor), [period, rangeAnchor])
   const load = useCallback(
     (token: string) =>
       apiRequest<SpendingReport>(
@@ -56,85 +59,151 @@ export function StatisticsScreen() {
     }).start()
   }, [chartProgress, period, reducedMotion, report])
 
+  useEffect(() => {
+    const frame = requestAnimationFrame(() =>
+      scrollRef.current?.scrollTo({ animated: false, y: 0 }),
+    )
+    return () => cancelAnimationFrame(frame)
+  }, [period])
+
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false
+        return
+      }
+      setRangeAnchor(new Date())
+    }, []),
+  )
+
   return (
     <SafeAreaView edges={[]} style={styles.safe}>
-      <Text style={styles.title}>Thống kê</Text>
-      <View style={styles.periods}>
-        {periods.map((item) => (
-          <AnimatedPressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected: period === item }}
-            key={item}
-            onPress={() => setPeriod(item)}
-            pressedScale={0.96}
-            style={[styles.period, period === item && styles.periodSelected]}
-          >
-            <Text style={[styles.periodText, period === item && styles.periodTextSelected]}>
-              {item}
-            </Text>
-          </AnimatedPressable>
-        ))}
-      </View>
-      <Text style={styles.summaryLabel}>
-        {period === 'Tuần' ? 'Tuần này' : period === 'Tháng' ? 'Tháng này' : 'Năm nay'}
-      </Text>
-      <View style={styles.summary}>
-        <Text style={styles.total}>
-          {loading ? '…' : formatMoney(report?.totalMinor ?? '0', report?.currency ?? 'VND')}
-        </Text>
-        <View style={styles.delta}>
-          <Text style={styles.deltaText}>{formatDelta(report?.comparison.changePercent)}</Text>
-        </View>
-      </View>
-      <Animated.View style={[cardShadow, styles.barCard, chartEntrance]}>
-        <View style={styles.bars}>
-          {bars.map((height, index) => (
-            <View key={days[index]} style={styles.barColumn}>
-              <Animated.View
-                style={[
-                  styles.bar,
-                  {
-                    height: chartProgress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [4, height],
-                    }),
-                  },
-                  index === 4 && styles.activeBar,
-                ]}
-              />
-              <Text style={styles.day}>{days[index]}</Text>
-            </View>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.title}>Thống kê</Text>
+        <View accessibilityRole="tablist" style={styles.periods}>
+          {statisticsPeriods.map((item) => (
+            <AnimatedPressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: period === item }}
+              key={item}
+              onPress={() => setPeriod(item)}
+              pressedScale={0.96}
+              style={[styles.period, period === item && styles.periodSelected]}
+            >
+              <Text style={[styles.periodText, period === item && styles.periodTextSelected]}>
+                {item}
+              </Text>
+            </AnimatedPressable>
           ))}
         </View>
-      </Animated.View>
-      <Animated.View style={[cardShadow, styles.breakdown, detailEntrance]}>
-        <Donut categories={categories} />
-        <View style={styles.legend}>
-          {categories.map((item) => (
-            <View key={item.label} style={styles.legendRow}>
-              <View style={[styles.dot, { backgroundColor: item.color }]} />
-              <Text style={styles.legendLabel}>{item.label}</Text>
-              <Text style={styles.legendPercent}>{item.percent}%</Text>
-            </View>
-          ))}
+        <Text style={styles.summaryLabel}>{periodLabel(period)}</Text>
+        <View style={styles.summary}>
+          <Text selectable style={styles.total}>
+            {loading ? '…' : formatMoney(report?.totalMinor ?? '0', report?.currency ?? 'VND')}
+          </Text>
+          <View style={styles.delta}>
+            <Text style={styles.deltaText}>{formatDelta(report?.comparison.changePercent)}</Text>
+          </View>
         </View>
-      </Animated.View>
-      <View style={styles.insight}>
-        <Text style={styles.insightLabel}>INSIGHT</Text>
-        <Text numberOfLines={2} style={styles.insightText}>
-          {error
-            ? error
-            : report?.insights[0]
-              ? `Ngày chi nhiều nhất là ${new Date(report.insights[0].date).toLocaleDateString('vi-VN')}, với ${formatMoney(report.insights[0].amountMinor, report.currency)}.`
-              : 'Chưa đủ dữ liệu để tạo insight cho kỳ này.'}
-        </Text>
-        <View style={styles.divider} />
-        <Text numberOfLines={2} style={styles.insightText}>
-          {report?.count
-            ? `Trung bình mỗi khoản là ${formatMoney(String(Math.round(Number(report.totalMinor) / report.count)), report.currency)}.`
-            : 'Ghi thêm vài khoản để Billet tìm ra thói quen của bạn.'}
-        </Text>
-      </View>
+        {period === 'Hôm nay' ? (
+          <Animated.View style={[cardShadow, styles.barCard, styles.todayCard, chartEntrance]}>
+            <View style={styles.todayHeading}>
+              <Text style={styles.todayTitle}>Phân bổ hôm nay</Text>
+              <Text style={styles.todayCount}>
+                {loading ? 'Đang tải…' : `${report?.count ?? 0} khoản`}
+              </Text>
+            </View>
+            <View style={styles.todaySplit}>
+              {categories.length ? (
+                categories.map((item) => (
+                  <View
+                    key={item.label}
+                    style={[
+                      styles.todaySegment,
+                      { backgroundColor: item.color, flex: Math.max(item.percent, 1) },
+                    ]}
+                  />
+                ))
+              ) : (
+                <View style={[styles.todaySegment, styles.todaySegmentEmpty]} />
+              )}
+            </View>
+            <View style={styles.todayLegend}>
+              {categories.slice(0, 3).map((item) => (
+                <View key={item.label} style={styles.todayLegendItem}>
+                  <View style={[styles.dot, { backgroundColor: item.color }]} />
+                  <Text numberOfLines={1} style={styles.todayLegendLabel}>
+                    {item.label}
+                  </Text>
+                  <Text style={styles.legendPercent}>{item.percent}%</Text>
+                </View>
+              ))}
+              {!loading && categories.length === 0 ? (
+                <Text style={styles.emptyText}>Chưa có khoản chi hôm nay.</Text>
+              ) : null}
+            </View>
+          </Animated.View>
+        ) : (
+          <Animated.View style={[cardShadow, styles.barCard, chartEntrance]}>
+            <View style={styles.bars}>
+              {bars.map((height, index) => (
+                <View key={days[index]} style={styles.barColumn}>
+                  <Animated.View
+                    style={[
+                      styles.bar,
+                      {
+                        height: chartProgress.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [4, height],
+                        }),
+                      },
+                      index === 4 && styles.activeBar,
+                    ]}
+                  />
+                  <Text style={styles.day}>{days[index]}</Text>
+                </View>
+              ))}
+            </View>
+          </Animated.View>
+        )}
+        {period !== 'Hôm nay' ? (
+          <View style={[cardShadow, styles.breakdown]}>
+            <Donut categories={categories} />
+            <View style={styles.legend}>
+              {categories.map((item) => (
+                <View key={item.label} style={styles.legendRow}>
+                  <View style={[styles.dot, { backgroundColor: item.color }]} />
+                  <Text style={styles.legendLabel}>{item.label}</Text>
+                  <Text style={styles.legendPercent}>{item.percent}%</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+        <View style={styles.insight}>
+          <Text style={styles.insightLabel}>INSIGHT</Text>
+          <Text numberOfLines={2} style={styles.insightText}>
+            {error
+              ? error
+              : report?.insights[0]
+                ? period === 'Hôm nay'
+                  ? `Tổng chi hôm nay là ${formatMoney(report.insights[0].amountMinor, report.currency)}.`
+                  : `Ngày chi nhiều nhất là ${new Date(report.insights[0].date).toLocaleDateString('vi-VN')}, với ${formatMoney(report.insights[0].amountMinor, report.currency)}.`
+                : 'Chưa đủ dữ liệu để tạo insight cho kỳ này.'}
+          </Text>
+          <View style={styles.divider} />
+          <Text numberOfLines={2} style={styles.insightText}>
+            {report?.count
+              ? `Trung bình mỗi khoản là ${formatMoney(String(Math.round(Number(report.totalMinor) / report.count)), report.currency)}.`
+              : 'Ghi thêm vài khoản để Billet tìm ra thói quen của bạn.'}
+          </Text>
+        </View>
+      </ScrollView>
       <BottomTabBar active="statistics" />
     </SafeAreaView>
   )
@@ -157,6 +226,7 @@ function Donut({
   }))
   return (
     <Svg height={104} viewBox="0 0 104 104" width={104}>
+      <Circle cx="52" cy="52" fill="none" r={radius} stroke={colors.line} strokeWidth="20" />
       {segments.map((item) => (
         <Circle
           cx="52"
@@ -164,29 +234,24 @@ function Donut({
           fill="none"
           key={item.label}
           r={radius}
-          rotation="-90"
           stroke={item.color}
-          strokeDasharray={`${item.length} ${circumference - item.length}`}
+          strokeDasharray={
+            item.length >= circumference ? undefined : [item.length, circumference - item.length]
+          }
           strokeDashoffset={-item.offset}
           strokeWidth="20"
+          transform="rotate(-90 52 52)"
         />
       ))}
     </Svg>
   )
 }
 
-function reportRange(period: (typeof periods)[number]) {
-  const to = new Date()
-  to.setHours(23, 59, 59, 999)
-  const from = startOfLocalDay(to)
-  if (period === 'Tuần') from.setDate(from.getDate() - 6)
-  else if (period === 'Tháng') from.setDate(1)
-  else from.setMonth(0, 1)
-  return {
-    from: from.toISOString(),
-    to: to.toISOString(),
-    granularity: period === 'Năm' ? 'month' : 'day',
-  }
+function periodLabel(period: StatisticsPeriod) {
+  if (period === 'Hôm nay') return 'Đã chi hôm nay'
+  if (period === 'Tuần') return 'Tuần này'
+  if (period === 'Tháng') return 'Tháng này'
+  return 'Năm nay'
 }
 
 function formatDelta(value: number | null | undefined) {
@@ -218,6 +283,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 16,
   },
+  content: { paddingBottom: 112 },
   day: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 11 },
   delta: {
     backgroundColor: colors.sage,
@@ -233,6 +299,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   dot: { borderRadius: 5, height: 10, width: 10 },
+  emptyText: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 14 },
   insight: {
     backgroundColor: '#E7E1F4',
     borderRadius: 24,
@@ -292,4 +359,18 @@ const styles = StyleSheet.create({
     marginTop: 62,
   },
   total: { color: colors.text, fontFamily: fonts.amount, fontSize: 38, letterSpacing: -1 },
+  todayCard: { gap: 14, justifyContent: 'center', paddingTop: 20 },
+  todayCount: {
+    color: colors.textSecondary,
+    fontFamily: fonts.medium,
+    fontSize: 13,
+  },
+  todayHeading: { flexDirection: 'row', justifyContent: 'space-between' },
+  todayLegend: { gap: 8 },
+  todayLegendItem: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  todayLegendLabel: { color: colors.text, flex: 1, fontFamily: fonts.regular, fontSize: 14 },
+  todaySegment: { height: 10 },
+  todaySegmentEmpty: { backgroundColor: colors.line, flex: 1 },
+  todaySplit: { borderRadius: 5, flexDirection: 'row', gap: 3, overflow: 'hidden' },
+  todayTitle: { color: colors.text, fontFamily: fonts.semibold, fontSize: 15 },
 })
