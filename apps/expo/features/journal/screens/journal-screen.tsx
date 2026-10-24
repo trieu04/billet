@@ -37,8 +37,7 @@ export function JournalScreen() {
   const firstFocus = useRef(true)
   const focused = useIsFocused()
   const { captures, insertingId, insertPhoto, reconcileCaptures } = useCaptureFlow()
-  const totalEntrance = useEntranceAnimation(40, 8)
-  const momentsEntrance = useEntranceAnimation(120, 12)
+  const momentsEntrance = useEntranceAnimation(40, 8)
   const load = useCallback(async (token: string) => {
     const from = startOfLocalDay()
     from.setDate(from.getDate() - 13)
@@ -64,7 +63,6 @@ export function JournalScreen() {
   const journal = mergeSavedCaptures(data, captures, startOfLocalDay())
   const expenses = journal.data
   const dayGroups = groupExpensesByDay(expenses)
-  const todayGroup = dayGroups.find((group) => formatJournalDay(group.date, today) === 'Hôm nay')
   const cardWidth = Math.min(220, windowWidth - 112)
   const measureInsertion = useCallback(() => {
     if (!focused || !insertingId) return
@@ -96,27 +94,11 @@ export function JournalScreen() {
             <Text style={styles.date}>
               {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'full' }).format(today)}
             </Text>
-            <Text style={styles.title}>Hôm nay</Text>
+            <Text style={styles.title}>Nhật ký</Text>
           </View>
           <JournalViewToggle active="timeline" />
         </View>
-        <Animated.View style={[styles.totalCard, totalEntrance]}>
-          <Text style={styles.label}>Đã chi hôm nay</Text>
-          <Text style={styles.total}>{formatMoney(todayGroup?.totalMinor ?? '0', 'VND')}</Text>
-          <View style={styles.split}>
-            <View style={[styles.segment, styles.food]} />
-            <View style={[styles.segment, styles.travel]} />
-            <View style={[styles.segment, styles.other]} />
-          </View>
-          <View style={styles.legend}>
-            <Text style={styles.caption}>Ăn uống</Text>
-            <Text style={styles.caption}>Đi lại</Text>
-            <Text style={styles.caption}>Khác</Text>
-            <Text style={styles.caption}>{todayGroup?.expenses.length ?? 0} khoản</Text>
-          </View>
-        </Animated.View>
         <Animated.View style={[styles.moments, momentsEntrance]}>
-          <Text style={styles.overline}>KHOẢNH KHẮC</Text>
           {loading && expenses.length === 0 ? <ActivityIndicator color={colors.link} /> : null}
           {error ? (
             <Pressable accessibilityRole="button" onPress={() => void refresh()}>
@@ -209,7 +191,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 4,
   },
-  caption: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12 },
   capture: {
     alignItems: 'center',
     alignSelf: 'center',
@@ -252,7 +233,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   error: { color: '#B3433C', fontFamily: fonts.medium, fontSize: 14, textAlign: 'center' },
-  food: { backgroundColor: colors.peach, flex: 5 },
   heading: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -260,9 +240,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginLeft: 4,
   },
-  label: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 13 },
-  legend: { flexDirection: 'row', justifyContent: 'space-between' },
-  other: { backgroundColor: colors.lavender, flex: 2 },
   overline: {
     color: colors.textSecondary,
     fontFamily: fonts.semibold,
@@ -272,20 +249,6 @@ const styles = StyleSheet.create({
   },
   moments: { gap: 20, marginTop: 25 },
   safe: { backgroundColor: colors.canvas, flex: 1 },
-  segment: { height: 10 },
-  split: { borderRadius: 5, flexDirection: 'row', gap: 3, overflow: 'hidden' },
   shelfContent: { gap: 12, paddingRight: 28 },
   title: { color: colors.text, fontFamily: fonts.bold, fontSize: 34, letterSpacing: -0.5 },
-  total: { color: colors.text, fontFamily: fonts.amount, fontSize: 44, letterSpacing: -1 },
-  totalCard: {
-    backgroundColor: colors.card,
-    borderRadius: 24,
-    gap: 8,
-    padding: 20,
-    shadowColor: '#5A3C1E',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.07,
-    shadowRadius: 24,
-  },
-  travel: { backgroundColor: colors.sage, flex: 3 },
 })
