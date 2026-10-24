@@ -76,6 +76,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - if: needs.changes.outputs.common == 'true' || needs.changes.outputs.workspace == 'true'
         run: pnpm format:check
+      - name: Ensure the main ref is available to Changesets
+        if: needs.changes.outputs.release == 'true' || needs.changes.outputs.workspace == 'true'
+        run: git show-ref --verify --quiet refs/heads/main || git branch main origin/main
       - if: needs.changes.outputs.release == 'true' || needs.changes.outputs.workspace == 'true'
         run: pnpm release:check
 
