@@ -8,9 +8,59 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
-  validate:
+  changes:
+    name: Detect component changes
+    runs-on: ubuntu-latest
+    outputs:
+      common: ${{ steps.filter.outputs.common }}
+      release: ${{ steps.filter.outputs.release }}
+      workspace: ${{ steps.filter.outputs.workspace }}
+      server: ${{ steps.filter.outputs.server }}
+      web: ${{ steps.filter.outputs.web }}
+      expo: ${{ steps.filter.outputs.expo }}
+      ios: ${{ steps.filter.outputs.ios }}
+      android: ${{ steps.filter.outputs.android }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            common:
+              - '.github/workflows/ci.yml'
+              - 'scripts/**'
+            release:
+              - '.changeset/**'
+              - 'scripts/**'
+              - 'apps/*/package.json'
+              - 'apps/android/version.properties'
+              - 'apps/ios/project.yml'
+            workspace:
+              - '.npmrc'
+              - '.oxfmtignore'
+              - '.oxfmtrc.json'
+              - '.oxlintrc.json'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+            server:
+              - 'apps/server/**'
+            web:
+              - 'apps/web/**'
+            expo:
+              - 'apps/expo/**'
+            ios:
+              - 'apps/ios/**'
+            android:
+              - 'apps/android/**'
+
+  validate-common:
+    name: Validate shared repository
+    needs: changes
+    if: needs.changes.outputs.common == 'true' || needs.changes.outputs.release == 'true' || needs.changes.outputs.workspace == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,17 +73,65 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - name: Merge main into pull request
-        run: git merge origin/main --no-edit
       - run: pnpm install --frozen-lockfile
-      - run: pnpm format:check
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
-      - run: pnpm release:check
+      - if: needs.changes.outputs.common == 'true' || needs.changes.outputs.workspace == 'true'
+        run: pnpm format:check
+      - name: Ensure the main ref is available to Changesets
+        if: (needs.changes.outputs.release == 'true' || needs.changes.outputs.workspace == 'true') && github.head_ref != 'changeset-release/main' && github.ref_name != 'changeset-release/main'
+        run: git show-ref --verify --quiet refs/heads/main || git branch main origin/main
+      - name: Validate release metadata
+        if: (needs.changes.outputs.release == 'true' || needs.changes.outputs.workspace == 'true') && github.head_ref != 'changeset-release/main' && github.ref_name != 'changeset-release/main'
+        run: pnpm release:check
+      - name: Validate versioned native applications
+        if: needs.changes.outputs.release == 'true' && (github.head_ref == 'changeset-release/main' || github.ref_name == 'changeset-release/main')
+        run: node scripts/sync-ios-version.mjs --check && node scripts/sync-android-version.mjs --check
+
+  validate-server:
+    name: Validate server
+    needs: changes
+    if: needs.changes.outputs.server == 'true' || needs.changes.outputs.workspace == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.8.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec oxfmt --check apps/server
+      - run: pnpm --filter @billet/server lint
+      - run: pnpm --filter @billet/server typecheck
+      - run: pnpm --filter @billet/server test
+      - run: pnpm --filter @billet/server build
+
+  validate-web:
+    name: Validate web
+    needs: changes
+    if: needs.changes.outputs.web == 'true' || needs.changes.outputs.workspace == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.8.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec oxfmt --check apps/web
+      - run: pnpm --filter @billet/web lint
+      - run: pnpm --filter @billet/web typecheck
+      - run: pnpm --filter @billet/web test
+      - run: pnpm --filter @billet/web build
 
   validate-expo:
+    name: Validate Expo
+    needs: changes
+    if: needs.changes.outputs.expo == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -55,6 +153,9 @@ jobs:
       - run: pnpm build
 
   validate-ios:
+    name: Validate iOS
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,6 +169,9 @@ jobs:
         run: xcodebuild -project Billet.xcodeproj -scheme Billet -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
 
   validate-android:
+    name: Validate Android
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -76,6 +180,8 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
       - name: Install Android SDK
         run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
