@@ -5,6 +5,7 @@ import {
   IsArray,
   IsEmail,
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   Length,
@@ -16,15 +17,16 @@ import { UserResponseDto } from '../user/dto'
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/
 
 export class RegisterDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'ntdm11',
-    description: 'Unique public username (3-30 lowercase letters, digits, or underscores)',
+    description: 'Optional public username; generated from email when omitted',
   })
+  @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   )
   @Matches(/^[a-z][a-z0-9_]{2,29}$/)
-  username: string
+  username?: string
 
   @ApiProperty({ example: 'trieu@example.com' })
   @Transform(({ value }: { value: unknown }) =>
@@ -49,10 +51,11 @@ export class RegisterDto {
   @IsString({ each: true })
   verificationTokens?: string[]
 
-  @ApiProperty({ example: 'Trieu' })
+  @ApiPropertyOptional({ example: 'Trieu', description: 'Defaults to the email local part' })
+  @IsOptional()
   @IsString()
   @Length(1, 100)
-  displayName: string
+  displayName?: string
 
   @ApiProperty({ example: 'Billet123', minLength: 8 })
   @IsString()
@@ -80,6 +83,23 @@ export class LoginDto {
   @IsString()
   @Length(1, 128)
   password: string
+}
+
+export class SocialLoginDto {
+  @ApiProperty({ enum: ['google', 'apple'] })
+  @IsIn(['google', 'apple'])
+  provider: 'google' | 'apple'
+
+  @ApiProperty({ description: 'OpenID Connect identity token returned by the provider' })
+  @IsString()
+  @Length(20, 8192)
+  identityToken: string
+
+  @ApiPropertyOptional({ description: 'Used on Apple’s first authorization response' })
+  @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  displayName?: string
 }
 
 export class AuthResponseDto {

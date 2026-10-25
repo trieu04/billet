@@ -24,6 +24,7 @@ const user: UserEntity = {
 describe('AuthService', () => {
   const users = {
     create: jest.fn(),
+    availability: jest.fn(),
     findByLoginIdentifierWithPassword: jest.fn(),
     findByEmailWithPassword: jest.fn(),
     findById: jest.fn(),
@@ -43,6 +44,8 @@ describe('AuthService', () => {
     jwtSecret: 'test-secret',
     accessTokenTtl: '15m',
     registrationVerificationPolicy: 'none',
+    googleClientIds: [],
+    appleClientIds: [],
   })
 
   beforeEach(() => jest.clearAllMocks())
@@ -67,6 +70,17 @@ describe('AuthService', () => {
     expect(result).toMatchObject({ accessToken: 'signed-token', expiresIn: 900 })
   })
 
+  it('generates profile fields for email and password registration', async () => {
+    users.availability.mockResolvedValue({ usernameAvailable: true })
+    users.create.mockResolvedValue(user)
+
+    await service.register({ email: user.email, password: 'Billet123' })
+
+    expect(users.create).toHaveBeenCalledWith(
+      expect.objectContaining({ username: expect.stringMatching(/^trieu_/), displayName: 'trieu' }),
+    )
+  })
+
   it('enforces the configured email registration policy', async () => {
     const requiredService = new AuthService(
       users as unknown as UsersService,
@@ -75,6 +89,8 @@ describe('AuthService', () => {
         jwtSecret: 'test-secret',
         accessTokenTtl: '15m',
         registrationVerificationPolicy: 'email',
+        googleClientIds: [],
+        appleClientIds: [],
       },
     )
     await expect(
@@ -98,6 +114,8 @@ describe('AuthService', () => {
           jwtSecret: 'test-secret',
           accessTokenTtl: '15m',
           registrationVerificationPolicy: policy,
+          googleClientIds: [],
+          appleClientIds: [],
         },
       )
       await expect(

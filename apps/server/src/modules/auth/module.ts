@@ -8,6 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import { EmailModule } from '../email/module'
 import { SmsModule } from '../sms/module'
 import { AuthChallengeEntity } from './entities/auth-challenge.entity'
+import { AuthIdentityEntity } from './entities/auth-identity.entity'
 import { AuthController } from './controller'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
 import { MfaPendingGuard } from './guards/mfa-pending.guard'
@@ -20,7 +21,7 @@ import { JwtStrategy } from './strategies/jwt.strategy'
     forwardRef(() => UsersModule),
     EmailModule,
     SmsModule,
-    TypeOrmModule.forFeature([AuthChallengeEntity]),
+    TypeOrmModule.forFeature([AuthChallengeEntity, AuthIdentityEntity]),
     PassportModule,
     JwtModule.registerAsync({
       inject: [authConfig.KEY],

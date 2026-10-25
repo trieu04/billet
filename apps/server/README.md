@@ -27,8 +27,9 @@ pnpm --filter @billet/server migration:revert
 Authentication includes registration/login, email verification, password reset/change,
 and optional email or authenticator-app MFA. See OpenAPI for request schemas. Main routes:
 
-Registration requires a unique username (3–30 lowercase letters, digits, or underscores,
-starting with a letter). Availability checks accept username, email, or phone number.
+Registration requires email and password. A unique username and display name are derived from
+the email when omitted; clients may still provide a username (3–30 lowercase letters, digits,
+or underscores, starting with a letter). Availability checks accept username, email, or phone number.
 Existing accounts receive a `user_<id>` username during migration. Login accepts a username,
 email address, or E.164 phone number in the `identifier` field.
 
@@ -36,6 +37,7 @@ email address, or E.164 phone number in the `identifier` field.
 - `POST /api/v1/auth/register/availability`
 - `POST /api/v1/auth/register/verification/request|confirm`
 - `POST /api/v1/auth/login`
+- `POST /api/v1/auth/social` with a Google or Apple identity token
 - `GET /api/v1/auth/me` with a Bearer token
 - `POST /api/v1/auth/verification/request|confirm`
 - `POST /api/v1/auth/password-reset/request` and `POST /api/v1/auth/password-reset`
@@ -141,6 +143,13 @@ email and phone confirmation endpoints. `AUTH_REGISTRATION_VERIFICATION_POLICY`
 controls the requirement: `none`, `email`, `phone`, `one_of`, or `both`. The
 default is `one_of`. Enable and configure the email and/or SMS delivery providers
 needed by the selected policy; a valid supplied token marks its contact verified.
+
+Social sign-in verifies provider ID tokens on the API before issuing a Billet token.
+Configure the allowed audiences as comma-separated `GOOGLE_OAUTH_CLIENT_IDS` and
+`APPLE_OAUTH_CLIENT_IDS` values. Include every web, iOS, and Android client ID used by
+the shipped clients. A provider identity is linked to an existing account only when the
+provider supplies the same verified email address. Providers with no configured audience are
+disabled; clients also omit their buttons when the corresponding public client ID is absent.
 
 Email and SMS delivery are disabled by default. Enable them only after providing all
 required `EMAIL_*` or `SMS_*` variables. The SMS endpoint receives JSON shaped as

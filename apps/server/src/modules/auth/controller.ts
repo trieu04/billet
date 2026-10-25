@@ -21,6 +21,7 @@ import {
   RegistrationVerificationRequestDto,
   RegisterDto,
   ResetPasswordDto,
+  SocialLoginDto,
   VerificationCodeDto,
   VerifyMfaDto,
 } from './dto'
@@ -47,7 +48,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Create a Billet account',
     description:
-      'Creates an account and returns an access token. Include the short-lived verification tokens required by the configured registration policy.',
+      'Creates an account from email and password and returns an access token. Username and display name are generated when omitted. Include the short-lived verification tokens required by the configured registration policy.',
   })
   @ApiCreatedResponse({ description: 'Account created and authenticated', type: AuthResponseDto })
   @ApiBadRequestResponse({ description: 'Registration data or verification token is invalid' })
@@ -119,6 +120,19 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Identifier or password is incorrect' })
   login(@Body() input: LoginDto): Promise<AuthResponseDto> {
     return this.auth.login(input)
+  }
+
+  @Post('social')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Sign in with Google or Apple',
+    description:
+      'Verifies the provider identity token, links a verified email to an existing account when safe, or creates a new Billet account.',
+  })
+  @ApiOkResponse({ description: 'Provider token accepted', type: AuthResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Provider token is invalid or not intended for Billet' })
+  socialLogin(@Body() input: SocialLoginDto): Promise<AuthResponseDto> {
+    return this.auth.socialLogin(input)
   }
 
   @Get('me')

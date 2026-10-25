@@ -138,6 +138,7 @@ describe('Auth (e2e)', () => {
       '/api/v1/auth/register/verification/request',
       '/api/v1/auth/register/verification/confirm',
       '/api/v1/auth/login',
+      '/api/v1/auth/social',
       '/api/v1/auth/me',
       '/api/v1/auth/password-reset/request',
       '/api/v1/auth/password-reset',

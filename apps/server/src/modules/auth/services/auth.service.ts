@@ -1,7 +1,17 @@
-import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common'
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Optional,
+  UnauthorizedException,
+} from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
+import { InjectRepository } from '@nestjs/typeorm'
 import { compare, hash } from 'bcryptjs'
+import { createHash, randomBytes } from 'node:crypto'
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose'
 import QRCode from 'qrcode'
+import { Repository } from 'typeorm'
 import { authConfig, type AuthConfig } from '../../../configs/app.config'
 import type { UserEntity } from '../../user/entities/user.entity'
 import { UsersService } from '../../user/service'
@@ -13,11 +23,15 @@ import {
   type LoginDto,
   type RegisterDto,
   type ResetPasswordDto,
+  type SocialLoginDto,
 } from '../dto'
+import { AuthIdentityEntity, type SocialProvider } from '../entities/auth-identity.entity'
 import { OtpService } from './otp.service'
 import { createTotpUri, generateTotpSecret, verifyTotp } from '../utils/totp'
 
 const HASH_ROUNDS = 12
+const GOOGLE_JWKS = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'))
+const APPLE_JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'))
 
 @Injectable()
 export class AuthService {
@@ -25,6 +39,9 @@ export class AuthService {
     private readonly users: UsersService,
     private readonly jwt: JwtService,
     @Inject(authConfig.KEY) private readonly config: AuthConfig,
+    @Optional()
+    @InjectRepository(AuthIdentityEntity)
+    private readonly identities?: Repository<AuthIdentityEntity>,
     private readonly otp?: OtpService,
   ) {}
 
@@ -33,12 +50,14 @@ export class AuthService {
     const emailVerified = verified.has(`email:${input.email}`)
     const phoneVerified = input.phoneNumber ? verified.has(`phone:${input.phoneNumber}`) : false
     this.assertRegistrationPolicy(emailVerified, phoneVerified)
+    const username =
+      input.username ?? (await this.availableSocialUsername(input.email, `password:${input.email}`))
     return this.authResponse(
       await this.users.create({
-        username: input.username,
+        username,
         email: input.email,
         phoneNumber: input.phoneNumber,
-        displayName: input.displayName,
+        displayName: input.displayName?.trim() || input.email.split('@')[0],
         passwordHash: await hash(input.password, HASH_ROUNDS),
         emailVerified,
         phoneNumberVerified: phoneVerified,
@@ -99,6 +118,44 @@ export class AuthService {
     if (!user || !(await compare(input.password, user.passwordHash)))
       throw new UnauthorizedException('Identifier or password is incorrect')
     return this.authResponse(user, user.mfaMethods.length > 0)
+  }
+
+  async socialLogin(input: SocialLoginDto): Promise<AuthResponseDto> {
+    if (!this.identities) throw new Error('Social identity repository is unavailable')
+    const profile = await this.verifySocialIdentity(input.provider, input.identityToken)
+    const identity = await this.identities.findOne({
+      where: { provider: input.provider, subject: profile.subject },
+    })
+    if (identity) return this.authResponse(await this.users.findById(identity.userId), false)
+
+    if (profile.email && !profile.emailVerified) {
+      throw new UnauthorizedException('The provider email must be verified before linking accounts')
+    }
+
+    let user = profile.email ? await this.users.findByEmailWithPassword(profile.email) : null
+    if (!user) {
+      if (!profile.email) {
+        throw new UnauthorizedException(
+          'The provider did not return an email. Re-authorize Billet and share your email.',
+        )
+      }
+      user = await this.users.create({
+        username: await this.availableSocialUsername(profile.email, profile.subject),
+        email: profile.email,
+        displayName: input.displayName?.trim() || profile.name || profile.email.split('@')[0],
+        passwordHash: await hash(randomBytes(32).toString('hex'), HASH_ROUNDS),
+        emailVerified: true,
+      })
+    }
+
+    await this.identities.save(
+      this.identities.create({
+        provider: input.provider,
+        subject: profile.subject,
+        userId: user.id,
+      }),
+    )
+    return this.authResponse(user, false)
   }
 
   async currentUser(userId: string) {
@@ -258,6 +315,41 @@ export class AuthService {
     return verified
   }
 
+  private async verifySocialIdentity(provider: SocialProvider, token: string) {
+    const audiences =
+      provider === 'google' ? this.config.googleClientIds : this.config.appleClientIds
+    if (audiences.length === 0)
+      throw new UnauthorizedException(`${provider} sign-in is not configured`)
+    try {
+      const { payload } = await jwtVerify(token, provider === 'google' ? GOOGLE_JWKS : APPLE_JWKS, {
+        issuer:
+          provider === 'google'
+            ? ['https://accounts.google.com', 'accounts.google.com']
+            : 'https://appleid.apple.com',
+        audience: audiences,
+      })
+      return socialProfile(payload)
+    } catch {
+      throw new UnauthorizedException(`${provider} identity token is invalid`)
+    }
+  }
+
+  private async availableSocialUsername(email: string, subject: string): Promise<string> {
+    const stem =
+      email
+        .split('@')[0]
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, '')
+        .replace(/^[^a-z]+/, '')
+        .slice(0, 20) || 'billet'
+    const suffix = createHash('sha256').update(subject).digest('hex').slice(0, 6)
+    const candidate = `${stem}_${suffix}`.slice(0, 30)
+    if ((await this.users.availability(undefined, undefined, candidate)).usernameAvailable) {
+      return candidate
+    }
+    return `${stem.slice(0, 17)}_${randomBytes(4).toString('hex')}`.slice(0, 30)
+  }
+
   private async authResponse(user: UserEntity, requiresMfa: boolean): Promise<AuthResponseDto> {
     const accessToken = await this.jwt.signAsync(
       { email: user.email, purpose: requiresMfa ? 'mfa_pending' : 'access' },
@@ -271,6 +363,23 @@ export class AuthService {
       requiresMfa,
       mfaMethods: user.mfaMethods as MfaMethod[],
     }
+  }
+}
+
+function socialProfile(payload: JWTPayload): {
+  subject: string
+  email: string | null
+  emailVerified: boolean
+  name: string | null
+} {
+  if (!payload.sub) throw new Error('Missing subject')
+  const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : null
+  const verified = payload.email_verified === true || payload.email_verified === 'true'
+  return {
+    subject: payload.sub,
+    email,
+    emailVerified: verified,
+    name: typeof payload.name === 'string' ? payload.name : null,
   }
 }
 

@@ -27,6 +27,8 @@ export const authConfig = registerAs('auth', () => ({
   jwtSecret: process.env.JWT_SECRET ?? 'development-only-change-me',
   accessTokenTtl: process.env.JWT_ACCESS_TOKEN_TTL ?? '15m',
   registrationVerificationPolicy: process.env.AUTH_REGISTRATION_VERIFICATION_POLICY ?? 'one_of',
+  googleClientIds: parseList(process.env.GOOGLE_OAUTH_CLIENT_IDS, ''),
+  appleClientIds: parseList(process.env.APPLE_OAUTH_CLIENT_IDS, ''),
 }))
 
 export type AuthConfig = ConfigType<typeof authConfig>

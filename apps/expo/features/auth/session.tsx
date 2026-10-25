@@ -24,6 +24,12 @@ type SessionContextValue = {
   user: User | null
   ready: boolean
   login(identifier: string, password: string): Promise<void>
+  register(input: { email: string; password: string; verificationToken: string }): Promise<void>
+  socialLogin(
+    provider: 'google' | 'apple',
+    identityToken: string,
+    displayName?: string,
+  ): Promise<void>
   logout(): Promise<void>
 }
 
@@ -64,20 +70,55 @@ export function SessionProvider({ children }: PropsWithChildren) {
     })()
   }, [])
 
-  const login = useCallback(async (identifier: string, password: string) => {
-    const response = await apiRequest<AuthResponse>('/auth/login', {
-      method: 'POST',
-      body: { identifier, password },
-    })
+  const acceptAuth = useCallback(async (response: AuthResponse) => {
     if (response.requiresMfa) throw new Error('Tài khoản cần xác thực hai bước, chưa được hỗ trợ.')
     await saveToken(response.accessToken)
     setToken(response.accessToken)
     setUser(response.user)
   }, [])
 
+  const login = useCallback(
+    async (identifier: string, password: string) => {
+      const response = await apiRequest<AuthResponse>('/auth/login', {
+        method: 'POST',
+        body: { identifier, password },
+      })
+      await acceptAuth(response)
+    },
+    [acceptAuth],
+  )
+
+  const register = useCallback(
+    async (input: { email: string; password: string; verificationToken: string }) => {
+      await acceptAuth(
+        await apiRequest<AuthResponse>('/auth/register', {
+          method: 'POST',
+          body: {
+            ...input,
+            verificationToken: undefined,
+            verificationTokens: [input.verificationToken],
+          },
+        }),
+      )
+    },
+    [acceptAuth],
+  )
+
+  const socialLogin = useCallback(
+    async (provider: 'google' | 'apple', identityToken: string, displayName?: string) => {
+      await acceptAuth(
+        await apiRequest<AuthResponse>('/auth/social', {
+          method: 'POST',
+          body: { provider, identityToken, displayName },
+        }),
+      )
+    },
+    [acceptAuth],
+  )
+
   const value = useMemo(
-    () => ({ token, user, ready, login, logout }),
-    [login, logout, ready, token, user],
+    () => ({ token, user, ready, login, register, socialLogin, logout }),
+    [login, logout, ready, register, socialLogin, token, user],
   )
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }
@@ -85,15 +126,17 @@ export function SessionProvider({ children }: PropsWithChildren) {
 export function SessionGuard({ children }: PropsWithChildren) {
   const { ready, token } = useSession()
   const segments = useSegments()
-  const isLogin = (segments[0] as string | undefined) === 'login'
+  const isAuthRoute = ['login', 'register', 'forgot-password'].includes(
+    (segments[0] as string | undefined) ?? '',
+  )
 
   useEffect(() => {
     if (!ready) return
-    if (!token && !isLogin) router.replace('/login' as Href)
-    if (token && isLogin) router.replace('/')
-  }, [isLogin, ready, token])
+    if (!token && !isAuthRoute) router.replace('/login' as Href)
+    if (token && isAuthRoute) router.replace('/')
+  }, [isAuthRoute, ready, token])
 
-  if (!ready || (!token && !isLogin) || (token && isLogin)) return null
+  if (!ready || (!token && !isAuthRoute) || (token && isAuthRoute)) return null
   return children
 }
 

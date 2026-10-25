@@ -1,22 +1,51 @@
-import { useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import * as AppleAuthentication from 'expo-apple-authentication'
+import * as Google from 'expo-auth-session/providers/google'
+import * as WebBrowser from 'expo-web-browser'
+import { type Href, router } from 'expo-router'
+import { useState, type ComponentProps } from 'react'
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native'
 
 import { colors, fonts } from '@/features/ui/theme'
 import { useSession } from './session'
 
+WebBrowser.maybeCompleteAuthSession()
+
 export function LoginScreen() {
-  const { login } = useSession()
+  const { login, socialLogin } = useSession()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [googleRequest, , promptGoogle] = Google.useIdTokenAuthRequest({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    selectAccount: true,
+  })
+  const googleEnabled = Boolean(
+    Platform.select({
+      web: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+      android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    }),
+  )
+  const appleEnabled = Platform.OS === 'ios' && Boolean(process.env.EXPO_PUBLIC_APPLE_CLIENT_ID)
+  const socialEnabled = googleEnabled || appleEnabled
 
-  const submit = async () => {
+  const run = async (action: () => Promise<void>) => {
     setSubmitting(true)
     setError(null)
     try {
-      await login(identifier, password)
+      await action()
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Không thể đăng nhập')
     } finally {
@@ -24,17 +53,66 @@ export function LoginScreen() {
     }
   }
 
+  const google = () =>
+    run(async () => {
+      const result = await promptGoogle()
+      if (result.type !== 'success' || !result.params.id_token)
+        throw new Error('Google Sign-In đã bị hủy')
+      await socialLogin('google', result.params.id_token)
+    })
+
+  const apple = () =>
+    run(async () => {
+      const result = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      })
+      if (!result.identityToken) throw new Error('Apple không trả về token đăng nhập')
+      const displayName = [result.fullName?.givenName, result.fullName?.familyName]
+        .filter(Boolean)
+        .join(' ')
+      await socialLogin('apple', result.identityToken, displayName || undefined)
+    })
+
   return (
-    <SafeAreaView style={styles.safe}>
+    <ScrollView contentContainerStyle={styles.safe} keyboardShouldPersistTaps="handled">
       <View style={styles.card}>
         <Text style={styles.eyebrow}>BILLET</Text>
         <Text style={styles.title}>Chào mừng trở lại</Text>
-        <Text style={styles.subtitle}>Đăng nhập để tiếp tục nhật ký chi tiêu của bạn.</Text>
+        <Text style={styles.subtitle}>Tiếp tục nhật ký chi tiêu của bạn.</Text>
+        {socialEnabled && (
+          <View style={styles.socialRow}>
+            {googleEnabled && (
+              <SocialButton
+                label="Google"
+                disabled={!googleRequest || submitting}
+                onPress={() => void google()}
+              />
+            )}
+            {appleEnabled && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                cornerRadius={24}
+                style={styles.appleButton}
+                onPress={() => void apple()}
+              />
+            )}
+          </View>
+        )}
+        {socialEnabled && (
+          <View style={styles.divider}>
+            <View style={styles.line} />
+            <Text style={styles.or}>HOẶC</Text>
+            <View style={styles.line} />
+          </View>
+        )}
         <TextInput
           accessibilityLabel="Tên đăng nhập, email hoặc số điện thoại"
           autoCapitalize="none"
           autoComplete="username"
-          keyboardType="default"
           onChangeText={setIdentifier}
           placeholder="Username, email hoặc số điện thoại"
           placeholderTextColor={colors.textSecondary}
@@ -46,18 +124,28 @@ export function LoginScreen() {
           autoCapitalize="none"
           autoComplete="current-password"
           onChangeText={setPassword}
-          onSubmitEditing={() => void submit()}
+          onSubmitEditing={() => void run(() => login(identifier, password))}
           placeholder="Mật khẩu"
           placeholderTextColor={colors.textSecondary}
           secureTextEntry
           style={styles.input}
           value={password}
         />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/forgot-password' as Href)}
+        >
+          <Text style={styles.link}>Quên mật khẩu?</Text>
+        </Pressable>
+        {error ? (
+          <Text accessibilityRole="alert" style={styles.error}>
+            {error}
+          </Text>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           disabled={submitting || !identifier.trim() || !password}
-          onPress={() => void submit()}
+          onPress={() => void run(() => login(identifier, password))}
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}
         >
           {submitting ? (
@@ -66,27 +154,48 @@ export function LoginScreen() {
             <Text style={styles.buttonText}>Đăng nhập</Text>
           )}
         </Pressable>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/register' as Href)}>
+          <Text style={styles.register}>
+            Chưa có tài khoản? <Text style={styles.link}>Đăng ký</Text>
+          </Text>
+        </Pressable>
       </View>
-    </SafeAreaView>
+    </ScrollView>
+  )
+}
+
+function SocialButton({ label, ...props }: { label: string } & ComponentProps<typeof Pressable>) {
+  return (
+    <Pressable
+      {...props}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.socialButton, pressed && styles.pressed]}
+    >
+      <Text style={styles.socialText}>{label}</Text>
+    </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
+  appleButton: { flex: 1, height: 50 },
   button: {
     alignItems: 'center',
     backgroundColor: colors.peach,
+    borderCurve: 'continuous',
     borderRadius: 27,
     height: 54,
     justifyContent: 'center',
     marginTop: 4,
   },
   buttonText: { color: '#3A1D0E', fontFamily: fonts.semibold, fontSize: 16 },
-  card: { gap: 14, marginHorizontal: 24, maxWidth: 440, width: '88%' },
+  card: { gap: 14, maxWidth: 440, width: '100%' },
+  divider: { alignItems: 'center', flexDirection: 'row', gap: 12 },
   error: { color: '#B3433C', fontFamily: fonts.regular, fontSize: 13 },
   eyebrow: { color: colors.link, fontFamily: fonts.bold, fontSize: 13, letterSpacing: 2 },
   input: {
     backgroundColor: colors.card,
     borderColor: colors.line,
+    borderCurve: 'continuous',
     borderRadius: 16,
     borderWidth: 1,
     color: colors.text,
@@ -95,14 +204,37 @@ const styles = StyleSheet.create({
     height: 54,
     paddingHorizontal: 16,
   },
-  pressed: { opacity: 0.75 },
-  safe: { alignItems: 'center', backgroundColor: colors.canvas, flex: 1, justifyContent: 'center' },
+  line: { backgroundColor: colors.line, flex: 1, height: 1 },
+  link: { color: colors.link, fontFamily: fonts.semibold, fontSize: 14 },
+  or: { color: colors.textSecondary, fontFamily: fonts.medium, fontSize: 11, letterSpacing: 1.5 },
+  pressed: { opacity: 0.72 },
+  register: { color: colors.textSecondary, fontFamily: fonts.regular, textAlign: 'center' },
+  safe: {
+    alignItems: 'center',
+    backgroundColor: colors.canvas,
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+  },
+  socialButton: {
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderColor: colors.line,
+    borderRadius: 24,
+    borderWidth: 1,
+    flex: 1,
+    height: 50,
+    justifyContent: 'center',
+  },
+  socialRow: { flexDirection: 'row', gap: 12 },
+  socialText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 15 },
   subtitle: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: 15,
     lineHeight: 22,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   title: { color: colors.text, fontFamily: fonts.bold, fontSize: 32 },
 })
