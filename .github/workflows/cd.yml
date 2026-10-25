@@ -60,7 +60,7 @@ jobs:
             git pull --ff-only
 
             if [ "$REBUILD_ALL" = "true" ] || [ "$COMMON_CHANGED" = "true" ]; then
-              docker compose up -d --build
+              docker compose up -d --build --remove-orphans
               exit 0
             fi
 
@@ -79,8 +79,8 @@ jobs:
             fi
 
             if [ "$#" -gt 0 ]; then
-              docker compose up -d --build --no-deps "$@"
+              docker compose up -d --build --no-deps --remove-orphans "$@"
             else
               # Reconcile the running stack without rebuilding unchanged images.
-              docker compose up -d
+              docker compose up -d --remove-orphans
             fi
