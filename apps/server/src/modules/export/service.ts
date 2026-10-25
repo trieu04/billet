@@ -56,6 +56,14 @@ export class ExportService implements OnModuleInit, OnModuleDestroy {
   async get(userId: string, id: string) {
     return this.response(await this.owned(userId, id))
   }
+  async list(userId: string, limit: number) {
+    const jobs = await this.jobs.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+      take: limit,
+    })
+    return jobs.map((job) => this.response(job))
+  }
   async download(userId: string, id: string) {
     const job = await this.jobs
       .createQueryBuilder('j')

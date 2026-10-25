@@ -24,6 +24,12 @@
       ],
       "expo-font",
       "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Billet to use Face ID to unlock your private expense journal."
+        }
+      ],
       "expo-status-bar"
     ],
     "experiments": {

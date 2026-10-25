@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Res, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Post, Query, Res, UseGuards } from '@nestjs/common'
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -12,7 +12,7 @@ import { ParseBigIntPipe } from '../../shared/pipes/parse-bigint.pipe'
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import type { AuthUser } from '../auth/interface'
-import { CreateExportDto, ExportResponseDto } from './dto'
+import { CreateExportDto, ExportListQueryDto, ExportResponseDto } from './dto'
 import { ExportService } from './service'
 @ApiTags('exports')
 @ApiBearerAuth()
@@ -29,6 +29,12 @@ export class ExportController {
   @ApiCreatedResponse({ type: ExportResponseDto })
   create(@CurrentUser() u: AuthUser, @Body() b: CreateExportDto) {
     return this.exports.create(u.id, b)
+  }
+  @Get()
+  @ApiOperation({ summary: 'List recent expense export jobs' })
+  @ApiOkResponse({ type: ExportResponseDto, isArray: true })
+  list(@CurrentUser() u: AuthUser, @Query() query: ExportListQueryDto) {
+    return this.exports.list(u.id, query.limit)
   }
   @Get(':id')
   @ApiOperation({

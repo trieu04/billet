@@ -64,4 +64,33 @@ describe('UsersService settings', () => {
     })
     expect(settings.findOneBy).toHaveBeenCalledTimes(2)
   })
+
+  it('clears a stored reminder time when reminders are disabled', async () => {
+    const persisted = {
+      id: '7',
+      userId: '1',
+      defaultCurrency: 'VND',
+      timezone: 'Asia/Ho_Chi_Minh',
+      locale: 'vi',
+      appearance: Appearance.System,
+      reminderEnabled: true,
+      reminderTime: '20:00:00',
+    } as UserSettingsEntity
+    const settings = {
+      findOneBy: jest.fn().mockResolvedValue(persisted),
+      save: jest.fn().mockResolvedValue(persisted),
+      create: jest.fn(),
+    }
+    const service = new UsersService(
+      {} as Repository<UserEntity>,
+      settings as unknown as Repository<UserSettingsEntity>,
+      {} as DataSource,
+    )
+
+    await service.updateSettings('1', { reminderEnabled: false })
+
+    expect(settings.save).toHaveBeenCalledWith(
+      expect.objectContaining({ reminderEnabled: false, reminderTime: null }),
+    )
+  })
 })

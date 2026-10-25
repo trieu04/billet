@@ -54,7 +54,8 @@ Authenticated notification endpoints:
 
 Expense journal endpoints:
 
-- `GET /api/v1/profile` and `GET|PATCH /api/v1/profile/settings`
+- `GET|PATCH /api/v1/profile`, `GET|PATCH /api/v1/profile/settings`, and
+  `GET /api/v1/profile/settings/options`
 - `GET /api/v1/categories`
 - `POST|GET /api/v1/expenses`, `GET|PATCH|DELETE /api/v1/expenses/:id`
 - `GET /api/v1/expenses/calendar`, `GET /api/v1/expenses/calendar/history`
@@ -63,7 +64,7 @@ Expense journal endpoints:
 - `GET /api/v1/reports/spending`
 - `GET|PUT /api/v1/budgets`
 - `POST /api/v1/reminders/sync`
-- `POST /api/v1/exports`, `GET /api/v1/exports/:id`, and the authenticated download route
+- `POST|GET /api/v1/exports`, `GET /api/v1/exports/:id`, and the authenticated download route
 
 Amounts use minor currency units encoded as decimal strings, and all identifiers are
 bigint strings. Expense creation requires an idempotency key. Updates require the

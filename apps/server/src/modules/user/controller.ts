@@ -3,7 +3,14 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swa
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import type { AuthUser } from '../auth/interface'
-import { ProfileResponseDto, UpdateSettingsDto, UserSettingsResponseDto } from './dto'
+import {
+  ProfileResponseDto,
+  SettingsOptionsResponseDto,
+  UpdateProfileDto,
+  UpdateSettingsDto,
+  UserSettingsResponseDto,
+} from './dto'
+import { Appearance } from './entities/user-settings.entity'
 import { UsersService } from './service'
 @ApiTags('profile')
 @ApiBearerAuth()
@@ -21,6 +28,12 @@ export class UserController {
   get(@CurrentUser() user: AuthUser) {
     return this.users.profile(user.id)
   }
+  @Patch()
+  @ApiOperation({ summary: 'Update the account profile' })
+  @ApiOkResponse({ type: ProfileResponseDto })
+  updateProfile(@CurrentUser() user: AuthUser, @Body() input: UpdateProfileDto) {
+    return this.users.updateProfile(user.id, input)
+  }
   @Get('settings')
   @ApiOperation({
     summary: 'Get account settings',
@@ -29,6 +42,15 @@ export class UserController {
   @ApiOkResponse({ type: UserSettingsResponseDto })
   settings(@CurrentUser() user: AuthUser) {
     return this.users.getSettings(user.id)
+  }
+  @Get('settings/options')
+  @ApiOperation({ summary: 'Get supported account setting values' })
+  @ApiOkResponse({ type: SettingsOptionsResponseDto })
+  options(): SettingsOptionsResponseDto {
+    return {
+      currencies: ['VND', 'USD', 'EUR', 'JPY'],
+      appearances: [Appearance.System, Appearance.Light, Appearance.Dark],
+    }
   }
   @Patch('settings')
   @ApiOperation({

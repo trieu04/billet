@@ -5,6 +5,7 @@ import { UserEntity } from './entities/user.entity'
 import { UserSettingsEntity } from './entities/user-settings.entity'
 import type {
   ProfileResponseDto,
+  UpdateProfileDto,
   UpdateSettingsDto,
   UserResponseDto,
   UserSettingsResponseDto,
@@ -112,6 +113,13 @@ export class UsersService {
     return user
   }
 
+  async updateProfile(userId: string, input: UpdateProfileDto): Promise<ProfileResponseDto> {
+    const user = await this.findById(userId)
+    user.displayName = input.displayName.trim()
+    await this.users.save(user)
+    return this.profile(userId)
+  }
+
   async getSettings(userId: string): Promise<UserSettingsResponseDto> {
     let settings = await this.settings.findOneBy({ userId })
     settings ??= await this.settings.save(this.settings.create({ userId }))
@@ -129,6 +137,7 @@ export class UsersService {
     let settings = await this.settings.findOneBy({ userId })
     settings ??= this.settings.create({ userId })
     Object.assign(settings, input)
+    if (!settings.reminderEnabled) settings.reminderTime = null
     if (settings.reminderEnabled && !settings.reminderTime)
       throw new ConflictException('Reminder time is required when reminders are enabled')
     await this.settings.save(settings)

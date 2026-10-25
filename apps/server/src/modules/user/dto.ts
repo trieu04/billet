@@ -1,5 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsBoolean, IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator'
+import {
+  IsBoolean,
+  IsEnum,
+  IsIn,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  ValidateIf,
+} from 'class-validator'
 import { Appearance } from './entities/user-settings.entity'
 
 export class UserResponseDto {
@@ -29,8 +38,9 @@ export class UserResponseDto {
 }
 
 export class UpdateSettingsDto {
-  @ApiPropertyOptional({ example: 'VND' })
+  @ApiPropertyOptional({ example: 'VND', enum: ['VND', 'USD', 'EUR', 'JPY'] })
   @IsOptional()
+  @IsIn(['VND', 'USD', 'EUR', 'JPY'])
   @Matches(/^[A-Z]{3}$/)
   defaultCurrency?: string
   @ApiPropertyOptional({ example: 'Asia/Ho_Chi_Minh' })
@@ -44,10 +54,26 @@ export class UpdateSettingsDto {
   @IsEnum(Appearance)
   appearance?: Appearance
   @ApiPropertyOptional() @IsOptional() @IsBoolean() reminderEnabled?: boolean
-  @ApiPropertyOptional({ example: '20:00' })
-  @IsOptional()
+  @ApiPropertyOptional({ example: '20:00', nullable: true })
+  @ValidateIf((_object, value) => value !== undefined && value !== null)
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
-  reminderTime?: string
+  reminderTime?: string | null
+}
+
+export class UpdateProfileDto {
+  @ApiProperty({ example: 'Nguyễn Trí' })
+  @IsString()
+  @MaxLength(100)
+  @Matches(/\S/, { message: 'displayName must not be blank' })
+  displayName: string
+}
+
+export class SettingsOptionsResponseDto {
+  @ApiProperty({ enum: ['VND', 'USD', 'EUR', 'JPY'], isArray: true })
+  currencies: string[]
+
+  @ApiProperty({ enum: Appearance, isArray: true })
+  appearances: Appearance[]
 }
 export class UserSettingsResponseDto {
   @ApiProperty() id: string

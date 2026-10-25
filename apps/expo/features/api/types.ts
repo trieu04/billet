@@ -90,6 +90,11 @@ export type Settings = {
   reminderTime: string | null
 }
 
+export type SettingsOptions = {
+  currencies: string[]
+  appearances: Settings['appearance'][]
+}
+
 export type Profile = User & {
   expenseCount: number
   settings: Settings
@@ -102,6 +107,18 @@ export type Budget = {
   limitMinor: string | null
   spentMinor: string
   remainingMinor: string | null
+}
+
+export type ExportJob = {
+  id: string
+  status: 'pending' | 'processing' | 'succeeded' | 'failed' | 'canceled'
+  from: string | null
+  to: string | null
+  currency: string | null
+  snapshotAt: string | null
+  downloadExpiresAt: string | null
+  failureReason: string | null
+  createdAt: string
 }
 
 export type MediaReservation = {
