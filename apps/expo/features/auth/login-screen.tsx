@@ -25,12 +25,6 @@ export function LoginScreen() {
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [googleRequest, , promptGoogle] = Google.useIdTokenAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    selectAccount: true,
-  })
   const googleEnabled = Boolean(
     Platform.select({
       web: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
@@ -52,14 +46,6 @@ export function LoginScreen() {
       setSubmitting(false)
     }
   }
-
-  const google = () =>
-    run(async () => {
-      const result = await promptGoogle()
-      if (result.type !== 'success' || !result.params.id_token)
-        throw new Error('Google Sign-In đã bị hủy')
-      await socialLogin('google', result.params.id_token)
-    })
 
   const apple = () =>
     run(async () => {
@@ -85,10 +71,10 @@ export function LoginScreen() {
         {socialEnabled && (
           <View style={styles.socialRow}>
             {googleEnabled && (
-              <SocialButton
-                label="Google"
-                disabled={!googleRequest || submitting}
-                onPress={() => void google()}
+              <GoogleLoginButton
+                disabled={submitting}
+                onLogin={(identityToken) => socialLogin('google', identityToken)}
+                run={run}
               />
             )}
             {appleEnabled && (
@@ -161,6 +147,38 @@ export function LoginScreen() {
         </Pressable>
       </View>
     </ScrollView>
+  )
+}
+
+function GoogleLoginButton({
+  disabled,
+  onLogin,
+  run,
+}: {
+  disabled: boolean
+  onLogin: (identityToken: string) => Promise<void>
+  run: (action: () => Promise<void>) => Promise<void>
+}) {
+  const [request, , prompt] = Google.useIdTokenAuthRequest({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    selectAccount: true,
+  })
+
+  return (
+    <SocialButton
+      label="Google"
+      disabled={!request || disabled}
+      onPress={() =>
+        void run(async () => {
+          const result = await prompt()
+          if (result.type !== 'success' || !result.params.id_token)
+            throw new Error('Google Sign-In đã bị hủy')
+          await onLogin(result.params.id_token)
+        })
+      }
+    />
   )
 }
 
