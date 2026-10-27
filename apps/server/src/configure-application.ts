@@ -11,7 +11,7 @@ export function configureApplication(app: INestApplication): AppConfig {
   app.use(helmet())
   app.useGlobalPipes(
     new ValidationPipe({
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false,
       transform: true,
       whitelist: true,
     }),
