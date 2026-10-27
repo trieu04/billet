@@ -23,4 +23,5 @@ data/sample/object-storage/*
 data/sample/object-storage/media/*
 !data/sample/object-storage/media/sample/
 
-keys/
+keys/*
+!keys/.gitkeep
