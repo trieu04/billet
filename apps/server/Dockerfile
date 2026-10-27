@@ -10,7 +10,10 @@ RUN pnpm --filter @billet/server build && pnpm deploy --filter @billet/server --
 FROM node:22-alpine AS production
 ENV NODE_ENV=production
 WORKDIR /app
-RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
+RUN addgroup -S nodejs \
+  && adduser -S nestjs -G nodejs \
+  && mkdir -p /data/private \
+  && chown nestjs:nodejs /data/private
 COPY --from=build --chown=nestjs:nodejs /prod/server ./
 USER nestjs
 EXPOSE 6701
