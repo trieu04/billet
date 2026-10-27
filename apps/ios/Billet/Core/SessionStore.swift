@@ -10,9 +10,15 @@ final class SessionStore {
     private(set) var token: String?
     private(set) var user: User?
     private let keychain = KeychainStore()
+    private var refreshTask: Task<String?, Never>?
     private var isUITesting: Bool { ProcessInfo.processInfo.environment["BILLET_UI_TESTING"] == "1" }
 
-    var api: APIClient { APIClient(token: token) }
+    var api: APIClient {
+        if isUITesting { return APIClient(token: token) }
+        return APIClient(token: token, refreshAccessToken: { [weak self] in
+            await self?.refreshSession()
+        })
+    }
 
     func restore() async {
         guard state == .restoring else { return }
@@ -20,16 +26,16 @@ final class SessionStore {
             state = .signedOut
             return
         }
-        guard let savedToken = keychain.loadToken() else {
+        guard let savedTokens = keychain.loadTokens() else {
             state = .signedOut
             return
         }
-        token = savedToken
+        token = savedTokens.accessToken
         do {
-            user = try await APIClient(token: savedToken).request("/auth/me")
+            user = try await api.request("/auth/me")
             state = .signedIn
         } catch let error as APIError where error.statusCode == 401 {
-            try? keychain.saveToken(nil)
+            try? keychain.saveTokens(nil)
             token = nil
             state = .signedOut
         } catch {
@@ -59,16 +65,67 @@ final class SessionStore {
         guard !response.requiresMfa else {
             throw APIError(message: "Tài khoản cần xác thực hai bước, chưa được hỗ trợ.", statusCode: 409)
         }
-        try keychain.saveToken(response.accessToken)
+        guard let refreshToken = response.refreshToken else {
+            throw APIError(message: "Máy chủ không trả về refresh token.", statusCode: 500)
+        }
+        try keychain.saveTokens(
+            SessionTokens(accessToken: response.accessToken, refreshToken: refreshToken)
+        )
         token = response.accessToken
         user = response.user
         state = .signedIn
     }
 
     func logout() {
-        try? keychain.saveToken(nil)
+        if let tokens = keychain.loadTokens() {
+            Task {
+                try? await APIClient().send(
+                    "/auth/logout",
+                    method: "POST",
+                    body: RefreshTokenBody(refreshToken: tokens.refreshToken)
+                )
+            }
+        }
+        try? keychain.saveTokens(nil)
         token = nil
         user = nil
         state = .signedOut
+    }
+
+    private func refreshSession() async -> String? {
+        if let refreshTask { return await refreshTask.value }
+        let task = Task { @MainActor [weak self] in await self?.performRefresh() }
+        refreshTask = task
+        let result = await task.value
+        refreshTask = nil
+        return result
+    }
+
+    private func performRefresh() async -> String? {
+        guard let tokens = keychain.loadTokens() else { return nil }
+        do {
+            let response: AuthResponse = try await APIClient().request(
+                "/auth/refresh",
+                method: "POST",
+                body: RefreshTokenBody(refreshToken: tokens.refreshToken)
+            )
+            guard let refreshToken = response.refreshToken else { throw APIError(
+                message: "Máy chủ không trả về refresh token.",
+                statusCode: 500
+            ) }
+            try keychain.saveTokens(
+                SessionTokens(accessToken: response.accessToken, refreshToken: refreshToken)
+            )
+            token = response.accessToken
+            user = response.user
+            state = .signedIn
+            return response.accessToken
+        } catch {
+            try? keychain.saveTokens(nil)
+            token = nil
+            user = nil
+            state = .signedOut
+            return nil
+        }
     }
 }

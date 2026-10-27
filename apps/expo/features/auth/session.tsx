@@ -12,12 +12,13 @@ import {
 } from 'react'
 import { Platform } from 'react-native'
 
-import { apiRequest } from '@/features/api/client'
+import { apiRequest, configureApiRefresh } from '@/features/api/client'
 import type { AuthResponse, User } from '@/features/api/types'
 
 import { restoreSession } from './restore-session'
 
 const TOKEN_KEY = 'billet.access-token'
+const REFRESH_TOKEN_KEY = 'billet.refresh-token'
 
 type SessionContextValue = {
   token: string | null
@@ -50,20 +51,47 @@ async function saveToken(token: string | null) {
   else await SecureStore.deleteItemAsync(TOKEN_KEY)
 }
 
+async function loadRefreshToken() {
+  if (Platform.OS === 'web') return globalThis.localStorage?.getItem(REFRESH_TOKEN_KEY) ?? null
+  return SecureStore.getItemAsync(REFRESH_TOKEN_KEY)
+}
+
+async function saveRefreshToken(token: string | null) {
+  if (Platform.OS === 'web') {
+    if (token) globalThis.localStorage?.setItem(REFRESH_TOKEN_KEY, token)
+    else globalThis.localStorage?.removeItem(REFRESH_TOKEN_KEY)
+    return
+  }
+  if (token) await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token)
+  else await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY)
+}
+
 export function SessionProvider({ children }: PropsWithChildren) {
   const [token, setToken] = useState<string | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [ready, setReady] = useState(false)
 
   const logout = useCallback(async () => {
+    const refreshToken = await loadRefreshToken()
+    if (refreshToken) {
+      void apiRequest('/auth/logout', { method: 'POST', body: { refreshToken } }).catch(
+        () => undefined,
+      )
+    }
     await saveToken(null)
+    await saveRefreshToken(null)
     setToken(null)
     setUser(null)
   }, [])
 
   useEffect(() => {
     void (async () => {
-      const session = await restoreSession({ loadToken, saveToken })
+      const session = await restoreSession({
+        loadToken,
+        saveToken,
+        loadRefreshToken,
+        saveRefreshToken,
+      })
       setToken(session.token)
       setUser(session.user)
       setReady(true)
@@ -72,10 +100,34 @@ export function SessionProvider({ children }: PropsWithChildren) {
 
   const acceptAuth = useCallback(async (response: AuthResponse) => {
     if (response.requiresMfa) throw new Error('Tài khoản cần xác thực hai bước, chưa được hỗ trợ.')
+    if (!response.refreshToken) throw new Error('Máy chủ không trả về refresh token.')
     await saveToken(response.accessToken)
+    await saveRefreshToken(response.refreshToken)
     setToken(response.accessToken)
     setUser(response.user)
   }, [])
+
+  useEffect(() => {
+    configureApiRefresh(async () => {
+      const refreshToken = await loadRefreshToken()
+      if (!refreshToken) return null
+      try {
+        const response = await apiRequest<AuthResponse>('/auth/refresh', {
+          method: 'POST',
+          body: { refreshToken },
+        })
+        await acceptAuth(response)
+        return response.accessToken
+      } catch {
+        await saveToken(null)
+        await saveRefreshToken(null)
+        setToken(null)
+        setUser(null)
+        return null
+      }
+    })
+    return () => configureApiRefresh(null)
+  }, [acceptAuth])
 
   const login = useCallback(
     async (identifier: string, password: string) => {

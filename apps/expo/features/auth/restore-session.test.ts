@@ -63,6 +63,32 @@ describe('restoreSession', () => {
     expect(storage.saveToken).toHaveBeenCalledExactlyOnceWith(null)
   })
 
+  it('rotates a refresh token when the stored access token expired', async () => {
+    const user = { id: '1', username: 'billet', email: 'user@example.com', displayName: 'User' }
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(
+        Response.json({
+          accessToken: 'new-access-token',
+          refreshToken: 'new-refresh-token',
+          user,
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    const { restoreSession } = await import('./restore-session')
+    const storage = {
+      loadToken: vi.fn().mockResolvedValue('expired-access-token'),
+      saveToken: vi.fn().mockResolvedValue(undefined),
+      loadRefreshToken: vi.fn().mockResolvedValue('saved-refresh-token'),
+      saveRefreshToken: vi.fn().mockResolvedValue(undefined),
+    }
+
+    await expect(restoreSession(storage)).resolves.toEqual({ token: 'new-access-token', user })
+    expect(storage.saveToken).toHaveBeenCalledWith('new-access-token')
+    expect(storage.saveRefreshToken).toHaveBeenCalledWith('new-refresh-token')
+  })
+
   it('skips validation when there is no stored token', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)

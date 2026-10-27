@@ -17,6 +17,7 @@ class ApiException(message: String, val statusCode: Int) : IOException(message)
 class ApiClient(
     private val baseUrl: String = BuildConfig.API_BASE_URL,
     private val tokenProvider: () -> String? = { null },
+    private val tokenRefresher: (suspend (String?) -> String?)? = null,
 ) {
     val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
@@ -25,7 +26,7 @@ class ApiClient(
         serializer: KSerializer<T>,
         method: String = "GET",
         body: String? = null,
-    ): T = withContext(Dispatchers.IO) {
+    ): T = withRefresh {
         val connection = open(path, method)
         try {
             if (body != null) {
@@ -49,7 +50,7 @@ class ApiClient(
     suspend inline fun <reified B, reified T> request(path: String, method: String, body: B): T =
         request(path, method, json.encodeToString(body))
 
-    suspend fun send(path: String, method: String) = withContext(Dispatchers.IO) {
+    suspend fun send(path: String, method: String) = withRefresh {
         val connection = open(path, method)
         try {
             responseBytes(connection)
@@ -58,7 +59,7 @@ class ApiClient(
         }
     }
 
-    suspend fun upload(url: String, data: ByteArray, mimeType: String) = withContext(Dispatchers.IO) {
+    suspend fun upload(url: String, data: ByteArray, mimeType: String) = withRefresh {
         val connection = (URI(url).toURL().openConnection() as HttpURLConnection).apply {
             requestMethod = "PUT"
             connectTimeout = 30_000
@@ -76,12 +77,28 @@ class ApiClient(
         }
     }
 
-    suspend fun bytes(path: String): ByteArray = withContext(Dispatchers.IO) {
+    suspend fun bytes(path: String): ByteArray = withRefresh {
         val connection = open(path, "GET")
         try {
             responseBytes(connection)
         } finally {
             connection.disconnect()
+        }
+    }
+
+    private suspend fun <T> withRefresh(block: () -> T): T = withContext(Dispatchers.IO) {
+        val failedToken = tokenProvider()
+        try {
+            block()
+        } catch (error: ApiException) {
+            if (
+                error.statusCode != 401 ||
+                tokenRefresher == null ||
+                tokenRefresher.invoke(failedToken) == null
+            ) {
+                throw error
+            }
+            block()
         }
     }
 

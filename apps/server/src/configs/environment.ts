@@ -11,6 +11,7 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
   const databasePort = getNumber(environment, 'DATABASE_PORT', 6710)
   const jwtSecret = getString(environment, 'AUTH_JWT_SECRET', 'development-only-change-me')
   const accessTokenTtl = getString(environment, 'AUTH_ACCESS_TOKEN_TTL', '15m')
+  const refreshTokenTtl = getString(environment, 'AUTH_REFRESH_TOKEN_TTL', '30d')
   const smtpPort = getNumber(environment, 'SMTP_PORT', 587)
   const smsTimeoutMs = getNumber(environment, 'SMS_HTTP_TIMEOUT_MS', 10_000)
   const webSocketPath = getString(environment, 'REALTIME_WEBSOCKET_PATH', '/ws')
@@ -48,6 +49,9 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
   }
   if (!/^\d+[smhd]$/.test(accessTokenTtl)) {
     errors.push('AUTH_ACCESS_TOKEN_TTL must use a duration such as 15m, 1h, or 7d')
+  }
+  if (!/^\d+[smhd]$/.test(refreshTokenTtl)) {
+    errors.push('AUTH_REFRESH_TOKEN_TTL must use a duration such as 30d, 12h, or 7d')
   }
   if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65_535) {
     errors.push('SMTP_PORT must be an integer between 1 and 65535')

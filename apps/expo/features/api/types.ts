@@ -7,6 +7,7 @@ export type User = {
 
 export type AuthResponse = {
   accessToken: string
+  refreshToken?: string
   tokenType: 'Bearer'
   expiresIn: number
   user: User

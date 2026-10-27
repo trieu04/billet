@@ -43,6 +43,7 @@ describe('AuthService', () => {
   const service = new AuthService(users as unknown as UsersService, jwt as unknown as JwtService, {
     jwtSecret: 'test-secret',
     accessTokenTtl: '15m',
+    refreshTokenTtl: '30d',
     registrationVerificationPolicy: 'none',
     googleClientIds: [],
     appleClientIds: [],
@@ -88,6 +89,7 @@ describe('AuthService', () => {
       {
         jwtSecret: 'test-secret',
         accessTokenTtl: '15m',
+        refreshTokenTtl: '30d',
         registrationVerificationPolicy: 'email',
         googleClientIds: [],
         appleClientIds: [],
@@ -113,6 +115,7 @@ describe('AuthService', () => {
         {
           jwtSecret: 'test-secret',
           accessTokenTtl: '15m',
+          refreshTokenTtl: '30d',
           registrationVerificationPolicy: policy,
           googleClientIds: [],
           appleClientIds: [],
@@ -150,5 +153,51 @@ describe('AuthService', () => {
     await expect(
       service.login({ identifier: 'missing@example.com', password: 'wrong' }),
     ).rejects.toBeInstanceOf(UnauthorizedException)
+  })
+
+  it('rotates a refresh token exactly once', async () => {
+    const execute = jest.fn().mockResolvedValue({ affected: 1 })
+    const queryBuilder = {
+      update: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      execute,
+    }
+    const refreshTokens = {
+      findOne: jest.fn().mockResolvedValue({
+        id: '10',
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: null,
+      }),
+      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      create: jest.fn((value) => value),
+      save: jest.fn(),
+    }
+    users.findById.mockResolvedValue(user)
+    const rotatingService = new AuthService(
+      users as unknown as UsersService,
+      jwt as unknown as JwtService,
+      {
+        jwtSecret: 'test-secret',
+        accessTokenTtl: '15m',
+        refreshTokenTtl: '30d',
+        registrationVerificationPolicy: 'none',
+        googleClientIds: [],
+        appleClientIds: [],
+      },
+      undefined,
+      undefined,
+      refreshTokens as never,
+    )
+
+    const response = await rotatingService.refresh({ refreshToken: 'r'.repeat(64) })
+
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(refreshTokens.save).toHaveBeenCalledTimes(1)
+    expect(response).toMatchObject({
+      accessToken: 'signed-token',
+      refreshToken: expect.any(String),
+    })
   })
 })

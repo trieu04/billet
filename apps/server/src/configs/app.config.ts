@@ -26,6 +26,7 @@ export type DatabaseConfig = ConfigType<typeof databaseConfig>
 export const authConfig = registerAs('auth', () => ({
   jwtSecret: process.env.AUTH_JWT_SECRET ?? 'development-only-change-me',
   accessTokenTtl: process.env.AUTH_ACCESS_TOKEN_TTL ?? '15m',
+  refreshTokenTtl: process.env.AUTH_REFRESH_TOKEN_TTL ?? '30d',
   registrationVerificationPolicy: process.env.AUTH_REGISTRATION_VERIFICATION_POLICY ?? 'one_of',
   googleClientIds: parseList(process.env.AUTH_GOOGLE_OIDC_CLIENT_IDS, ''),
   appleClientIds: parseList(process.env.AUTH_APPLE_OIDC_CLIENT_IDS, ''),

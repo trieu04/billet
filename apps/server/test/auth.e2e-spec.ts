@@ -41,6 +41,14 @@ describe('Auth (e2e)', () => {
       expiresIn: 900,
       user,
     }),
+    refresh: jest.fn().mockResolvedValue({
+      accessToken: 'refreshed-token',
+      refreshToken: 'rotated-refresh-token',
+      tokenType: 'Bearer',
+      expiresIn: 900,
+      user,
+    }),
+    logout: jest.fn().mockResolvedValue({ success: true }),
     currentUser: jest.fn().mockResolvedValue(user),
     registrationAvailability: jest.fn().mockResolvedValue({
       emailAvailable: true,
@@ -129,6 +137,23 @@ describe('Auth (e2e)', () => {
     expect(auth.currentUser).toHaveBeenCalledWith(user.id)
   })
 
+  it('rotates and revokes refresh tokens', async () => {
+    const refreshToken = 'r'.repeat(64)
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken })
+      .expect(200)
+      .expect(({ body }) => expect(body).toMatchObject({ accessToken: 'refreshed-token' }))
+    expect(auth.refresh).toHaveBeenCalledWith({ refreshToken })
+
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/logout')
+      .send({ refreshToken })
+      .expect(200)
+      .expect({ success: true })
+    expect(auth.logout).toHaveBeenCalledWith({ refreshToken })
+  })
+
   it('documents auth endpoints in journey order with descriptions and response examples', () => {
     const document = SwaggerModule.createDocument(app, new DocumentBuilder().build())
 
@@ -139,6 +164,8 @@ describe('Auth (e2e)', () => {
       '/api/v1/auth/register/verification/confirm',
       '/api/v1/auth/login',
       '/api/v1/auth/social',
+      '/api/v1/auth/refresh',
+      '/api/v1/auth/logout',
       '/api/v1/auth/me',
       '/api/v1/auth/password-reset/request',
       '/api/v1/auth/password-reset',

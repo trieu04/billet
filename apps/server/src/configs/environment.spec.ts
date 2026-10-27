@@ -24,6 +24,7 @@ describe('validateEnvironment', () => {
     [{ DATABASE_SSL_ENABLED: 'yes' }, 'DATABASE_SSL_ENABLED'],
     [{ NODE_ENV: 'production' }, 'AUTH_JWT_SECRET'],
     [{ AUTH_ACCESS_TOKEN_TTL: 'soon' }, 'AUTH_ACCESS_TOKEN_TTL'],
+    [{ AUTH_REFRESH_TOKEN_TTL: 'later' }, 'AUTH_REFRESH_TOKEN_TTL'],
     [{ SMTP_PORT: '0' }, 'SMTP_PORT'],
     [{ SMTP_ENABLED: 'true' }, 'SMTP_HOST'],
     [{ SMS_HTTP_TIMEOUT_MS: '50' }, 'SMS_HTTP_TIMEOUT_MS'],

@@ -112,6 +112,11 @@ export class AuthResponseDto {
   @ApiProperty({ example: 900 })
   expiresIn: number
 
+  @ApiPropertyOptional({
+    description: 'Opaque rotating token; omitted until MFA is complete',
+  })
+  refreshToken?: string
+
   @ApiProperty({ type: UserResponseDto })
   user: UserResponseDto
 
@@ -120,6 +125,13 @@ export class AuthResponseDto {
 
   @ApiProperty({ isArray: true, enum: ['authenticator', 'email'], example: [] })
   mfaMethods: MfaMethod[]
+}
+
+export class RefreshTokenDto {
+  @ApiProperty({ description: 'Opaque refresh token returned by an authenticated session' })
+  @IsString()
+  @Length(40, 256)
+  refreshToken: string
 }
 
 export enum MfaMethod {

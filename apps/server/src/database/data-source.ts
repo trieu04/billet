@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { DataSource } from 'typeorm'
 import { AuthChallengeEntity } from '../modules/auth/entities/auth-challenge.entity'
 import { AuthIdentityEntity } from '../modules/auth/entities/auth-identity.entity'
+import { RefreshTokenEntity } from '../modules/auth/entities/refresh-token.entity'
 import { NotificationEntity } from '../modules/notification/entities/notification.entity'
 import { PushDeviceEntity } from '../modules/notification/entities/push-device.entity'
 import { UserEntity } from '../modules/user/entities/user.entity'
@@ -32,6 +33,7 @@ const applicationDataSource = new DataSource({
     PushDeviceEntity,
     AuthChallengeEntity,
     AuthIdentityEntity,
+    RefreshTokenEntity,
     CategoryEntity,
     MediaAssetEntity,
     RecognitionJobEntity,

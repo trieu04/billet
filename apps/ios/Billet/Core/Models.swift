@@ -8,10 +8,13 @@ struct User: Codable, Equatable, Sendable {
 }
 struct AuthResponse: Decodable, Sendable {
     let accessToken: String
+    let refreshToken: String?
     let expiresIn: Int
     let user: User
     let requiresMfa: Bool
 }
+struct RefreshTokenBody: Codable, Sendable { let refreshToken: String }
+struct SessionTokens: Codable, Sendable { let accessToken: String; let refreshToken: String }
 struct Category: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let code: String

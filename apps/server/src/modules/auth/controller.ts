@@ -17,6 +17,7 @@ import {
   LoginDto,
   MfaMethodDto,
   RegistrationAvailabilityDto,
+  RefreshTokenDto,
   RegistrationVerificationConfirmDto,
   RegistrationVerificationRequestDto,
   RegisterDto,
@@ -133,6 +134,26 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Provider token is invalid or not intended for Billet' })
   socialLogin(@Body() input: SocialLoginDto): Promise<AuthResponseDto> {
     return this.auth.socialLogin(input)
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Rotate a refresh token',
+    description: 'Exchanges a valid refresh token for a new access token and refresh token.',
+  })
+  @ApiOkResponse({ description: 'Session refreshed', type: AuthResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Refresh token is invalid, expired, or reused' })
+  refresh(@Body() input: RefreshTokenDto): Promise<AuthResponseDto> {
+    return this.auth.refresh(input)
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke a refresh token' })
+  @ApiOkResponse({ description: 'Session revoked', type: SuccessResponseDto })
+  logout(@Body() input: RefreshTokenDto) {
+    return this.auth.logout(input)
   }
 
   @Get('me')

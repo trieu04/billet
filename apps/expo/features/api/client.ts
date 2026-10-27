@@ -24,7 +24,23 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   token?: string | null
 }
 
+let refreshAccessToken: (() => Promise<string | null>) | null = null
+let refreshPromise: Promise<string | null> | null = null
+
+export function configureApiRefresh(handler: (() => Promise<string | null>) | null) {
+  refreshAccessToken = handler
+  refreshPromise = null
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return request<T>(path, options, true)
+}
+
+async function request<T>(
+  path: string,
+  options: RequestOptions,
+  allowRefresh: boolean,
+): Promise<T> {
   const headers = new Headers(options.headers)
   if (options.token) headers.set('Authorization', `Bearer ${options.token}`)
 
@@ -35,6 +51,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
 
   const response = await fetch(resolveApiUrl(API_BASE_URL, path), { ...options, body, headers })
+  if (response.status === 401 && options.token && allowRefresh && refreshAccessToken) {
+    refreshPromise ??= refreshAccessToken().finally(() => {
+      refreshPromise = null
+    })
+    const token = await refreshPromise
+    if (token) return request<T>(path, { ...options, token }, false)
+  }
   if (!response.ok) {
     const payload: unknown = await response.json().catch(() => null)
     const message = getErrorMessage(payload) ?? `Yêu cầu thất bại (${response.status})`

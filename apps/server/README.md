@@ -37,6 +37,7 @@ email address, or E.164 phone number in the `identifier` field.
 - `POST /api/v1/auth/register/availability`
 - `POST /api/v1/auth/register/verification/request|confirm`
 - `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh` and `POST /api/v1/auth/logout`
 - `POST /api/v1/auth/social` with a Google or Apple identity token
 - `GET /api/v1/auth/me` with a Bearer token
 - `POST /api/v1/auth/verification/request|confirm`
@@ -139,6 +140,10 @@ and generated OpenAPI documentation.
 Passwords are stored only as bcrypt hashes and are excluded from ordinary entity
 queries. OTPs are HMAC-hashed, expire after five minutes, have a resend cooldown,
 and are deleted after successful use or five failed attempts.
+
+Authenticated responses include a rotating opaque refresh token. Only its SHA-256
+hash is stored. Refresh tokens default to 30 days (`AUTH_REFRESH_TOKEN_TTL`), are
+single-use, and are revoked on logout, password reset, or password change.
 
 Registration accepts the verification tokens returned by the pre-registration
 email and phone confirmation endpoints. `AUTH_REGISTRATION_VERIFICATION_POLICY`

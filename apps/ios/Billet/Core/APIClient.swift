@@ -9,11 +9,18 @@ struct APIClient: Sendable {
     let baseURL: URL
     var token: String?
     var session: URLSession = .shared
+    var refreshAccessToken: (@Sendable () async -> String?)?
 
-    init(baseURL: URL = AppConfiguration.apiBaseURL, token: String? = nil, session: URLSession = .shared) {
+    init(
+        baseURL: URL = AppConfiguration.apiBaseURL,
+        token: String? = nil,
+        session: URLSession = .shared,
+        refreshAccessToken: (@Sendable () async -> String?)? = nil
+    ) {
         self.baseURL = baseURL
         self.token = token
         self.session = session
+        self.refreshAccessToken = refreshAccessToken
     }
 
     func request<Response: Decodable>(
@@ -67,6 +74,20 @@ struct APIClient: Sendable {
     }
 
     private func data(_ path: String, method: String, body: Data?) async throws -> Data {
+        do {
+            return try await performData(path, method: method, body: body, token: token)
+        } catch let error as APIError where error.statusCode == 401 && refreshAccessToken != nil {
+            guard let refreshedToken = await refreshAccessToken?() else { throw error }
+            return try await performData(path, method: method, body: body, token: refreshedToken)
+        }
+    }
+
+    private func performData(
+        _ path: String,
+        method: String,
+        body: Data?,
+        token requestToken: String?
+    ) async throws -> Data {
         let url: URL
         if let absolute = URL(string: path), absolute.scheme != nil {
             url = absolute
@@ -84,7 +105,9 @@ struct APIClient: Sendable {
         request.timeoutInterval = 30
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if body != nil { request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
-        if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        if let requestToken {
+            request.setValue("Bearer \(requestToken)", forHTTPHeaderField: "Authorization")
+        }
         let (data, response) = try await session.data(for: request)
         try validate(response, data: data)
         return data

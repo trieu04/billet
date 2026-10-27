@@ -13,10 +13,14 @@ data class User(
 @Serializable
 data class AuthResponse(
     val accessToken: String,
+    val refreshToken: String? = null,
     val expiresIn: Int,
     val user: User,
     val requiresMfa: Boolean,
 )
+
+@Serializable data class RefreshTokenBody(val refreshToken: String)
+@Serializable data class SuccessResponse(val success: Boolean)
 
 @Serializable
 data class Category(

@@ -8,7 +8,9 @@ import app.billet.mobile.core.model.Expense
 import app.billet.mobile.core.model.ExpenseList
 import app.billet.mobile.core.model.MediaReservation
 import app.billet.mobile.core.model.Profile
+import app.billet.mobile.core.model.RefreshTokenBody
 import app.billet.mobile.core.model.SpendingReport
+import app.billet.mobile.core.model.SuccessResponse
 import app.billet.mobile.core.model.User
 import java.time.Instant
 import java.time.LocalDate
@@ -34,6 +36,17 @@ class BilletRepository(private val api: ApiClient) {
 
     suspend fun login(identifier: String, password: String): AuthResponse =
         api.request("/auth/login", "POST", LoginBody(identifier, password))
+
+    suspend fun refresh(refreshToken: String): AuthResponse =
+        api.request("/auth/refresh", "POST", RefreshTokenBody(refreshToken))
+
+    suspend fun logout(refreshToken: String) {
+        api.request<RefreshTokenBody, SuccessResponse>(
+            "/auth/logout",
+            "POST",
+            RefreshTokenBody(refreshToken),
+        )
+    }
 
     suspend fun me(): User = api.request("/auth/me")
     suspend fun categories(): List<Category> = api.request("/categories")

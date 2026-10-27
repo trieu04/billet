@@ -22,10 +22,12 @@ import {
   type ChangePasswordDto,
   type LoginDto,
   type RegisterDto,
+  type RefreshTokenDto,
   type ResetPasswordDto,
   type SocialLoginDto,
 } from '../dto'
 import { AuthIdentityEntity, type SocialProvider } from '../entities/auth-identity.entity'
+import { RefreshTokenEntity } from '../entities/refresh-token.entity'
 import { OtpService } from './otp.service'
 import { createTotpUri, generateTotpSecret, verifyTotp } from '../utils/totp'
 
@@ -43,6 +45,9 @@ export class AuthService {
     @InjectRepository(AuthIdentityEntity)
     private readonly identities?: Repository<AuthIdentityEntity>,
     private readonly otp?: OtpService,
+    @Optional()
+    @InjectRepository(RefreshTokenEntity)
+    private readonly refreshTokens?: Repository<RefreshTokenEntity>,
   ) {}
 
   async register(input: RegisterDto): Promise<AuthResponseDto> {
@@ -169,6 +174,7 @@ export class AuthService {
     await this.users.updateSecurity(userId, {
       passwordHash: await hash(input.newPassword, HASH_ROUNDS),
     })
+    await this.revokeUserRefreshTokens(userId)
     return { success: true as const }
   }
 
@@ -199,7 +205,40 @@ export class AuthService {
     await this.users.updateSecurity(user.id, {
       passwordHash: await hash(input.newPassword, HASH_ROUNDS),
     })
+    await this.revokeUserRefreshTokens(user.id)
     return { success: true as const }
+  }
+
+  async refresh(input: RefreshTokenDto): Promise<AuthResponseDto> {
+    const repository = this.requireRefreshTokens()
+    const tokenHash = hashRefreshToken(input.refreshToken)
+    const stored = await repository.findOne({ where: { tokenHash } })
+    if (!stored || stored.revokedAt || stored.expiresAt <= new Date()) {
+      if (stored?.revokedAt) await this.revokeUserRefreshTokens(stored.userId)
+      throw new UnauthorizedException('Refresh token is invalid or expired')
+    }
+
+    const revokedAt = new Date()
+    const result = await repository
+      .createQueryBuilder()
+      .update(RefreshTokenEntity)
+      .set({ revokedAt })
+      .where('id = :id AND revoked_at IS NULL', { id: stored.id })
+      .execute()
+    if (result.affected !== 1) {
+      await this.revokeUserRefreshTokens(stored.userId)
+      throw new UnauthorizedException('Refresh token has already been used')
+    }
+    return this.authResponse(await this.users.findById(stored.userId), false)
+  }
+
+  async logout(input: RefreshTokenDto): Promise<{ success: true }> {
+    if (!this.refreshTokens) return { success: true }
+    await this.refreshTokens.update(
+      { tokenHash: hashRefreshToken(input.refreshToken) },
+      { revokedAt: new Date() },
+    )
+    return { success: true }
   }
 
   async mfaMethods(userId: string) {
@@ -355,8 +394,10 @@ export class AuthService {
       { email: user.email, purpose: requiresMfa ? 'mfa_pending' : 'access' },
       { subject: user.id, ...(requiresMfa ? { expiresIn: '5m' } : {}) },
     )
+    const refreshToken = requiresMfa ? undefined : await this.issueRefreshToken(user.id)
     return {
       accessToken,
+      ...(refreshToken ? { refreshToken } : {}),
       tokenType: 'Bearer',
       expiresIn: requiresMfa ? 300 : ttlSeconds(this.config.accessTokenTtl),
       user: this.users.toResponse(user),
@@ -364,6 +405,39 @@ export class AuthService {
       mfaMethods: user.mfaMethods as MfaMethod[],
     }
   }
+
+  private async issueRefreshToken(userId: string): Promise<string | undefined> {
+    if (!this.refreshTokens) return undefined
+    const token = randomBytes(48).toString('base64url')
+    await this.refreshTokens.save(
+      this.refreshTokens.create({
+        tokenHash: hashRefreshToken(token),
+        userId,
+        expiresAt: new Date(Date.now() + ttlSeconds(this.config.refreshTokenTtl) * 1_000),
+        revokedAt: null,
+      }),
+    )
+    return token
+  }
+
+  private requireRefreshTokens(): Repository<RefreshTokenEntity> {
+    if (!this.refreshTokens) throw new Error('Refresh token repository is unavailable')
+    return this.refreshTokens
+  }
+
+  private async revokeUserRefreshTokens(userId: string): Promise<void> {
+    if (!this.refreshTokens) return
+    await this.refreshTokens
+      .createQueryBuilder()
+      .update(RefreshTokenEntity)
+      .set({ revokedAt: new Date() })
+      .where('user_id = :userId AND revoked_at IS NULL', { userId })
+      .execute()
+  }
+}
+
+function hashRefreshToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex')
 }
 
 function socialProfile(payload: JWTPayload): {

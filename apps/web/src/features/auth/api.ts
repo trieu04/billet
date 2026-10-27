@@ -3,10 +3,19 @@ const API_BASE_URL = import.meta.env.VITE_BILLET_API_BASE_URL || '/api/v1'
 export type User = { id: string; username: string; email: string; displayName: string }
 export type AuthResponse = {
   accessToken: string
+  refreshToken?: string
   tokenType: 'Bearer'
   expiresIn: number
   user: User
   requiresMfa: boolean
+}
+
+export function refreshSession(refreshToken: string) {
+  return authRequest<AuthResponse>('/auth/refresh', { refreshToken })
+}
+
+export function revokeSession(refreshToken: string) {
+  return authRequest<{ success: true }>('/auth/logout', { refreshToken })
 }
 
 export async function authRequest<T>(path: string, body?: Record<string, unknown>): Promise<T> {
