@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-process.env.EXPO_PUBLIC_API_BASE_URL = 'http://localhost:6701/api/v1'
+process.env.EXPO_PUBLIC_BILLET_API_BASE_URL = 'http://localhost:6701/api/v1'
 
 async function fetchMedia(mediaAssetId: string, token: string) {
   const { fetchAuthenticatedMedia } = await import('./media')

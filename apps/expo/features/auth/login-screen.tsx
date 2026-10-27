@@ -27,12 +27,13 @@ export function LoginScreen() {
   const [error, setError] = useState<string | null>(null)
   const googleEnabled = Boolean(
     Platform.select({
-      web: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-      ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-      android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+      web: process.env.EXPO_PUBLIC_GOOGLE_WEB_OAUTH_CLIENT_ID,
+      ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_OAUTH_CLIENT_ID,
+      android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_OAUTH_CLIENT_ID,
     }),
   )
-  const appleEnabled = Platform.OS === 'ios' && Boolean(process.env.EXPO_PUBLIC_APPLE_CLIENT_ID)
+  const appleEnabled =
+    Platform.OS === 'ios' && Boolean(process.env.EXPO_PUBLIC_APPLE_OAUTH_CLIENT_ID)
   const socialEnabled = googleEnabled || appleEnabled
 
   const run = async (action: () => Promise<void>) => {
@@ -160,9 +161,9 @@ function GoogleLoginButton({
   run: (action: () => Promise<void>) => Promise<void>
 }) {
   const [request, , prompt] = Google.useIdTokenAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_OAUTH_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_OAUTH_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_OAUTH_CLIENT_ID,
     selectAccount: true,
   })
 

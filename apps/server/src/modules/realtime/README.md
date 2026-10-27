@@ -37,5 +37,5 @@ scaling the API.
 Operational limits: 64 KiB frames, 1,000 process-wide connections, five connections
 per user, 60 frames/minute/socket, four in-flight commands, and a 1 MB outgoing
 buffer. The server pings every 30 seconds and terminates clients that stop replying.
-Configure `WS_ALLOWED_ORIGINS` for browser clients; native clients without an Origin
+Configure `REALTIME_WEBSOCKET_ALLOWED_ORIGINS` for browser clients; native clients without an Origin
 header must still authenticate.

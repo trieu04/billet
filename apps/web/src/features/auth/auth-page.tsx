@@ -91,8 +91,8 @@ export function AuthPage({ initialMode = 'login' }: { initialMode?: 'login' | 'r
     forgot: 'Quên mật khẩu',
     reset: 'Đặt mật khẩu mới',
   }[mode]
-  const googleEnabled = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID)
-  const appleEnabled = Boolean(import.meta.env.VITE_APPLE_CLIENT_ID)
+  const googleEnabled = Boolean(import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID)
+  const appleEnabled = Boolean(import.meta.env.VITE_APPLE_OAUTH_CLIENT_ID)
   const socialEnabled = googleEnabled || appleEnabled
 
   return (

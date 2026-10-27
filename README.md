@@ -111,7 +111,7 @@ physical device using the Compose-hosted Expo bundle, configure
 `apps/expo/.env` with the reachable gateway and packager host:
 
 ```dotenv
-EXPO_PUBLIC_API_BASE_URL=http://192.168.1.10:6700/api/v1
+EXPO_PUBLIC_BILLET_API_BASE_URL=http://192.168.1.10:6700/api/v1
 EXPO_TOKEN=replace-with-an-expo-access-token
 EXPO_PACKAGER_HOSTNAME=192.168.1.10
 ```
@@ -151,7 +151,7 @@ values such as internal hostnames and ports. Variables prefixed with `VITE_` or
 `EXPO_PUBLIC_` are bundled into client applications and must never contain
 secrets. The web `.env` is mounted only for the Vite build and is not copied
 into the resulting image. The root `.env` is reserved for Docker Compose host
-settings such as `PUBLISHED_*_PORT` values. The example reserves ports
+settings such as `COMPOSE_*_HOST_PORT` values. The example reserves ports
 `6700–6703` and `6710`; clear an individual value to let Docker allocate an
 available host port instead.
 

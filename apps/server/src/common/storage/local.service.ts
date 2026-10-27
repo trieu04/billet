@@ -7,7 +7,7 @@ export class LocalObjectStorage implements ObjectStorage {
   private readonly root = resolve(
     __dirname,
     '../../../../..',
-    process.env.OBJECT_STORAGE_PATH ?? 'data/sample/object-storage',
+    process.env.LOCAL_OBJECT_STORAGE_DIRECTORY ?? 'data/sample/object-storage',
   )
   async put(key: string, data: Buffer) {
     const path = this.path(key)

@@ -1,10 +1,10 @@
 import { getExpoHostUri } from './runtime-host'
 import { resolveApiBaseUrl, resolveApiUrl } from './url'
 
-const configuredBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim()
+const configuredBaseUrl = process.env.EXPO_PUBLIC_BILLET_API_BASE_URL?.trim()
 
 if (!configuredBaseUrl) {
-  throw new Error('EXPO_PUBLIC_API_BASE_URL is required')
+  throw new Error('EXPO_PUBLIC_BILLET_API_BASE_URL is required')
 }
 
 export const API_BASE_URL = resolveApiBaseUrl(configuredBaseUrl, getExpoHostUri())

@@ -74,28 +74,30 @@ current `version` and return `409 Conflict` after a concurrent edit. Aggregates 
 mix currencies.
 
 Private media and exports use the injectable object-storage boundary. Development
-defaults to owner-only files under `OBJECT_STORAGE_PATH`; Docker persists this path in
+defaults to owner-only files under `LOCAL_OBJECT_STORAGE_DIRECTORY`; Docker persists this path in
 the `billet-storage` volume. Replace the provider with a private S3-compatible adapter
 for production. Receipt recognition is also provider-backed; the default disabled
 provider records bounded retries and a visible failed status without blocking manual
 expense capture.
 
 To enable receipt extraction with a Gemini API key created in Google AI Studio, set
-`RECOGNITION_PROVIDER=google-ai-studio` and `GOOGLE_AI_STUDIO_API_KEYS` (one key or comma-separated keys). The default
-model is `gemini-2.5-flash`; override it with `GOOGLE_AI_STUDIO_MODEL` when needed.
+`EXPENSE_RECOGNITION_PROVIDER=google-ai-studio` and
+`EXPENSE_RECOGNITION_GOOGLE_API_KEYS` (one key or comma-separated keys). The default
+model is `gemini-2.5-flash`; override it with `EXPENSE_RECOGNITION_GOOGLE_MODEL` when needed.
 Images stay behind the authenticated media boundary and the API key is used only by
-the server. `RECOGNITION_TIMEOUT_MS` controls the upstream request timeout.
-`RECOGNITION_RPM`, `RECOGNITION_TPM`, and `RECOGNITION_RPD` apply conservative
+the server. `EXPENSE_RECOGNITION_TIMEOUT_MS` controls the upstream request timeout.
+`EXPENSE_RECOGNITION_REQUESTS_PER_MINUTE`, `EXPENSE_RECOGNITION_TOKENS_PER_MINUTE`,
+and `EXPENSE_RECOGNITION_REQUESTS_PER_DAY` apply conservative
 rolling quota guards before each request; no provider request is sent while an aggregate
 limit is exhausted. TPM reservations are reconciled with Gemini's reported token usage.
-`GOOGLE_AI_STUDIO_API_KEYS` accepts a comma-separated key pool and selects keys in pure
+`EXPENSE_RECOGNITION_GOOGLE_API_KEYS` accepts a comma-separated key pool and selects keys in pure
 round-robin order. Configure RPM, TPM, and RPD as totals for the whole pool. Gemini
 quotas are commonly scoped to a project/model, so multiple keys from one project do not
 increase those upstream quotas. The built-in counters are process-local and assume the
 current single server worker; use a shared quota store before scaling the recognition
 worker horizontally.
 
-Set `API_DOCS_ENABLED=false` to disable the OpenAPI UI. `CORS_ORIGINS` accepts a
+Set `OPENAPI_ENABLED=false` to disable the OpenAPI UI. `HTTP_CORS_ALLOWED_ORIGINS` accepts a
 comma-separated allowlist. Environment configuration is validated during startup.
 
 ## Adding a feature
@@ -145,18 +147,18 @@ default is `one_of`. Enable and configure the email and/or SMS delivery provider
 needed by the selected policy; a valid supplied token marks its contact verified.
 
 Social sign-in verifies provider ID tokens on the API before issuing a Billet token.
-Configure the allowed audiences as comma-separated `GOOGLE_OAUTH_CLIENT_IDS` and
-`APPLE_OAUTH_CLIENT_IDS` values. Include every web, iOS, and Android client ID used by
+Configure the allowed audiences as comma-separated `AUTH_GOOGLE_OIDC_CLIENT_IDS` and
+`AUTH_APPLE_OIDC_CLIENT_IDS` values. Include every web, iOS, and Android client ID used by
 the shipped clients. A provider identity is linked to an existing account only when the
 provider supplies the same verified email address. Providers with no configured audience are
 disabled; clients also omit their buttons when the corresponding public client ID is absent.
 
 Email and SMS delivery are disabled by default. Enable them only after providing all
-required `EMAIL_*` or `SMS_*` variables. The SMS endpoint receives JSON shaped as
-`{ to, body, sender }` with `Authorization: Bearer <SMS_API_TOKEN>`; a vendor-specific
+required `SMTP_*` or `SMS_HTTP_*` variables. The SMS endpoint receives JSON shaped as
+`{ to, body, sender }` with `Authorization: Bearer <SMS_HTTP_PROVIDER_TOKEN>`; a vendor-specific
 adapter can replace this provider without changing consuming features.
 
-FCM is disabled by default. To enable it, set `FIREBASE_ENABLED=true` and provide
-`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`. Escaped
-newlines in the private key are expanded at startup. Invalid/unregistered device
-tokens are automatically deactivated.
+FCM is disabled by default. To enable it, set `FCM_ENABLED=true` and point
+`FCM_SERVICE_ACCOUNT_FILE` to a Firebase service-account JSON file readable by the
+server process. Mount that file into the server container when using Docker; do not
+commit it. Invalid/unregistered device tokens are automatically deactivated.

@@ -17,12 +17,12 @@ import { snakeNamingStrategy } from './snake-naming.strategy'
 
 const applicationDataSource = new DataSource({
   type: 'postgres',
-  host: process.env.DB_HOST ?? 'localhost',
-  port: Number(process.env.DB_PORT ?? 6710),
-  username: process.env.DB_USERNAME ?? 'billet',
-  password: process.env.DB_PASSWORD ?? 'billet',
-  database: process.env.DB_NAME ?? 'billet',
-  ssl: process.env.DB_SSL === 'true',
+  host: process.env.DATABASE_HOST ?? 'localhost',
+  port: Number(process.env.DATABASE_PORT ?? 6710),
+  username: process.env.DATABASE_USERNAME ?? 'billet',
+  password: process.env.DATABASE_PASSWORD ?? 'billet',
+  database: process.env.DATABASE_NAME ?? 'billet',
+  ssl: process.env.DATABASE_SSL_ENABLED === 'true',
   namingStrategy: snakeNamingStrategy,
   synchronize: false,
   entities: [

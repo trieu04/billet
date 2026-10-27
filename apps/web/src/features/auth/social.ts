@@ -29,7 +29,7 @@ function loadScript(src: string): Promise<void> {
 }
 
 export async function googleSignIn(): Promise<AuthResponse> {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+  const clientId = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID
   if (!clientId) throw new Error('Google Sign-In chưa được cấu hình')
   await loadScript('https://accounts.google.com/gsi/client')
   const identityToken = await new Promise<string>((resolve, reject) => {
@@ -48,7 +48,7 @@ export async function googleSignIn(): Promise<AuthResponse> {
 }
 
 export async function appleSignIn(): Promise<AuthResponse> {
-  const clientId = import.meta.env.VITE_APPLE_CLIENT_ID
+  const clientId = import.meta.env.VITE_APPLE_OAUTH_CLIENT_ID
   if (!clientId) throw new Error('Apple Sign-In chưa được cấu hình')
   await loadScript(
     'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js',

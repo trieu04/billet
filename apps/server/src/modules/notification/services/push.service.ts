@@ -25,11 +25,7 @@ export class PushNotificationsService implements OnModuleInit {
   onModuleInit(): void {
     if (!this.config.enabled) return
     try {
-      const credential = cert({
-        projectId: this.config.projectId,
-        clientEmail: this.config.clientEmail,
-        privateKey: this.config.privateKey,
-      })
+      const credential = cert(this.config.serviceAccountFile)
       const app = getApps()[0] ?? initializeApp({ credential })
       this.messaging = getMessaging(app)
     } catch (error: unknown) {

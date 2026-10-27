@@ -2,84 +2,86 @@ import { registerAs, type ConfigType } from '@nestjs/config'
 
 export const appConfig = registerAs('app', () => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
-  host: process.env.HOST ?? '0.0.0.0',
-  port: Number(process.env.PORT ?? 6701),
-  apiPrefix: normalizePath(process.env.API_PREFIX ?? 'api/v1'),
-  corsOrigins: parseList(process.env.CORS_ORIGINS ?? process.env.CORS_ORIGIN),
-  docsPath: normalizePath(process.env.API_DOCS_PATH ?? 'docs'),
-  docsEnabled: parseBoolean(process.env.API_DOCS_ENABLED, true),
+  host: process.env.SERVER_HOST ?? '0.0.0.0',
+  port: Number(process.env.SERVER_PORT ?? 6701),
+  apiPrefix: normalizePath(process.env.API_PATH_PREFIX ?? 'api/v1'),
+  corsOrigins: parseList(process.env.HTTP_CORS_ALLOWED_ORIGINS),
+  docsPath: normalizePath(process.env.OPENAPI_PATH ?? 'docs'),
+  docsEnabled: parseBoolean(process.env.OPENAPI_ENABLED, true),
 }))
 
 export type AppConfig = ConfigType<typeof appConfig>
 
 export const databaseConfig = registerAs('database', () => ({
-  host: process.env.DB_HOST ?? 'localhost',
-  port: Number(process.env.DB_PORT ?? 6710),
-  username: process.env.DB_USERNAME ?? 'billet',
-  password: process.env.DB_PASSWORD ?? 'billet',
-  name: process.env.DB_NAME ?? 'billet',
-  ssl: parseBoolean(process.env.DB_SSL, false),
+  host: process.env.DATABASE_HOST ?? 'localhost',
+  port: Number(process.env.DATABASE_PORT ?? 6710),
+  username: process.env.DATABASE_USERNAME ?? 'billet',
+  password: process.env.DATABASE_PASSWORD ?? 'billet',
+  name: process.env.DATABASE_NAME ?? 'billet',
+  ssl: parseBoolean(process.env.DATABASE_SSL_ENABLED, false),
 }))
 
 export type DatabaseConfig = ConfigType<typeof databaseConfig>
 
 export const authConfig = registerAs('auth', () => ({
-  jwtSecret: process.env.JWT_SECRET ?? 'development-only-change-me',
-  accessTokenTtl: process.env.JWT_ACCESS_TOKEN_TTL ?? '15m',
+  jwtSecret: process.env.AUTH_JWT_SECRET ?? 'development-only-change-me',
+  accessTokenTtl: process.env.AUTH_ACCESS_TOKEN_TTL ?? '15m',
   registrationVerificationPolicy: process.env.AUTH_REGISTRATION_VERIFICATION_POLICY ?? 'one_of',
-  googleClientIds: parseList(process.env.GOOGLE_OAUTH_CLIENT_IDS, ''),
-  appleClientIds: parseList(process.env.APPLE_OAUTH_CLIENT_IDS, ''),
+  googleClientIds: parseList(process.env.AUTH_GOOGLE_OIDC_CLIENT_IDS, ''),
+  appleClientIds: parseList(process.env.AUTH_APPLE_OIDC_CLIENT_IDS, ''),
 }))
 
 export type AuthConfig = ConfigType<typeof authConfig>
 
 export const emailConfig = registerAs('email', () => ({
-  enabled: parseBoolean(process.env.EMAIL_ENABLED, false),
-  host: process.env.EMAIL_HOST ?? '',
-  port: Number(process.env.EMAIL_PORT ?? 587),
-  secure: parseBoolean(process.env.EMAIL_SECURE, false),
-  user: process.env.EMAIL_USER ?? '',
-  password: process.env.EMAIL_PASSWORD ?? '',
-  from: process.env.EMAIL_FROM ?? '',
+  enabled: parseBoolean(process.env.SMTP_ENABLED, false),
+  host: process.env.SMTP_HOST ?? '',
+  port: Number(process.env.SMTP_PORT ?? 587),
+  secure: parseBoolean(process.env.SMTP_TLS_ENABLED, false),
+  user: process.env.SMTP_USERNAME ?? '',
+  password: process.env.SMTP_PASSWORD ?? '',
+  from: process.env.SMTP_FROM_ADDRESS ?? '',
 }))
 
 export type EmailConfig = ConfigType<typeof emailConfig>
 
 export const smsConfig = registerAs('sms', () => ({
-  enabled: parseBoolean(process.env.SMS_ENABLED, false),
-  providerUrl: process.env.SMS_PROVIDER_URL ?? '',
-  apiToken: process.env.SMS_API_TOKEN ?? '',
-  sender: process.env.SMS_SENDER ?? 'Billet',
-  timeoutMs: Number(process.env.SMS_TIMEOUT_MS ?? 10_000),
+  enabled: parseBoolean(process.env.SMS_HTTP_PROVIDER_ENABLED, false),
+  providerUrl: process.env.SMS_HTTP_PROVIDER_URL ?? '',
+  apiToken: process.env.SMS_HTTP_PROVIDER_TOKEN ?? '',
+  sender: process.env.SMS_SENDER_NAME ?? 'Billet',
+  timeoutMs: Number(process.env.SMS_HTTP_TIMEOUT_MS ?? 10_000),
 }))
 
 export type SmsConfig = ConfigType<typeof smsConfig>
 
 export const realtimeConfig = registerAs('realtime', () => ({
-  path: process.env.WS_PATH ?? '/ws',
-  allowedOrigins: parseList(process.env.WS_ALLOWED_ORIGINS ?? process.env.CORS_ORIGINS),
+  path: process.env.REALTIME_WEBSOCKET_PATH ?? '/ws',
+  allowedOrigins: parseList(
+    process.env.REALTIME_WEBSOCKET_ALLOWED_ORIGINS ?? process.env.HTTP_CORS_ALLOWED_ORIGINS,
+  ),
 }))
 
 export type RealtimeConfig = ConfigType<typeof realtimeConfig>
 
 export const firebaseConfig = registerAs('firebase', () => ({
-  enabled: parseBoolean(process.env.FIREBASE_ENABLED, false),
-  projectId: process.env.FIREBASE_PROJECT_ID ?? '',
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL ?? '',
-  privateKey: (process.env.FIREBASE_PRIVATE_KEY ?? '').replace(/\\n/g, '\n'),
+  enabled: parseBoolean(process.env.FCM_ENABLED, false),
+  serviceAccountFile: process.env.FCM_SERVICE_ACCOUNT_FILE ?? '',
 }))
 
 export type FirebaseConfig = ConfigType<typeof firebaseConfig>
 
 export const recognitionConfig = registerAs('recognition', () => ({
-  provider: process.env.RECOGNITION_PROVIDER ?? 'disabled',
-  googleAiStudioApiKeys: parseList(process.env.GOOGLE_AI_STUDIO_API_KEYS, ''),
-  googleAiStudioModel: process.env.GOOGLE_AI_STUDIO_MODEL ?? 'gemini-2.5-flash',
-  timeoutMs: Number(process.env.RECOGNITION_TIMEOUT_MS ?? 30_000),
-  requestsPerMinute: Number(process.env.RECOGNITION_RPM ?? 10),
-  tokensPerMinute: Number(process.env.RECOGNITION_TPM ?? 250_000),
-  requestsPerDay: Number(process.env.RECOGNITION_RPD ?? 250),
-  estimatedTokensPerRequest: Number(process.env.RECOGNITION_ESTIMATED_TOKENS ?? 4_096),
+  provider: process.env.EXPENSE_RECOGNITION_PROVIDER ?? 'disabled',
+  googleAiStudioApiKeys: parseList(process.env.EXPENSE_RECOGNITION_GOOGLE_API_KEYS, ''),
+  googleAiStudioModel: process.env.EXPENSE_RECOGNITION_GOOGLE_MODEL ?? 'gemini-2.5-flash',
+  timeoutMs: Number(process.env.EXPENSE_RECOGNITION_TIMEOUT_MS ?? 30_000),
+  requestsPerMinute: Number(process.env.EXPENSE_RECOGNITION_REQUESTS_PER_MINUTE ?? 10),
+  tokensPerMinute: Number(process.env.EXPENSE_RECOGNITION_TOKENS_PER_MINUTE ?? 250_000),
+  requestsPerDay: Number(process.env.EXPENSE_RECOGNITION_REQUESTS_PER_DAY ?? 250),
+  estimatedTokensPerRequest: Number(
+    process.env.EXPENSE_RECOGNITION_ESTIMATED_TOKENS_PER_REQUEST ?? 4_096,
+  ),
 }))
 
 export type RecognitionConfig = ConfigType<typeof recognitionConfig>

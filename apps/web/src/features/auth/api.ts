@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+const API_BASE_URL = import.meta.env.VITE_BILLET_API_BASE_URL || '/api/v1'
 
 export type User = { id: string; username: string; email: string; displayName: string }
 export type AuthResponse = {

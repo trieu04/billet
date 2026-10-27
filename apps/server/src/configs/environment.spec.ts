@@ -16,25 +16,25 @@ describe('validateEnvironment', () => {
 
   it.each([
     [{ NODE_ENV: 'staging' }, 'NODE_ENV'],
-    [{ PORT: '0' }, 'PORT'],
-    [{ PORT: 'not-a-number' }, 'PORT'],
-    [{ API_PREFIX: '///' }, 'API_PREFIX'],
-    [{ API_DOCS_ENABLED: 'yes' }, 'API_DOCS_ENABLED'],
-    [{ DB_PORT: '70000' }, 'DB_PORT'],
-    [{ DB_SSL: 'yes' }, 'DB_SSL'],
-    [{ NODE_ENV: 'production' }, 'JWT_SECRET'],
-    [{ JWT_ACCESS_TOKEN_TTL: 'soon' }, 'JWT_ACCESS_TOKEN_TTL'],
-    [{ EMAIL_PORT: '0' }, 'EMAIL_PORT'],
-    [{ EMAIL_ENABLED: 'true' }, 'EMAIL_HOST'],
-    [{ SMS_TIMEOUT_MS: '50' }, 'SMS_TIMEOUT_MS'],
-    [{ SMS_ENABLED: 'true' }, 'SMS_PROVIDER_URL'],
-    [{ WS_PATH: 'ws' }, 'WS_PATH'],
-    [{ FIREBASE_ENABLED: 'true' }, 'FIREBASE_PROJECT_ID'],
-    [{ RECOGNITION_PROVIDER: 'other' }, 'RECOGNITION_PROVIDER'],
-    [{ RECOGNITION_PROVIDER: 'google-ai-studio' }, 'GOOGLE_AI_STUDIO_API_KEYS'],
-    [{ RECOGNITION_TIMEOUT_MS: '500' }, 'RECOGNITION_TIMEOUT_MS'],
-    [{ RECOGNITION_RPM: '0' }, 'RECOGNITION_RPM'],
-    [{ RECOGNITION_TPM: 'many' }, 'RECOGNITION_TPM'],
+    [{ SERVER_PORT: '0' }, 'SERVER_PORT'],
+    [{ SERVER_PORT: 'not-a-number' }, 'SERVER_PORT'],
+    [{ API_PATH_PREFIX: '///' }, 'API_PATH_PREFIX'],
+    [{ OPENAPI_ENABLED: 'yes' }, 'OPENAPI_ENABLED'],
+    [{ DATABASE_PORT: '70000' }, 'DATABASE_PORT'],
+    [{ DATABASE_SSL_ENABLED: 'yes' }, 'DATABASE_SSL_ENABLED'],
+    [{ NODE_ENV: 'production' }, 'AUTH_JWT_SECRET'],
+    [{ AUTH_ACCESS_TOKEN_TTL: 'soon' }, 'AUTH_ACCESS_TOKEN_TTL'],
+    [{ SMTP_PORT: '0' }, 'SMTP_PORT'],
+    [{ SMTP_ENABLED: 'true' }, 'SMTP_HOST'],
+    [{ SMS_HTTP_TIMEOUT_MS: '50' }, 'SMS_HTTP_TIMEOUT_MS'],
+    [{ SMS_HTTP_PROVIDER_ENABLED: 'true' }, 'SMS_HTTP_PROVIDER_URL'],
+    [{ REALTIME_WEBSOCKET_PATH: 'ws' }, 'REALTIME_WEBSOCKET_PATH'],
+    [{ FCM_ENABLED: 'true' }, 'FCM_SERVICE_ACCOUNT_FILE'],
+    [{ EXPENSE_RECOGNITION_PROVIDER: 'other' }, 'EXPENSE_RECOGNITION_PROVIDER'],
+    [{ EXPENSE_RECOGNITION_PROVIDER: 'google-ai-studio' }, 'EXPENSE_RECOGNITION_GOOGLE_API_KEYS'],
+    [{ EXPENSE_RECOGNITION_TIMEOUT_MS: '500' }, 'EXPENSE_RECOGNITION_TIMEOUT_MS'],
+    [{ EXPENSE_RECOGNITION_REQUESTS_PER_MINUTE: '0' }, 'EXPENSE_RECOGNITION_REQUESTS_PER_MINUTE'],
+    [{ EXPENSE_RECOGNITION_TOKENS_PER_MINUTE: 'many' }, 'EXPENSE_RECOGNITION_TOKENS_PER_MINUTE'],
     [
       { AUTH_REGISTRATION_VERIFICATION_POLICY: 'sometimes' },
       'AUTH_REGISTRATION_VERIFICATION_POLICY',
@@ -46,22 +46,22 @@ describe('validateEnvironment', () => {
   it.each(['', '   ', ', ,'])('rejects an empty recognition key pool %p', (keys) => {
     expect(() =>
       validateEnvironment({
-        RECOGNITION_PROVIDER: 'google-ai-studio',
-        GOOGLE_AI_STUDIO_API_KEYS: keys,
+        EXPENSE_RECOGNITION_PROVIDER: 'google-ai-studio',
+        EXPENSE_RECOGNITION_GOOGLE_API_KEYS: keys,
       }),
-    ).toThrow('GOOGLE_AI_STUDIO_API_KEYS is required')
+    ).toThrow('EXPENSE_RECOGNITION_GOOGLE_API_KEYS is required')
   })
 
   it.each(['test-key', 'key-1, key-2'])('accepts recognition keys %p', (keys) => {
     const environment = {
-      RECOGNITION_PROVIDER: 'google-ai-studio',
-      GOOGLE_AI_STUDIO_API_KEYS: keys,
-      GOOGLE_AI_STUDIO_MODEL: 'gemini-2.5-flash',
-      RECOGNITION_TIMEOUT_MS: '15000',
-      RECOGNITION_RPM: '10',
-      RECOGNITION_TPM: '250000',
-      RECOGNITION_RPD: '250',
-      RECOGNITION_ESTIMATED_TOKENS: '4096',
+      EXPENSE_RECOGNITION_PROVIDER: 'google-ai-studio',
+      EXPENSE_RECOGNITION_GOOGLE_API_KEYS: keys,
+      EXPENSE_RECOGNITION_GOOGLE_MODEL: 'gemini-2.5-flash',
+      EXPENSE_RECOGNITION_TIMEOUT_MS: '15000',
+      EXPENSE_RECOGNITION_REQUESTS_PER_MINUTE: '10',
+      EXPENSE_RECOGNITION_TOKENS_PER_MINUTE: '250000',
+      EXPENSE_RECOGNITION_REQUESTS_PER_DAY: '250',
+      EXPENSE_RECOGNITION_ESTIMATED_TOKENS_PER_REQUEST: '4096',
     }
 
     expect(validateEnvironment(environment)).toEqual(environment)

@@ -11,9 +11,7 @@ describe('PushNotificationsService', () => {
   }
   const service = new PushNotificationsService(devices as unknown as Repository<PushDeviceEntity>, {
     enabled: false,
-    projectId: '',
-    clientEmail: '',
-    privateKey: '',
+    serviceAccountFile: '',
   })
 
   beforeEach(() => jest.clearAllMocks())
