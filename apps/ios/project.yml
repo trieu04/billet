@@ -51,8 +51,10 @@ targets:
         SUPPORTS_MACCATALYST: NO
     scheme:
       testTargets:
-        - BilletTests
-        - BilletUITests
+        - name: BilletTests
+        - name: BilletUITests
+          parallelizable: false
+          randomExecutionOrder: false
   BilletTests:
     type: bundle.unit-test
     platform: iOS
