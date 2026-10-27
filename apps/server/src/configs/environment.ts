@@ -20,6 +20,7 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
     'AUTH_REGISTRATION_VERIFICATION_POLICY',
     'one_of',
   )
+  const mediaMaxFileSizeBytes = getNumber(environment, 'MEDIA_MAX_FILE_SIZE_BYTES', 15_000_000)
   const recognitionProvider = getString(environment, 'EXPENSE_RECOGNITION_PROVIDER', 'disabled')
   const recognitionTimeoutMs = getNumber(environment, 'EXPENSE_RECOGNITION_TIMEOUT_MS', 30_000)
   const recognitionLimits = [
@@ -58,6 +59,9 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
   }
   if (!Number.isInteger(smsTimeoutMs) || smsTimeoutMs < 100 || smsTimeoutMs > 60_000) {
     errors.push('SMS_HTTP_TIMEOUT_MS must be an integer between 100 and 60000')
+  }
+  if (!Number.isSafeInteger(mediaMaxFileSizeBytes) || mediaMaxFileSizeBytes < 1) {
+    errors.push('MEDIA_MAX_FILE_SIZE_BYTES must be a positive integer')
   }
   if (
     !RECOGNITION_PROVIDERS.includes(recognitionProvider as (typeof RECOGNITION_PROVIDERS)[number])

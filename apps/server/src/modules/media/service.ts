@@ -10,6 +10,7 @@ import { randomBytes } from 'node:crypto'
 import { Repository } from 'typeorm'
 import type { Readable } from 'node:stream'
 import { OBJECT_STORAGE, type ObjectStorage } from '../../common/storage/interface'
+import { mediaConfig, type MediaConfig } from '../../configs/app.config'
 import type { CreateMediaDto } from './dto'
 import { MediaAssetEntity, MediaStatus } from './entities/media-asset.entity'
 @Injectable()
@@ -17,10 +18,12 @@ export class MediaService {
   constructor(
     @InjectRepository(MediaAssetEntity) private readonly media: Repository<MediaAssetEntity>,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
+    @Inject(mediaConfig.KEY) private readonly config: MediaConfig,
   ) {}
   async create(userId: string, input: CreateMediaDto) {
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(input.mimeType))
       throw new BadRequestException('Only JPEG, PNG, and WebP images are supported')
+    if (input.sizeBytes > this.config.maxFileSizeBytes) throw new PayloadTooLargeException()
     const key = `${userId}/${randomBytes(24).toString('hex')}`
     const row = await this.media.save(
       this.media.create({
@@ -50,7 +53,8 @@ export class MediaService {
     for await (const chunk of stream) {
       const value = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array)
       size += value.length
-      if (size > declared || size > 15_000_000) throw new PayloadTooLargeException()
+      if (size > declared || size > this.config.maxFileSizeBytes)
+        throw new PayloadTooLargeException()
       chunks.push(value)
     }
     if (size !== declared) throw new BadRequestException('Uploaded size does not match declaration')

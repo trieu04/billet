@@ -1,9 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsInt, IsString, Max, MaxLength, Min } from 'class-validator'
+import { IsInt, IsString, MaxLength, Min } from 'class-validator'
 import { MediaStatus } from './entities/media-asset.entity'
 export class CreateMediaDto {
   @ApiProperty() @IsString() @MaxLength(100) mimeType: string
-  @ApiProperty() @IsInt() @Min(1) @Max(15_000_000) sizeBytes: number
+  @ApiProperty() @IsInt() @Min(1) sizeBytes: number
 }
 export class MediaResponseDto {
   @ApiProperty({ type: String, pattern: '^[1-9]\\d*$' }) id: string

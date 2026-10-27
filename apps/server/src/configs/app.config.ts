@@ -72,6 +72,12 @@ export const firebaseConfig = registerAs('firebase', () => ({
 
 export type FirebaseConfig = ConfigType<typeof firebaseConfig>
 
+export const mediaConfig = registerAs('media', () => ({
+  maxFileSizeBytes: Number(process.env.MEDIA_MAX_FILE_SIZE_BYTES ?? 15_000_000),
+}))
+
+export type MediaConfig = ConfigType<typeof mediaConfig>
+
 export const recognitionConfig = registerAs('recognition', () => ({
   provider: process.env.EXPENSE_RECOGNITION_PROVIDER ?? 'disabled',
   googleAiStudioApiKeys: parseList(process.env.EXPENSE_RECOGNITION_GOOGLE_API_KEYS, ''),
