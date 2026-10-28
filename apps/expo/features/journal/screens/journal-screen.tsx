@@ -156,7 +156,7 @@ export function JournalScreen() {
                           router.push({ pathname: '/expense', params: { id: expense.id } })
                         }
                         overlay
-                        store={expense.merchant || expense.caption || 'Khoản chi'}
+                        store={expense.caption || expense.merchant || 'Khoản chi'}
                         variant={index % 2 ? 'peach' : 'sage'}
                       />
                     </View>

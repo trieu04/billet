@@ -22,11 +22,13 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { apiRequest } from '@/features/api/client'
+import { formatMoney } from '@/features/api/format'
 import type { Category, Expense, MediaReservation } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
 import { useCaptureFlow } from '../capture-flow'
 import { parseCaptureAmount, type PhotoBounds } from '../capture-model'
+import { PhotoExpenseOverlay } from '../components/photo-expense-overlay'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
@@ -45,7 +47,7 @@ export function CaptureReviewScreen() {
   )
   const { data: categories, error: categoryError, refresh } = useApiResource(loadCategories)
   const [caption, setCaption] = useState('')
-  const [captionEditing, setCaptionEditing] = useState(false)
+  const [editingField, setEditingField] = useState<'amount' | 'title' | null>(null)
   const [amount, setAmount] = useState('')
   const [categoryId, setCategoryId] = useState<string>()
   const [saving, setSaving] = useState(false)
@@ -55,6 +57,7 @@ export function CaptureReviewScreen() {
   const [saveStage, setSaveStage] = useState('Đang lưu…')
   const locked = useRef(false)
   const captionRef = useRef<TextInputInstance>(null)
+  const amountRef = useRef<TextInputInstance>(null)
   const photoRef = useRef<ViewInstance>(null)
   const reviewScrollRef = useRef<ScrollViewInstance>(null)
   const uploadedMedia = useRef<string | undefined>(undefined)
@@ -64,12 +67,21 @@ export function CaptureReviewScreen() {
   )
   const selectedCategory = categoryId ?? categories?.[0]?.id
   const dirty = Boolean(imageUri || amount || caption || categoryId)
+  const timeLabel = new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(occurredAt))
+  const amountPreview = formatMoney(parseCaptureAmount(amount) ?? '0')
 
   useEffect(() => {
-    if (!captionEditing) return
-    const frame = requestAnimationFrame(() => captionRef.current?.focus())
+    if (!editingField) return
+    const frame = requestAnimationFrame(() => {
+      if (editingField === 'title') captionRef.current?.focus()
+      else amountRef.current?.focus()
+      reviewScrollRef.current?.scrollTo({ y: 0, animated: true })
+    })
     return () => cancelAnimationFrame(frame)
-  }, [captionEditing])
+  }, [editingField])
 
   const confirmDiscard = (onDiscard: () => void) => {
     if (Platform.OS === 'web') {
@@ -226,83 +238,95 @@ export function CaptureReviewScreen() {
                 source={{ uri: imageUri }}
                 style={StyleSheet.absoluteFill}
               />
-              <View style={styles.photoTimestamp}>
-                <Text style={styles.photoTimestampText}>
-                  Hôm nay ·{' '}
-                  {new Date(occurredAt).toLocaleTimeString('vi-VN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </Text>
-              </View>
-              {captionEditing ? (
-                <View style={styles.captionEditor}>
-                  <TextInput
-                    ref={captionRef}
-                    accessibilityLabel="Ghi chú khoản chi"
-                    editable={!saving}
-                    maxLength={120}
-                    multiline
-                    onChangeText={setCaption}
-                    placeholder="Hôm nay có gì đáng nhớ?"
-                    placeholderTextColor="rgba(255,255,255,0.68)"
-                    style={styles.captionInput}
-                    value={caption}
-                  />
-                  <AnimatedPressable
-                    accessibilityLabel="Xong ghi chú"
-                    accessibilityRole="button"
-                    onPress={() => {
-                      setCaptionEditing(false)
-                      Keyboard.dismiss()
-                      requestAnimationFrame(() =>
-                        reviewScrollRef.current?.scrollTo({ y: 0, animated: true }),
-                      )
-                    }}
-                    style={styles.captionDone}
-                  >
-                    <Feather color="white" name="check" size={18} />
-                  </AnimatedPressable>
-                </View>
-              ) : (
-                <AnimatedPressable
-                  accessibilityLabel={caption ? `Sửa ghi chú: ${caption}` : 'Thêm ghi chú vào ảnh'}
-                  accessibilityRole="button"
-                  disabled={saving}
-                  onPress={() => setCaptionEditing(true)}
-                  style={styles.captionBadge}
-                >
-                  <Feather color="white" name="edit-2" size={15} />
-                  <Text numberOfLines={2} style={styles.captionBadgeText}>
-                    {caption || 'Thêm ghi chú'}
-                  </Text>
-                </AnimatedPressable>
-              )}
+              <PhotoExpenseOverlay
+                amount={amountPreview}
+                amountEditor={
+                  editingField === 'amount' ? (
+                    <View style={styles.overlayAmountEditor}>
+                      <TextInput
+                        ref={amountRef}
+                        accessibilityLabel="Số tiền chi tiêu"
+                        editable={!saving}
+                        keyboardType="number-pad"
+                        maxLength={15}
+                        onBlur={() => setEditingField(null)}
+                        onChangeText={(value) => {
+                          setAmount(value)
+                          setError(null)
+                        }}
+                        onSubmitEditing={() => {
+                          setEditingField(null)
+                          Keyboard.dismiss()
+                        }}
+                        placeholder="0"
+                        placeholderTextColor="rgba(255,255,255,0.72)"
+                        returnKeyType="done"
+                        selectTextOnFocus
+                        style={[
+                          styles.overlayAmountInput,
+                          { width: Math.min(150, Math.max(48, amount.length * 13)) },
+                        ]}
+                        value={amount}
+                      />
+                      <Text style={styles.overlayCurrency}>₫</Text>
+                    </View>
+                  ) : undefined
+                }
+                meta={timeLabel}
+                onAmountPress={saving ? undefined : () => setEditingField('amount')}
+                onTitlePress={saving ? undefined : () => setEditingField('title')}
+                title={caption || 'Thêm tiêu đề'}
+                titleEditor={
+                  editingField === 'title' ? (
+                    <TextInput
+                      ref={captionRef}
+                      accessibilityLabel="Tiêu đề khoản chi"
+                      editable={!saving}
+                      maxLength={120}
+                      onBlur={() => setEditingField(null)}
+                      onChangeText={setCaption}
+                      onSubmitEditing={() => {
+                        setEditingField(null)
+                        Keyboard.dismiss()
+                      }}
+                      placeholder="Thêm tiêu đề"
+                      placeholderTextColor="rgba(255,255,255,0.72)"
+                      returnKeyType="done"
+                      selectTextOnFocus
+                      style={styles.overlayTitleInput}
+                      value={caption}
+                    />
+                  ) : undefined
+                }
+              />
             </View>
           ) : null}
-          <View style={styles.card}>
-            <Text style={styles.label}>SỐ TIỀN</Text>
-            <View style={styles.amountRow}>
-              <TextInput
-                accessibilityLabel="Số tiền chi tiêu"
-                editable={!saving}
-                keyboardType="number-pad"
-                maxLength={15}
-                onChangeText={(value) => {
-                  setAmount(value)
-                  setError(null)
-                }}
-                placeholder="0"
-                placeholderTextColor={colors.textSecondary}
-                returnKeyType="done"
-                onSubmitEditing={Keyboard.dismiss}
-                style={styles.amountInput}
-                value={amount}
-              />
-              <Text style={styles.currency}>₫</Text>
+          {!imageUri ? (
+            <View style={styles.card}>
+              <Text style={styles.label}>SỐ TIỀN</Text>
+              <View style={styles.amountRow}>
+                <TextInput
+                  ref={amountRef}
+                  accessibilityLabel="Số tiền chi tiêu"
+                  editable={!saving}
+                  keyboardType="number-pad"
+                  maxLength={15}
+                  onChangeText={(value) => {
+                    setAmount(value)
+                    setError(null)
+                  }}
+                  placeholder="0"
+                  placeholderTextColor={colors.textSecondary}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                  style={styles.amountInput}
+                  value={amount}
+                />
+                <Text style={styles.currency}>₫</Text>
+              </View>
+              <Text style={styles.helper}>Nhập số tiền của khoảnh khắc này</Text>
             </View>
-            <Text style={styles.helper}>Nhập số tiền của khoảnh khắc này</Text>
-          </View>
+          ) : null}
           <View style={styles.categories}>
             <Text style={styles.label}>DANH MỤC</Text>
             <View style={styles.chips}>
@@ -386,65 +410,12 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     overflow: 'hidden',
   },
-  photoTimestamp: {
-    backgroundColor: 'rgba(255,253,249,0.9)',
-    borderCurve: 'continuous',
-    borderRadius: 14,
-    left: 14,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    position: 'absolute',
-    top: 14,
-  },
-  photoTimestampText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 12 },
   card: {
     backgroundColor: colors.card,
     borderRadius: 20,
     borderCurve: 'continuous',
     padding: 20,
     gap: 8,
-  },
-  captionBadge: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(31,27,24,0.82)',
-    borderCurve: 'continuous',
-    borderRadius: 18,
-    bottom: 14,
-    flexDirection: 'row',
-    gap: 8,
-    left: 14,
-    maxWidth: '82%',
-    minHeight: 44,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    position: 'absolute',
-  },
-  captionBadgeText: {
-    color: 'white',
-    flexShrink: 1,
-    fontFamily: fonts.medium,
-    fontSize: 14,
-  },
-  captionDone: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderRadius: 22,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  captionEditor: {
-    alignItems: 'flex-end',
-    backgroundColor: 'rgba(31,27,24,0.9)',
-    borderCurve: 'continuous',
-    borderRadius: 20,
-    bottom: 12,
-    flexDirection: 'row',
-    gap: 8,
-    left: 12,
-    padding: 8,
-    position: 'absolute',
-    right: 12,
   },
   label: {
     color: colors.textSecondary,
@@ -465,17 +436,29 @@ const styles = StyleSheet.create({
   },
   currency: { color: colors.textSecondary, fontFamily: fonts.amount, fontSize: 28 },
   helper: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12 },
-  captionInput: {
-    color: 'white',
-    flex: 1,
-    fontFamily: fonts.regular,
-    fontSize: 14,
-    lineHeight: 19,
-    maxHeight: 76,
+  overlayAmountEditor: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     minHeight: 44,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    textAlignVertical: 'top',
+  },
+  overlayAmountInput: {
+    color: 'white',
+    fontFamily: fonts.amount,
+    fontSize: 20,
+    fontVariant: ['tabular-nums'],
+    minWidth: 48,
+    padding: 0,
+    textAlign: 'right',
+  },
+  overlayCurrency: { color: 'white', fontFamily: fonts.amount, fontSize: 20 },
+  overlayTitleInput: {
+    color: 'white',
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    lineHeight: 19,
+    minHeight: 24,
+    padding: 0,
   },
   categories: { padding: 4, gap: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

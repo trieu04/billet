@@ -7,6 +7,7 @@ import { Receipt } from './receipt'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
+import { PhotoExpenseOverlay } from './photo-expense-overlay'
 
 type Props = {
   amount?: string
@@ -67,19 +68,7 @@ export function ExpenseTicket({
         <PhotoFallback compact={compact} gradient={gradient} />
       )}
       {overlay ? (
-        <LinearGradient
-          colors={['transparent', 'rgba(31,27,24,0.88)']}
-          pointerEvents="none"
-          style={styles.photoOverlay}
-        >
-          <View style={styles.overlayInfo}>
-            <Text numberOfLines={2} style={styles.overlayStore}>
-              {store}
-            </Text>
-            <Text style={styles.overlayMeta}>{meta}</Text>
-          </View>
-          <Text style={styles.overlayAmount}>{amount}</Text>
-        </LinearGradient>
+        <PhotoExpenseOverlay amount={amount} meta={meta} title={store} />
       ) : (
         <View style={[styles.ticket, compact && styles.compactTicket]}>
           <View pointerEvents="none" style={styles.perforation}>
@@ -164,32 +153,11 @@ const styles = StyleSheet.create({
     top: -10,
     width: 20,
   },
-  overlayAmount: {
-    color: 'white',
-    fontFamily: fonts.amount,
-    fontSize: 20,
-    fontVariant: ['tabular-nums'],
-  },
-  overlayInfo: { flex: 1, gap: 2, minWidth: 0, paddingRight: 8 },
-  overlayMeta: { color: 'rgba(255,255,255,0.78)', fontFamily: fonts.medium, fontSize: 12 },
-  overlayStore: { color: 'white', fontFamily: fonts.semibold, fontSize: 15, lineHeight: 19 },
   photo: {
     alignItems: 'center',
     aspectRatio: expensePhotoAspectRatio,
     width: '100%',
     justifyContent: 'center',
-  },
-  photoOverlay: {
-    alignItems: 'flex-end',
-    bottom: 0,
-    flexDirection: 'row',
-    gap: 8,
-    left: 0,
-    paddingBottom: 16,
-    paddingHorizontal: 14,
-    paddingTop: 72,
-    position: 'absolute',
-    right: 0,
   },
   perforation: { height: 2, left: 0, position: 'absolute', right: 0, top: -1 },
   store: { color: colors.text, fontFamily: fonts.semibold, fontSize: 16 },

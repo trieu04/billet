@@ -12,6 +12,7 @@ import type { Category, Expense } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
 import { useCaptureFlow } from '@/features/expense/capture-flow'
+import { PhotoExpenseOverlay } from '@/features/expense/components/photo-expense-overlay'
 import { Receipt } from '@/features/expense/components/receipt'
 import { AnimatedPressable, useEntranceAnimation, useReducedMotion } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
@@ -157,7 +158,12 @@ export function ExpenseDetailScreen() {
     )
   }
 
-  const timestamp = formatTimestamp(new Date(expense.occurredAt))
+  const occurredAt = new Date(expense.occurredAt)
+  const timestamp = formatTimestamp(occurredAt)
+  const photoTime = occurredAt.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 
   return (
     <SafeAreaView edges={[]} style={styles.safe}>
@@ -190,13 +196,7 @@ export function ExpenseDetailScreen() {
           </AnimatedPressable>
         </View>
 
-        <Photo expense={expense} timestamp={timestamp} token={token} />
-
-        <View style={styles.amountCard}>
-          <Text style={styles.fieldLabel}>Số tiền</Text>
-          <Text style={styles.amount}>{formatMoney(expense.amountMinor, expense.currency)}</Text>
-          <Text style={styles.amountTime}>{timestamp}</Text>
-        </View>
+        <Photo expense={expense} time={photoTime} token={token} />
 
         <View style={styles.metadataCard}>
           <View style={styles.categoryChip}>
@@ -303,15 +303,7 @@ export function ExpenseDetailScreen() {
   )
 }
 
-function Photo({
-  expense,
-  timestamp,
-  token,
-}: {
-  expense: Expense
-  timestamp: string
-  token: string | null
-}) {
+function Photo({ expense, time, token }: { expense: Expense; time: string; token: string | null }) {
   return (
     <View style={styles.photo}>
       {expense.mediaAssetId && token ? (
@@ -326,14 +318,11 @@ function Photo({
       ) : (
         <PhotoFallback />
       )}
-      <View style={styles.photoTimestamp}>
-        <Text style={styles.photoTimestampText}>{timestamp}</Text>
-      </View>
-      <View style={styles.photoCaption}>
-        <Text numberOfLines={2} style={styles.photoCaptionText}>
-          {expense.caption || expense.merchant || 'Một khoảnh khắc trong ngày'}
-        </Text>
-      </View>
+      <PhotoExpenseOverlay
+        amount={formatMoney(expense.amountMinor, expense.currency)}
+        meta={time}
+        title={expense.caption || expense.merchant || 'Khoản chi'}
+      />
     </View>
   )
 }
@@ -391,31 +380,6 @@ function formatTimestamp(value: Date) {
 }
 
 const styles = StyleSheet.create({
-  amount: {
-    color: colors.text,
-    fontFamily: fonts.amount,
-    fontSize: 30,
-    left: 18,
-    letterSpacing: -0.5,
-    position: 'absolute',
-    top: 34,
-  },
-  amountCard: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    height: 94,
-    marginHorizontal: 16,
-    marginTop: 12,
-    position: 'relative',
-  },
-  amountTime: {
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    position: 'absolute',
-    right: 18,
-    top: 42,
-  },
   back: { alignItems: 'center', flexDirection: 'row', height: 40, width: 112 },
   backGlyph: { color: colors.link, fontFamily: fonts.regular, fontSize: 22, marginRight: 5 },
   categoryChip: {
@@ -450,14 +414,6 @@ const styles = StyleSheet.create({
   },
   errorButton: { paddingHorizontal: 20, paddingVertical: 12 },
   errorButtonText: { color: colors.link, fontFamily: fonts.semibold, fontSize: 15 },
-  fieldLabel: {
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    fontSize: 12,
-    left: 18,
-    position: 'absolute',
-    top: 14,
-  },
   grabber: {
     alignSelf: 'center',
     backgroundColor: '#DDD5C9',
@@ -516,29 +472,6 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   photoImage: { alignItems: 'center', height: '100%', justifyContent: 'center', width: '100%' },
-  photoCaption: {
-    backgroundColor: 'rgba(31,27,24,0.82)',
-    borderRadius: 18,
-    bottom: 14,
-    left: 14,
-    maxWidth: '82%',
-    minHeight: 44,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    position: 'absolute',
-  },
-  photoCaptionText: { color: 'white', fontFamily: fonts.medium, fontSize: 14 },
-  photoTimestamp: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    height: 28,
-    justifyContent: 'center',
-    left: 14,
-    paddingHorizontal: 12,
-    position: 'absolute',
-    top: 14,
-  },
-  photoTimestampText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 13 },
   placeholder: { color: '#A89E93' },
   safe: { backgroundColor: colors.canvas, flex: 1 },
   saveButton: {
