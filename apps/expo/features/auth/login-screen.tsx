@@ -1,7 +1,7 @@
 import * as AppleAuthentication from 'expo-apple-authentication'
 import * as Google from 'expo-auth-session/providers/google'
 import * as WebBrowser from 'expo-web-browser'
-import { type Href, router } from 'expo-router'
+import { Link } from 'expo-router'
 import { useState, type ComponentProps } from 'react'
 import {
   ActivityIndicator,
@@ -68,34 +68,6 @@ export function LoginScreen() {
       <View style={styles.card}>
         <Text style={styles.eyebrow}>BILLET</Text>
         <Text style={styles.title}>Chào mừng trở lại</Text>
-        <Text style={styles.subtitle}>Tiếp tục nhật ký chi tiêu của bạn.</Text>
-        {socialEnabled && (
-          <View style={styles.socialRow}>
-            {googleEnabled && (
-              <GoogleLoginButton
-                disabled={submitting}
-                onLogin={(identityToken) => socialLogin('google', identityToken)}
-                run={run}
-              />
-            )}
-            {appleEnabled && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                cornerRadius={24}
-                style={styles.appleButton}
-                onPress={() => void apple()}
-              />
-            )}
-          </View>
-        )}
-        {socialEnabled && (
-          <View style={styles.divider}>
-            <View style={styles.line} />
-            <Text style={styles.or}>HOẶC</Text>
-            <View style={styles.line} />
-          </View>
-        )}
         <TextInput
           accessibilityLabel="Tên đăng nhập, email hoặc số điện thoại"
           autoCapitalize="none"
@@ -118,12 +90,11 @@ export function LoginScreen() {
           style={styles.input}
           value={password}
         />
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/forgot-password' as Href)}
-        >
-          <Text style={styles.link}>Quên mật khẩu?</Text>
-        </Pressable>
+        <Link href="/forgot-password" asChild>
+          <Pressable accessibilityRole="link">
+            <Text style={styles.link}>Quên mật khẩu?</Text>
+          </Pressable>
+        </Link>
         {error ? (
           <Text accessibilityRole="alert" style={styles.error}>
             {error}
@@ -141,11 +112,40 @@ export function LoginScreen() {
             <Text style={styles.buttonText}>Đăng nhập</Text>
           )}
         </Pressable>
-        <Pressable accessibilityRole="button" onPress={() => router.push('/register' as Href)}>
-          <Text style={styles.register}>
-            Chưa có tài khoản? <Text style={styles.link}>Đăng ký</Text>
-          </Text>
-        </Pressable>
+        {socialEnabled && (
+          <View style={styles.divider}>
+            <View style={styles.line} />
+            <Text style={styles.or}>HOẶC</Text>
+            <View style={styles.line} />
+          </View>
+        )}
+        {socialEnabled && (
+          <View style={styles.socialRow}>
+            {googleEnabled && (
+              <GoogleLoginButton
+                disabled={submitting}
+                onLogin={(identityToken) => socialLogin('google', identityToken)}
+                run={run}
+              />
+            )}
+            {appleEnabled && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                cornerRadius={24}
+                style={styles.appleButton}
+                onPress={() => void apple()}
+              />
+            )}
+          </View>
+        )}
+        <Link href="/register" asChild>
+          <Pressable accessibilityRole="link">
+            <Text style={styles.register}>
+              Chưa có tài khoản? <Text style={styles.link}>Đăng ký</Text>
+            </Text>
+          </Pressable>
+        </Link>
       </View>
     </ScrollView>
   )

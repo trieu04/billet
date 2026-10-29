@@ -255,7 +255,7 @@ function MomentCell({
       <View style={styles.dotModule}>
         {data.dots?.length ? (
           <View style={styles.expenseDots}>
-            {data.dots.map((level, index) => (
+            {data.dots.slice(0, 5).map((level, index) => (
               <View
                 key={`${level}-${index}`}
                 style={[
@@ -263,7 +263,7 @@ function MomentCell({
                   {
                     backgroundColor: heat[level - 1],
                     marginLeft: index ? -4 : 0,
-                    width: `${Math.min(20, 90 / data.dots!.length)}%`,
+                    width: `${Math.min(20, 90 / Math.min(data.dots!.length, 5))}%`,
                     zIndex: index,
                   },
                 ]}
@@ -288,8 +288,8 @@ function PhotoStack({
   if (summary) {
     return (
       <View style={styles.summaryPhotos}>
-        {photos.slice(0, 2).map((photo, index) => {
-          const style = [styles.summaryPhoto, { left: index * 12 }]
+        {photos.slice(0, 4).map((photo, index) => {
+          const style = [styles.summaryPhoto, { left: index * 10 }]
           return photo.mediaAssetId && token ? (
             <AuthenticatedImage
               accessibilityLabel="Ảnh khoản chi"
@@ -320,9 +320,9 @@ function PhotoStack({
         const style = [
           styles.calendarPhoto,
           isSinglePhoto ? styles.singleCalendarPhoto : styles.layeredCalendarPhoto,
-          index > 0 && styles.stackedPhoto,
+          styles.stackedPhoto,
           {
-            left: index * 7,
+            left: index * 6,
             zIndex: index,
           },
         ]
@@ -357,7 +357,7 @@ function formatSelectedDate(date?: string) {
 }
 
 const styles = StyleSheet.create({
-  dayCell: { aspectRatio: 0.8, flex: 1, minWidth: 0, position: 'relative' },
+  dayCell: { aspectRatio: 0.92, flex: 1, minWidth: 0, position: 'relative' },
   days: { gap: 6, paddingBottom: 12, paddingHorizontal: 12, paddingTop: 10 },
   emptyDayDot: {
     backgroundColor: '#CFC7BB',
@@ -389,11 +389,10 @@ const styles = StyleSheet.create({
   },
   dotModule: {
     alignItems: 'center',
-    bottom: 0,
-    height: '21.875%',
     justifyContent: 'center',
-    left: 0,
     position: 'absolute',
+    bottom: 0,
+    left: 0,
     width: '100%',
   },
   futureDay: { backgroundColor: '#E9E2D7', borderRadius: 10, opacity: 0.72 },
@@ -446,17 +445,17 @@ const styles = StyleSheet.create({
   },
   monthsViewport: { flex: 1, marginTop: 5 },
   monthTotal: { color: colors.text, fontFamily: fonts.amount, fontSize: 15 },
-  photoStack: { alignSelf: 'center', height: 38, marginTop: 3, position: 'relative' },
+  photoStack: { alignSelf: 'center', height: 38, position: 'relative' },
   layeredPhotoStack: { width: 41 },
   safe: { backgroundColor: colors.canvas, flex: 1 },
-  selectedDay: { borderColor: colors.link, borderWidth: 1.5 },
-  selectedEmptyDayDot: { borderColor: colors.link, borderWidth: 1.5, opacity: 1 },
+  selectedDay: { outlineColor: colors.link, outlineWidth: 1.5, borderRadius: 8 },
+  selectedEmptyDayDot: { outlineColor: colors.link, outlineWidth: 1.5, opacity: 1 },
   calendarPhoto: {
     borderRadius: 9,
     height: 38,
     position: 'absolute',
   },
-  layeredCalendarPhoto: { width: 34 },
+  layeredCalendarPhoto: { width: 36 },
   singleCalendarPhoto: { width: 38 },
   singlePhotoStack: { width: 38 },
   stackedPhoto: {
@@ -488,8 +487,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     aspectRatio: expenseThumbnailAspectRatio,
     position: 'absolute',
-    top: 1,
-    width: 28,
+    top: 0,
+    width: 32,
   },
   summaryPhotos: { height: 36, position: 'relative', width: 52 },
   title: { color: colors.text, fontFamily: fonts.bold, fontSize: 34, letterSpacing: -0.5 },
