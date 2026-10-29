@@ -8,13 +8,13 @@ Billet is a visual expense journal: “Locket meets Money Tracker.” The produc
 
 ## Local development account
 
-- Seed account username: `ntdm`.
+- Seed account username: `devt`.
 - Seed account password: `devt`.
 - These are local development fixture credentials. Keep the sample seed and its documentation consistent with this account.
 
 ## Architecture rules
 
-- Keep the pnpm workspace simple. Do not introduce Turborepo.
+- Keep the pnpm workspace simple.
 - Dependency direction flows from app composition to features to shared primitives. Features must not import other feature internals.
 - Add `packages/*` only for a stable contract or utility already required by at least two apps. Shared code must not depend on an app.
 - Allocate application-owned network services from `6700–6709`: dedicated gateway container `6700`, API `6701`, web `6702`, and legacy Expo/Metro `6703`. Keep each service's internal, development, and published port aligned. Native clients do not claim a local service port. Allocate external infrastructure such as PostgreSQL, Redis, and emulators from `6710–6719` (PostgreSQL starts at `6710`).
@@ -32,9 +32,17 @@ Billet is a visual expense journal: “Locket meets Money Tracker.” The produc
 - Do not copy business logic, credentials, environment values, or generated artifacts from reference projects.
 - Preserve unrelated user changes. Do not rewrite Git history or use destructive Git commands.
 
+## Commit messages
+
+- Use Conventional Commits: `type(scope): description`, or `type: description` when no scope is useful.
+- Scope names the affected app, module, or area, such as `server`, `auth`, or `docs`. Never use an issue identifier such as `DEV-40` as the scope.
+- When an issue is associated with the work, reference its identifier in the description or commit body/footer, for example `docs: reorganize project documentation (DEV-40)` or a `Refs: DEV-40` footer.
+
 ## Linear task management
 
 - Project: [Billet](https://linear.app/devtvn/project/billet-9c0b5cc6e4c3) on the `DEV` team.
+- For routine task discovery, execution, and status updates, never call the Linear issue list without an explicit state filter. Call it separately for `Todo`, `In Progress`, and `In Review` with archived issues excluded, then merge only those results.
+- Do not query or report archived or deleted issues or issues in `Backlog`, `Done`, or `Canceled` unless the user explicitly asks for them.
 - Use Linear issues only for medium and large tasks. Small, low-risk changes such as typo fixes, minor documentation edits, or narrowly scoped configuration tweaks do not require an issue.
 - For medium and large tasks, search existing project issues before work and use the closest matching issue; create a new issue only when no suitable issue exists, and avoid duplicates.
 - Label each issue by application scope: use `server` for `apps/server`, `web` for `apps/web`, and `mobile` for `apps/android`, `apps/ios`, or the preserved legacy `apps/expo`. Apply every relevant label when work spans multiple apps.

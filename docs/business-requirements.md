@@ -1,10 +1,10 @@
 # Billet — Business Requirements Document
 
-Phiên bản 0.1 · Ngày 14/10/2026 · **Bản nháp để review, chưa phê duyệt phạm vi phát hành** · [DEV-21](https://linear.app/devtvn/issue/DEV-21).
+Trạng thái: **Bản nháp nghiệp vụ, chưa phê duyệt phạm vi phát hành** · Cập nhật: 2026-10-30 · [DEV-21](https://linear.app/devtvn/issue/DEV-21).
 
-BRD xác định giá trị sản phẩm, phạm vi và kết quả nghiệp vụ cần đạt. Nguồn tham chiếu: [product context](../README.md), [thiết kế iOS](https://www.figma.com/design/80rXESXakYSS23nyN8NcT7/Billet?node-id=8-102) và [thiết kế backend](./backend-design.md). Tài liệu không mô tả schema, API hoặc cách triển khai.
+BRD xác định mục tiêu, phạm vi, quy tắc và tiêu chí nghiệm thu của Billet. Các mã FR/BR/NFR là điểm truy vết cho backlog và kiểm thử; sự hiện diện của yêu cầu không chứng minh tính năng đã hoàn thành. Phân khúc người dùng, ưu tiên phát hành và KPI vẫn cần Product review.
 
-Định hướng “visual expense journal — Locket meets Money Tracker” đã có trong dự án. Phân nhóm người dùng, thứ tự phát hành, quy tắc còn mở và các chỉ tiêu dưới đây là đề xuất cần review, không phải kết quả nghiên cứu thị trường hay cam kết đã được xác nhận.
+Nguồn: [giới thiệu sản phẩm](../README.md), [Figma iOS](https://www.figma.com/design/80rXESXakYSS23nyN8NcT7/Billet?node-id=8-102), [backend](./techical-design/01-backend.md) và [luồng capture](./techical-design/02-mobile-capture.md).
 
 ## 1. Bối cảnh và cơ hội
 
@@ -52,23 +52,15 @@ Chưa đặt ngưỡng tăng trưởng vì chưa có baseline. Product phụ tr�
 
 Chưa mặc định phân khúc theo tuổi, nghề nghiệp hoặc mức thu nhập. Cần phỏng vấn/pilot để kiểm chứng ai có nhu cầu thường xuyên và điều gì khiến họ tiếp tục dùng.
 
-### Vai trò trong dự án
+### Trách nhiệm phê duyệt
 
-| Vai trò                               | Trách nhiệm review                                                           |
-| ------------------------------------- | ---------------------------------------------------------------------------- |
-| Product owner / người phụ trách dự án | Chốt mục tiêu, phạm vi, ưu tiên và quyết định còn mở                         |
-| Thiết kế sản phẩm                     | Kiểm chứng luồng, nội dung, khả năng sử dụng và các trạng thái lỗi           |
-| Đội phát triển                        | Đánh giá tính khả thi, chi phí tích hợp và ràng buộc nền tảng                |
-| QA                                    | Chuyển tiêu chí nghiệp vụ thành kịch bản nghiệm thu, kiểm tra tính nhất quán |
-| Vận hành / hỗ trợ                     | Quy trình xử lý lỗi dữ liệu, quyền riêng tư và yêu cầu tài khoản             |
-
-Đây là vai trò, chưa phải phân công nhân sự. Không suy ra nhu cầu xây trang quản trị chỉ từ việc có người hỗ trợ vận hành.
+Product chốt phạm vi và các quyết định còn mở; Design kiểm chứng trải nghiệm; Engineering đánh giá khả thi; QA nghiệm thu; vận hành chốt hỗ trợ và vòng đời dữ liệu. Đây là vai trò cần phân công trước pilot, chưa phải danh sách nhân sự.
 
 ## 4. Phạm vi và ưu tiên
 
 ### Phạm vi nền tảng
 
-Repository có mobile, web và server. Đề xuất xác thực trải nghiệm ghi nhận trên mobile trước, dùng iOS làm tham chiếu thiết kế. Chưa mặc định web hoặc Android phải phát hành đồng thời hay có đầy đủ tính năng như iOS; phạm vi từng nền tảng cần được chốt trước lập kế hoạch phát hành.
+Repository có native iOS, native Android, web, server và Expo được giữ làm client legacy. Đề xuất xác thực trải nghiệm ghi nhận trên mobile trước, dùng iOS làm tham chiếu thiết kế. Chưa mặc định web hoặc Android phải phát hành đồng thời hay có đầy đủ tính năng như iOS; phạm vi từng nền tảng cần được chốt trước lập kế hoạch phát hành.
 
 Các yêu cầu nghiệp vụ về tiền, thời gian, quyền sở hữu và tổng hợp áp dụng nhất quán trên mọi nền tảng được đưa vào phạm vi.
 
@@ -93,11 +85,13 @@ Các yêu cầu nghiệp vụ về tiền, thời gian, quyền sở hữu và t
 
 Quy trình xử lý yêu cầu xóa tài khoản/dữ liệu và thông báo quyền riêng tư cần được chốt trước thử nghiệm với người dùng bên ngoài; chưa mặc định phải có màn hình tự phục vụ trong P0.
 
-Suy luận cá nhân hóa từ ảnh là giả thuyết mở rộng, chưa phải cam kết triển khai P1. MVP dùng nhập số tiền thủ công vì nhanh và chắc chắn hơn việc chờ suy luận rồi xác nhận. Dữ liệu ảnh và khoản chi đã được người dùng xác nhận có thể tạo nền tảng đánh giá tính khả thi sau này.
+Suy luận cá nhân hóa từ ảnh là giả thuyết mở rộng, chưa phải cam kết triển khai P1. MVP dùng nhập số tiền thủ công vì nhanh và chắc chắn hơn việc chờ suy luận rồi xác nhận. Thiết kế thử nghiệm nằm trong [nhận diện chi tiêu từ ảnh](./techical-design/04-expense-image-recognition.md); chỉ bật sau kiểm chứng hiệu quả và độ tin cậy.
 
 ### Ngoài phạm vi ban đầu
 
-Chia sẻ xã hội, bạn bè, like/comment; ví và số dư tài khoản; đồng bộ ngân hàng; thu nhập, chuyển khoản nội bộ, hoàn tiền; chia bill; giao dịch định kỳ; danh mục tùy biến; quản lý từng món trong hóa đơn; quy đổi tỷ giá; kế toán doanh nghiệp hoặc tư vấn tài chính; đồng bộ chỉnh sửa offline hai chiều.
+Chia sẻ xã hội, bạn bè, like/comment; ví và số dư tài khoản; đồng bộ ngân hàng; thu nhập, chuyển khoản nội bộ, hoàn tiền; chia bill; giao dịch định kỳ; quản lý từng món trong hóa đơn; quy đổi tỷ giá; kế toán doanh nghiệp hoặc tư vấn tài chính; đồng bộ chỉnh sửa offline hai chiều.
+
+Danh mục tùy biến có implementation riêng tại [DEV-37](https://linear.app/devtvn/issue/DEV-37); chưa xếp lại ưu tiên phát hành trong BRD này. Không coi việc đã có source là bằng chứng nghiệm thu hoặc phê duyệt P0.
 
 Mô hình thu phí, gói premium, quảng cáo và mục tiêu doanh thu chưa được xác định. BRD này không đặt yêu cầu thanh toán hoặc đăng ký thuê bao.
 
@@ -241,19 +235,19 @@ Các chức năng xác thực, thông báo và realtime đã có nền tảng k�
 
 ## 12. Giả định và quyết định cần chốt
 
-| Mã  | Quyết định                                         | Đề xuất hiện tại                                               | Thời điểm cần chốt                      |
-| --- | -------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------- |
-| D1  | Người dùng và nền tảng thử nghiệm đầu tiên         | Cá nhân ghi chi tiêu trên mobile, iOS làm tham chiếu           | Trước lập kế hoạch pilot                |
-| D2  | Điều kiện lưu khi chưa có số tiền                  | Chưa ghi thành khoản chính thức; giữ nháp                      | Trước chốt luồng ghi nhận               |
-| D3  | Loại tiền được hỗ trợ                              | VND cho MVP; không quy đổi                                     | Trước chốt phạm vi P0                   |
-| D4  | Danh mục và nhận xét về bữa ăn                     | Danh mục phẳng; insight suy ra phải ghi là ước tính            | Trước hoàn thiện thống kê               |
-| D5  | Múi giờ và kỳ so sánh                              | Theo tài khoản; so cùng phần kỳ trước                          | Trước nghiệm thu tổng hợp               |
-| D6  | Độ bền draft offline và nhiều thiết bị             | Giữ nháp; chưa hỗ trợ sửa offline hai chiều                    | Trước nghiệm thu mất mạng               |
-| D7  | Cách lặp ngân sách và nhắc                         | Ngân sách đặt từng tháng, một lịch nhắc/ngày                   | Trước triển khai P1 tương ứng           |
-| D8  | Xóa tài khoản, retention và nhà cung cấp nhận diện | Cần chính sách và quy trình rõ; chưa chốt thời hạn             | Trước thử nghiệm bên ngoài              |
-| D9  | KPI, hiệu năng và điều kiện đo                     | Thu baseline pilot; chốt ngưỡng hiệu năng trước pilot          | Trước pilot và trước đánh giá phát hành |
-| D10 | Mức đầu tư, lịch phát hành, người phê duyệt        | Chưa xác định; không suy ra từ roadmap kỹ thuật                | Trước cam kết kế hoạch                  |
-| D11 | Vai trò AI trong luồng ghi nhận                    | MVP nhập tiền thủ công; AI cá nhân hóa là hướng thử nghiệm sau | Trước khi đưa suy luận ảnh vào backlog  |
+| Mã  | Quyết định                                         | Đề xuất hiện tại                                               | Thời điểm cần chốt                        |
+| --- | -------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------- |
+| D1  | Người dùng và nền tảng thử nghiệm đầu tiên         | Cá nhân ghi chi tiêu trên mobile, iOS làm tham chiếu           | Trước lập kế hoạch pilot                  |
+| D2  | Điều kiện lưu khi chưa có số tiền                  | Chưa ghi thành khoản chính thức; giữ nháp                      | Trước chốt luồng ghi nhận                 |
+| D3  | Loại tiền được hỗ trợ                              | VND cho MVP; không quy đổi                                     | Trước chốt phạm vi P0                     |
+| D4  | Danh mục và nhận xét về bữa ăn                     | Danh mục phẳng; insight suy ra phải ghi là ước tính            | Trước hoàn thiện thống kê                 |
+| D5  | Múi giờ và kỳ so sánh                              | Theo tài khoản; so cùng phần kỳ trước                          | Trước nghiệm thu tổng hợp                 |
+| D6  | Độ bền draft offline và nhiều thiết bị             | Giữ nháp; chưa hỗ trợ sửa offline hai chiều                    | Trước nghiệm thu mất mạng                 |
+| D7  | Cách lặp ngân sách và nhắc                         | Ngân sách đặt từng tháng, một lịch nhắc/ngày                   | Trước triển khai P1 tương ứng             |
+| D8  | Xóa tài khoản, retention và nhà cung cấp nhận diện | Cần chính sách và quy trình rõ; chưa chốt thời hạn             | Trước thử nghiệm bên ngoài                |
+| D9  | KPI, hiệu năng và điều kiện đo                     | Thu baseline pilot; chốt ngưỡng hiệu năng trước pilot          | Trước pilot và trước đánh giá phát hành   |
+| D10 | Mức đầu tư, lịch phát hành, người phê duyệt        | Chưa xác định; không suy ra từ roadmap kỹ thuật                | Trước cam kết kế hoạch                    |
+| D11 | Vai trò AI trong luồng ghi nhận                    | MVP nhập tiền thủ công; AI cá nhân hóa là hướng thử nghiệm sau | Trước khi bật suy luận ảnh trong sản phẩm |
 
 Product owner chốt các quyết định cùng thiết kế, phát triển và vận hành tùy nội dung. Chưa có người được chỉ định hoặc ngày cam kết trong BRD này.
 
@@ -261,4 +255,4 @@ Product owner chốt các quyết định cùng thiết kế, phát triển và 
 
 Sau review, mỗi nhóm yêu cầu được chuyển thành công việc triển khai và liên kết bằng mã FR/BR/NFR. Những thay đổi ảnh hưởng mục tiêu, phạm vi, quy tắc hoặc quyền riêng tư cần ghi lại quyết định và cập nhật tiêu chí nghiệm thu liên quan.
 
-BRD mô tả sản phẩm cần đạt điều gì; Figma mô tả trải nghiệm; [thiết kế backend](./backend-design.md) mô tả cách tổ chức kỹ thuật. Khi các tài liệu không khớp, chốt quyết định nghiệp vụ rồi đồng bộ tài liệu, không tự coi tài liệu nào mới hơn là đã được phê duyệt.
+BRD mô tả sản phẩm cần đạt điều gì; Figma mô tả trải nghiệm; [thiết kế backend](./techical-design/01-backend.md) mô tả cách tổ chức kỹ thuật. Khi các tài liệu không khớp, chốt quyết định nghiệp vụ rồi đồng bộ tài liệu, không tự coi tài liệu nào mới hơn là đã được phê duyệt.
