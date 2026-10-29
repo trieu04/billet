@@ -41,7 +41,7 @@ export class ExpenseService {
         throw new ConflictException('Idempotency key was already used with different content')
       return this.toResponse(existing)
     }
-    const category = await this.categories.resolve(input.categoryId)
+    const category = await this.categories.resolve(userId, input.categoryId)
     if (input.mediaAssetId) await this.media.assertReady(userId, input.mediaAssetId)
     if (input.recognitionJobId)
       await this.recognition.assertAccepted(userId, input.recognitionJobId, input.mediaAssetId)
@@ -112,7 +112,8 @@ export class ExpenseService {
     if (expense.version !== input.version)
       throw new ConflictException('Expense was changed; reload before editing')
     this.validateInput(input)
-    if (input.categoryId) expense.categoryId = (await this.categories.resolve(input.categoryId)).id
+    if (input.categoryId)
+      expense.categoryId = (await this.categories.resolve(userId, input.categoryId)).id
     if (input.mediaAssetId && input.mediaAssetId !== expense.mediaAssetId)
       await this.media.assertReady(userId, input.mediaAssetId)
     const mutable = [

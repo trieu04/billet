@@ -21,9 +21,18 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { API_BASE_URL, apiRequest } from '@/features/api/client'
 import { localMonth } from '@/features/api/format'
-import type { Budget, ExportJob, Profile, Settings, SettingsOptions } from '@/features/api/types'
+import type {
+  Budget,
+  Category,
+  ExportJob,
+  Profile,
+  Settings,
+  SettingsOptions,
+} from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
+import { CategoryFormModal } from '@/features/category/components/category-form-modal'
+import { categoryIcon } from '@/features/category/category-options'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
 
@@ -33,6 +42,7 @@ import { majorToMinor, minorToMajor } from '../settings-model'
 type Section =
   | 'appearance'
   | 'budget'
+  | 'categories'
   | 'currency'
   | 'export'
   | 'profile'
@@ -43,6 +53,7 @@ type Section =
 const titles: Record<Section, string> = {
   appearance: 'Giao diện',
   budget: 'Ngân sách tháng',
+  categories: 'Quản lý danh mục',
   currency: 'Tiền tệ mặc định',
   export: 'Xuất dữ liệu',
   profile: 'Thông tin hồ sơ',
@@ -142,6 +153,7 @@ export function SettingsScreen() {
               token={token}
             />
           ) : null}
+          {section === 'categories' ? <CategorySettings token={token} /> : null}
           {section === 'export' ? (
             <ExportSettings
               currency={resource.data?.profile.settings.defaultCurrency ?? 'VND'}
@@ -489,6 +501,138 @@ function ProfileSettings({ profile, token }: { profile?: Profile; token: string 
   )
 }
 
+function CategorySettings({ token }: { token: string | null }) {
+  const load = useCallback(
+    (accessToken: string) => apiRequest<Category[]>('/categories', { token: accessToken }),
+    [],
+  )
+  const resource = useApiResource(load)
+  const [editing, setEditing] = useState<Category | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const remove = (category: Category) => {
+    if (category.usageCount > 0) {
+      Alert.alert(
+        'Danh mục đang được sử dụng',
+        'Bạn có thể đổi tên, màu hoặc biểu tượng nhưng chưa thể xóa danh mục này.',
+      )
+      return
+    }
+    Alert.alert(
+      'Xóa danh mục?',
+      `“${category.name}” sẽ không còn xuất hiện khi ghi khoản chi mới.`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return
+            setDeletingId(category.id)
+            try {
+              await apiRequest(`/categories/${category.id}`, { method: 'DELETE', token })
+              resource.setData(
+                (current) => current?.filter((item) => item.id !== category.id) ?? current,
+              )
+            } catch (reason) {
+              Alert.alert(
+                'Không thể xóa danh mục',
+                reason instanceof Error ? reason.message : 'Vui lòng thử lại.',
+              )
+            } finally {
+              setDeletingId(null)
+            }
+          },
+        },
+      ],
+    )
+  }
+
+  const saved = (category: Category) => {
+    resource.setData((current) => {
+      if (!current) return [category]
+      const exists = current.some((item) => item.id === category.id)
+      return exists
+        ? current.map((item) => (item.id === category.id ? category : item))
+        : [...current, category]
+    })
+    setEditing(null)
+  }
+
+  if (resource.loading && !resource.data) {
+    return (
+      <View style={styles.categoryLoading}>
+        <ActivityIndicator color={colors.link} />
+      </View>
+    )
+  }
+
+  return (
+    <>
+      <Text style={styles.intro}>
+        Billet tự đưa các danh mục bạn dùng nhiều lên đầu. Chỉ số sử dụng được giữ ẩn để danh sách
+        luôn gọn.
+      </Text>
+      <PrimaryButton label="Thêm danh mục" onPress={() => setCreating(true)} />
+      {resource.error ? (
+        <AnimatedPressable accessibilityRole="button" onPress={() => void resource.refresh()}>
+          <InlineMessage text={`${resource.error} · Thử lại`} />
+        </AnimatedPressable>
+      ) : null}
+      <View style={styles.categoryList}>
+        {resource.data?.map((category) => (
+          <View key={category.id} style={styles.categoryRow}>
+            <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
+              <Feather color={colors.text} name={categoryIcon(category.icon)} size={21} />
+            </View>
+            <View style={styles.flex}>
+              <Text numberOfLines={1} style={styles.rowTitle}>
+                {category.name}
+              </Text>
+              <Text style={styles.rowHint}>{category.isCustom ? 'Của bạn' : 'Mặc định'}</Text>
+            </View>
+            {category.isCustom ? (
+              <View style={styles.categoryActions}>
+                <AnimatedPressable
+                  accessibilityLabel={`Sửa ${category.name}`}
+                  accessibilityRole="button"
+                  onPress={() => setEditing(category)}
+                  style={styles.categoryAction}
+                >
+                  <Feather color={colors.link} name="edit-2" size={18} />
+                </AnimatedPressable>
+                <AnimatedPressable
+                  accessibilityLabel={`Xóa ${category.name}`}
+                  accessibilityRole="button"
+                  disabled={deletingId === category.id}
+                  onPress={() => remove(category)}
+                  style={styles.categoryAction}
+                >
+                  {deletingId === category.id ? (
+                    <ActivityIndicator color="#B3433C" size="small" />
+                  ) : (
+                    <Feather color="#B3433C" name="trash-2" size={18} />
+                  )}
+                </AnimatedPressable>
+              </View>
+            ) : null}
+          </View>
+        ))}
+      </View>
+      <CategoryFormModal
+        category={editing}
+        onDismiss={() => {
+          setCreating(false)
+          setEditing(null)
+        }}
+        onSaved={saved}
+        visible={creating || Boolean(editing)}
+      />
+    </>
+  )
+}
+
 function ExportRow({ job, token }: { job: ExportJob; token: string | null }) {
   const downloadable =
     job.status === 'succeeded' &&
@@ -646,6 +790,27 @@ const styles = StyleSheet.create({
   aboutTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 28, marginTop: 16 },
   back: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   center: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+  categoryAction: { alignItems: 'center', height: 44, justifyContent: 'center', width: 40 },
+  categoryActions: { flexDirection: 'row' },
+  categoryIcon: {
+    alignItems: 'center',
+    borderCurve: 'continuous',
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  categoryList: { backgroundColor: colors.card, borderRadius: 18, overflow: 'hidden' },
+  categoryLoading: { alignItems: 'center', minHeight: 180, justifyContent: 'center' },
+  categoryRow: {
+    alignItems: 'center',
+    borderBottomColor: colors.line,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 72,
+    paddingHorizontal: 14,
+  },
   chip: {
     backgroundColor: colors.chip,
     borderRadius: 12,

@@ -21,6 +21,8 @@ export type Category = {
   color: string
   icon: string
   sortOrder: number
+  usageCount: number
+  isCustom: boolean
 }
 
 export type Expense = {

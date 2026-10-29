@@ -243,6 +243,15 @@ export function ProfileScreen() {
             />
           </View>
           <AnimatedPressable
+            accessibilityHint="Mở danh sách để thêm hoặc sửa danh mục"
+            accessibilityRole="button"
+            onPress={() => openSettings('categories')}
+            style={[styles.row, styles.border]}
+          >
+            <Text style={styles.rowLabel}>Quản lý danh mục</Text>
+            <Feather color="#A0978D" name="chevron-right" size={18} />
+          </AnimatedPressable>
+          <AnimatedPressable
             accessibilityRole="button"
             onPress={() => openSettings('export')}
             style={[styles.row, styles.border]}

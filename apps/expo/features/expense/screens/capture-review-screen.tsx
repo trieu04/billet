@@ -26,6 +26,7 @@ import { formatMoney } from '@/features/api/format'
 import type { Category, Expense, MediaReservation } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
+import { CategoryPicker } from '@/features/category/components/category-picker'
 import { useCaptureFlow } from '../capture-flow'
 import { parseCaptureAmount, type PhotoBounds } from '../capture-model'
 import { PhotoExpenseOverlay } from '../components/photo-expense-overlay'
@@ -45,7 +46,12 @@ export function CaptureReviewScreen() {
     (accessToken: string) => apiRequest<Category[]>('/categories', { token: accessToken }),
     [],
   )
-  const { data: categories, error: categoryError, refresh } = useApiResource(loadCategories)
+  const {
+    data: categories,
+    error: categoryError,
+    refresh,
+    setData: setCategories,
+  } = useApiResource(loadCategories)
   const [caption, setCaption] = useState('')
   const [editingField, setEditingField] = useState<'amount' | 'title' | null>(null)
   const [amount, setAmount] = useState('')
@@ -329,23 +335,16 @@ export function CaptureReviewScreen() {
           ) : null}
           <View style={styles.categories}>
             <Text style={styles.label}>DANH MỤC</Text>
-            <View style={styles.chips}>
-              {categories?.map((category) => (
-                <AnimatedPressable
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: selectedCategory === category.id }}
-                  disabled={saving}
-                  key={category.id}
-                  onPress={() => setCategoryId(category.id)}
-                  style={[styles.chip, selectedCategory === category.id && styles.selectedChip]}
-                >
-                  <Text style={styles.chipText}>{category.name}</Text>
-                  {selectedCategory === category.id ? (
-                    <Feather name="check" size={14} color={colors.link} />
-                  ) : null}
-                </AnimatedPressable>
-              ))}
-            </View>
+            <CategoryPicker
+              categories={categories ?? []}
+              disabled={saving}
+              onCreated={(category) => {
+                setCategories((current) => (current ? [...current, category] : [category]))
+                setCategoryId(category.id)
+              }}
+              onSelect={setCategoryId}
+              selectedId={selectedCategory}
+            />
             {categoryError ? (
               <AnimatedPressable accessibilityRole="button" onPress={() => void refresh()}>
                 <Text style={styles.helper}>Chưa tải được danh mục · Thử lại</Text>
@@ -461,18 +460,6 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   categories: { padding: 4, gap: 12 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    minHeight: 44,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    backgroundColor: colors.card,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  selectedChip: { backgroundColor: colors.peachSoft },
-  chipText: { color: colors.text, fontFamily: fonts.medium, fontSize: 13 },
   error: { color: '#B3433C', fontFamily: fonts.medium, fontSize: 14, padding: 8 },
   footer: { paddingHorizontal: 16, paddingTop: 12, gap: 8, backgroundColor: colors.canvas },
   primary: {

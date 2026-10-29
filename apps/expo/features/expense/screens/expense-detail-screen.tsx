@@ -11,6 +11,7 @@ import { formatMoney } from '@/features/api/format'
 import type { Category, Expense } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
+import { CategoryPicker } from '@/features/category/components/category-picker'
 import { useCaptureFlow } from '@/features/expense/capture-flow'
 import { PhotoExpenseOverlay } from '@/features/expense/components/photo-expense-overlay'
 import { Receipt } from '@/features/expense/components/receipt'
@@ -130,14 +131,6 @@ export function ExpenseDetailScreen() {
       },
     ])
 
-  const cycleCategory = () => {
-    if (!categories.length) return
-    const currentIndex = categories.findIndex((item) => item.id === displayedCategoryId)
-    setCategoryId(
-      categories[(currentIndex + 1) % categories.length]?.id ?? categories[0]?.id ?? null,
-    )
-  }
-
   if (loading) {
     return (
       <SafeAreaView style={styles.center}>
@@ -244,7 +237,7 @@ export function ExpenseDetailScreen() {
                   {
                     translateY: sheetProgress.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [514, 0],
+                      outputRange: [584, 0],
                     }),
                   },
                 ],
@@ -257,29 +250,35 @@ export function ExpenseDetailScreen() {
               <Text style={styles.doneText}>Xong</Text>
             </AnimatedPressable>
 
-            <SheetField label="Danh mục" onPress={cycleCategory} top={76}>
-              <View style={styles.sheetCategory}>
-                <View
-                  style={[
-                    styles.categoryDot,
-                    { backgroundColor: displayedCategory?.color || '#FFFFFF' },
-                  ]}
-                />
-                <Text style={styles.sheetCategoryText}>{displayedCategory?.name || 'Khác'}</Text>
-              </View>
-            </SheetField>
+            <View style={styles.sheetCategories}>
+              <Text style={styles.sheetCategoriesLabel}>Danh mục</Text>
+              <CategoryPicker
+                categories={categories}
+                disabled={saving}
+                onCreated={(category) => {
+                  setData((current) =>
+                    current
+                      ? { ...current, categories: [...current.categories, category] }
+                      : current,
+                  )
+                  setCategoryId(category.id)
+                }}
+                onSelect={setCategoryId}
+                selectedId={displayedCategoryId}
+              />
+            </View>
             <SheetField
               label="Cửa hàng"
               onPress={() => Alert.alert('Cửa hàng', expense.merchant || 'Chưa thêm cửa hàng')}
-              top={156}
+              top={194}
               value={expense.merchant || 'Thêm cửa hàng'}
             />
-            <SheetField label="Ngày & giờ" onPress={() => undefined} top={236} value={timestamp} />
+            <SheetField label="Ngày & giờ" onPress={() => undefined} top={274} value={timestamp} />
             <SheetField
               label="Địa điểm"
               onPress={() => Alert.alert('Địa điểm', expense.location || 'Chưa thêm địa điểm')}
               placeholder={!expense.location}
-              top={316}
+              top={354}
               value={expense.location || 'Thêm địa điểm'}
             />
 
@@ -501,25 +500,19 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     bottom: 0,
-    height: 514,
+    height: 584,
     left: 0,
     overflow: 'hidden',
     position: 'absolute',
     right: 0,
   },
-  sheetCategory: {
-    alignItems: 'center',
-    backgroundColor: colors.sage,
-    borderRadius: 15,
-    flexDirection: 'row',
-    gap: 6,
-    height: 30,
-    left: 15,
-    paddingHorizontal: 11,
-    position: 'absolute',
-    top: 31,
+  sheetCategories: { gap: 8, left: 0, position: 'absolute', right: 0, top: 72 },
+  sheetCategoriesLabel: {
+    color: colors.textSecondary,
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    marginHorizontal: 16,
   },
-  sheetCategoryText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 13 },
   sheetChevron: { position: 'absolute', right: 14, top: 27 },
   sheetField: {
     borderColor: '#F0EADF',
