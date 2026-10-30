@@ -1,6 +1,6 @@
 import { Apple, Chrome, LoaderCircle } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { authRequest, type AuthResponse } from './api'
 import { passwordLogin, useWebSession } from './session'
 import { appleSignIn, googleSignIn } from './social'
@@ -13,6 +13,7 @@ export function AuthPage({ initialMode = 'login' }: { initialMode?: 'login' | 'r
   const [mode, setMode] = useState<Mode>(initialMode)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [legalAccepted, setLegalAccepted] = useState(false)
   const [form, setForm] = useState({
     identifier: '',
     email: '',
@@ -20,10 +21,14 @@ export function AuthPage({ initialMode = 'login' }: { initialMode?: 'login' | 'r
     code: '',
   })
 
-  if (session.token) return <Navigate to="/" replace />
+  if (session.token) return <Navigate to="/journal" replace />
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+    if (mode === 'register' && !legalAccepted) {
+      setError('Bạn cần đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư.')
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -69,10 +74,14 @@ export function AuthPage({ initialMode = 'login' }: { initialMode?: 'login' | 'r
 
   const finish = (response: AuthResponse) => {
     session.authenticate(response)
-    navigate('/', { replace: true })
+    navigate('/journal', { replace: true })
   }
 
   const social = async (provider: 'google' | 'apple') => {
+    if (mode === 'register' && !legalAccepted) {
+      setError('Bạn cần đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư.')
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -106,6 +115,33 @@ export function AuthPage({ initialMode = 'login' }: { initialMode?: 'login' | 'r
             : 'Giữ những câu chuyện chi tiêu của bạn ở một nơi an toàn.'}
         </p>
 
+        {mode === 'register' && (
+          <label className="mt-6 flex items-start gap-3 rounded-2xl bg-stone-100/80 p-4 text-sm leading-6 text-stone-600">
+            <input
+              type="checkbox"
+              checked={legalAccepted}
+              onChange={(event) => setLegalAccepted(event.target.checked)}
+              required
+              className="mt-1 size-4 accent-[#8a4a2e]"
+            />
+            <span>
+              Tôi từ đủ 16 tuổi và đồng ý với{' '}
+              <Link className="font-semibold text-[#8a4a2e] underline" to="/terms" target="_blank">
+                Điều khoản sử dụng
+              </Link>{' '}
+              cùng{' '}
+              <Link
+                className="font-semibold text-[#8a4a2e] underline"
+                to="/privacy"
+                target="_blank"
+              >
+                Chính sách quyền riêng tư
+              </Link>
+              .
+            </span>
+          </label>
+        )}
+
         {(mode === 'login' || mode === 'register') && socialEnabled && (
           <div
             className={`mt-7 grid gap-3 ${googleEnabled && appleEnabled ? 'sm:grid-cols-2' : ''}`}
@@ -114,7 +150,7 @@ export function AuthPage({ initialMode = 'login' }: { initialMode?: 'login' | 'r
               <SocialButton
                 icon={Chrome}
                 label="Google"
-                disabled={busy}
+                disabled={busy || (mode === 'register' && !legalAccepted)}
                 onClick={() => void social('google')}
               />
             )}
@@ -122,7 +158,7 @@ export function AuthPage({ initialMode = 'login' }: { initialMode?: 'login' | 'r
               <SocialButton
                 icon={Apple}
                 label="Apple"
-                disabled={busy}
+                disabled={busy || (mode === 'register' && !legalAccepted)}
                 onClick={() => void social('apple')}
               />
             )}

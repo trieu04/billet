@@ -13,5 +13,46 @@
     margin: 0;
     min-width: 320px;
     font-family: var(--font-sans);
+    background: #f7f2ea;
+    color: #251c17;
+  }
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+  :focus-visible {
+    outline: 3px solid #ef764f;
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .legal-copy h2 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .legal-copy p,
+  .legal-copy ul {
+    margin-top: 0.75rem;
+    color: #62554c;
+    line-height: 1.8;
+  }
+  .legal-copy ul {
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+  .legal-copy li + li {
+    margin-top: 0.45rem;
+  }
+  .legal-copy a {
+    color: #a43d20;
+    font-weight: 650;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+  .legal-copy strong {
+    color: #3c2f28;
+    font-weight: 700;
   }
 }
