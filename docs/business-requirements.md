@@ -1,10 +1,10 @@
 # Billet — Business Requirements Document
 
-Trạng thái: **Bản nháp nghiệp vụ, chưa phê duyệt phạm vi phát hành** · Cập nhật: 2026-10-30 · [DEV-21](https://linear.app/devtvn/issue/DEV-21).
+Trạng thái: **Bản nháp nghiệp vụ, chưa phê duyệt phạm vi phát hành** · Cập nhật: 2026-10-31 · [DEV-21](https://linear.app/devtvn/issue/DEV-21).
 
 BRD xác định mục tiêu, phạm vi, quy tắc và tiêu chí nghiệm thu của Billet. Các mã FR/BR/NFR là điểm truy vết cho backlog và kiểm thử; sự hiện diện của yêu cầu không chứng minh tính năng đã hoàn thành. Phân khúc người dùng, ưu tiên phát hành và KPI vẫn cần Product review.
 
-Nguồn: [giới thiệu sản phẩm](../README.md), [Figma iOS](https://www.figma.com/design/80rXESXakYSS23nyN8NcT7/Billet?node-id=8-102), [backend](./techical-design/01-backend.md) và [luồng capture](./techical-design/02-mobile-capture.md).
+Nguồn: [giới thiệu sản phẩm](../README.md), [Figma iOS](https://www.figma.com/design/80rXESXakYSS23nyN8NcT7/Billet?node-id=8-102), [backend](./technical-design/01-backend.md) và [gợi ý chi tiêu từ ảnh](./technical-design/03-photo-expense-suggestion.md).
 
 ## 1. Bối cảnh và cơ hội
 
@@ -85,7 +85,7 @@ Các yêu cầu nghiệp vụ về tiền, thời gian, quyền sở hữu và t
 
 Quy trình xử lý yêu cầu xóa tài khoản/dữ liệu và thông báo quyền riêng tư cần được chốt trước thử nghiệm với người dùng bên ngoài; chưa mặc định phải có màn hình tự phục vụ trong P0.
 
-Suy luận cá nhân hóa từ ảnh là giả thuyết mở rộng, chưa phải cam kết triển khai P1. MVP dùng nhập số tiền thủ công vì nhanh và chắc chắn hơn việc chờ suy luận rồi xác nhận. Thiết kế thử nghiệm nằm trong [nhận diện chi tiêu từ ảnh](./techical-design/04-expense-image-recognition.md); chỉ bật sau kiểm chứng hiệu quả và độ tin cậy.
+Suy luận cá nhân hóa từ ảnh là giả thuyết mở rộng, chưa phải cam kết triển khai P1. MVP dùng nhập số tiền thủ công vì nhanh và chắc chắn hơn việc chờ suy luận rồi xác nhận. Thiết kế thử nghiệm nằm trong [gợi ý chi tiêu từ ảnh](./technical-design/03-photo-expense-suggestion.md); chỉ bật sau kiểm chứng hiệu quả và độ tin cậy.
 
 ### Ngoài phạm vi ban đầu
 
@@ -114,14 +114,14 @@ Mã yêu cầu dùng để liên kết với thiết kế, backlog và kiểm th
 
 ### Tài khoản và ghi nhận
 
-| Mã    | Yêu cầu                                                            | Tiêu chí nghiệm thu                                                                                                                                        |
-| ----- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FR-01 | Người dùng truy cập tài khoản cá nhân và có thể khôi phục truy cập | Có thể đăng nhập, đăng xuất và đi qua quy trình khôi phục; người chưa xác thực không xem được nhật ký cá nhân                                              |
-| FR-02 | Tạo khoản chi bằng nhập tay                                        | Không bắt buộc ảnh, caption, cửa hàng hoặc GPS; tiền và thời gian hợp lệ thì lưu được; khoản mới xuất hiện trong ngày tương ứng                            |
-| FR-03 | Chụp hoặc chọn ảnh để ghi nhận                                     | Có preview và chụp/chọn lại; hủy trước lưu không tạo khoản chi; từ chối camera vẫn có lựa chọn nhập tay                                                    |
-| FR-04 | Nhận gợi ý cá nhân hóa từ ảnh — P1                                 | Chỉ xử lý từ xa sau khi người dùng chấp nhận ảnh; chạy bất đồng bộ; nêu cơ sở và độ tin cậy; mọi gợi ý có thể sửa/bỏ qua; không ghi đè dữ liệu đã nhập/lưu |
-| FR-05 | Lưu ảnh và caption cùng khoản chi                                  | Sau lưu, mở chi tiết thấy đúng ảnh và caption; caption trống vẫn hợp lệ; ghi nhận một ảnh mỗi khoản ở MVP                                                  |
-| FR-06 | Biết rõ trạng thái lưu và thử lại an toàn                          | Phân biệt chưa lưu, đang lưu, đã lưu và lỗi; mất mạng không báo thành công; thử lại cùng thao tác không tạo thêm khoản chi                                 |
+| Mã    | Yêu cầu                                                            | Tiêu chí nghiệm thu                                                                                                                                                                                                                                      |
+| ----- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-01 | Người dùng truy cập tài khoản cá nhân và có thể khôi phục truy cập | Có thể đăng nhập, đăng xuất và đi qua quy trình khôi phục; người chưa xác thực không xem được nhật ký cá nhân                                                                                                                                            |
+| FR-02 | Tạo khoản chi bằng nhập tay                                        | Không bắt buộc ảnh, caption, cửa hàng hoặc GPS; tiền và thời gian hợp lệ thì lưu được; khoản mới xuất hiện trong ngày tương ứng                                                                                                                          |
+| FR-03 | Chụp hoặc chọn ảnh để ghi nhận                                     | Có preview và chụp/chọn lại; hủy trước lưu không tạo khoản chi; từ chối camera vẫn có lựa chọn nhập tay                                                                                                                                                  |
+| FR-04 | Nhận gợi ý cá nhân hóa từ ảnh — P1                                 | Có thể gửi ảnh đã nén để phân loại ngay khi chụp/chọn, chỉ dùng cho lượt đó và không lưu; chụp lại/hủy dừng xử lý; người dùng tắt được; không chặn nhập hoặc lưu; nêu cơ sở và độ tin cậy; mọi gợi ý có thể sửa/bỏ qua; không ghi đè dữ liệu đã nhập/lưu |
+| FR-05 | Lưu ảnh và caption cùng khoản chi                                  | Sau lưu, mở chi tiết thấy đúng ảnh và caption; caption trống vẫn hợp lệ; ghi nhận một ảnh mỗi khoản ở MVP                                                                                                                                                |
+| FR-06 | Biết rõ trạng thái lưu và thử lại an toàn                          | Phân biệt chưa lưu, đang lưu, đã lưu và lỗi; mất mạng không báo thành công; thử lại cùng thao tác không tạo thêm khoản chi                                                                                                                               |
 
 ### Nhật ký và tổng hợp
 
@@ -255,4 +255,4 @@ Product owner chốt các quyết định cùng thiết kế, phát triển và 
 
 Sau review, mỗi nhóm yêu cầu được chuyển thành công việc triển khai và liên kết bằng mã FR/BR/NFR. Những thay đổi ảnh hưởng mục tiêu, phạm vi, quy tắc hoặc quyền riêng tư cần ghi lại quyết định và cập nhật tiêu chí nghiệm thu liên quan.
 
-BRD mô tả sản phẩm cần đạt điều gì; Figma mô tả trải nghiệm; [thiết kế backend](./techical-design/01-backend.md) mô tả cách tổ chức kỹ thuật. Khi các tài liệu không khớp, chốt quyết định nghiệp vụ rồi đồng bộ tài liệu, không tự coi tài liệu nào mới hơn là đã được phê duyệt.
+BRD mô tả sản phẩm cần đạt điều gì; Figma mô tả trải nghiệm; [thiết kế backend](./technical-design/01-backend.md) mô tả cách tổ chức kỹ thuật. Khi các tài liệu không khớp, chốt quyết định nghiệp vụ rồi đồng bộ tài liệu, không tự coi tài liệu nào mới hơn là đã được phê duyệt.

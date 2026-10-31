@@ -1,8 +1,8 @@
 # Technical Design — [Tên chủ đề]
 
-| Thông tin | Giá trị |
-| --------- | ------- |
-| Phạm vi | [App/module] |
+| Thông tin  | Giá trị                                               |
+| ---------- | ----------------------------------------------------- |
+| Phạm vi    | [App/module]                                          |
 | Trạng thái | [Đề xuất / Đang triển khai / Hiện hành / Đã thay thế] |
 
 > **Quy ước:** Lưu tại `docs/technical-design/NN-<topic>.md`, đánh số từ `01`; `00-template.md` dành cho mẫu.

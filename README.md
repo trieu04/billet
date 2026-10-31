@@ -27,5 +27,5 @@ The API and web app use a pnpm workspace. Native apps use their platform toolcha
 
 - [Documentation index](./docs/index.md): reading order, document status, and naming conventions.
 - [Development guide](./docs/development-guide.md): setup, commands, Docker, environment variables, and releases.
-- [Backend design](./docs/techical-design/01-backend.md): architecture, data flows, and implementation limits.
+- [Backend design](./docs/technical-design/01-backend.md): architecture, data flows, and implementation limits.
 - [Repository rules](./AGENTS.md): engineering conventions and completion checks.
