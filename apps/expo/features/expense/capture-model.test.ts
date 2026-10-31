@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { Expense, ExpenseList } from '../api/types'
+import type { Category, Expense, ExpenseList } from '../api/types'
 import {
+  findCategoryIdByCode,
   mergeSavedCaptures,
   parseCaptureAmount,
   reconcileSavedCaptures,
@@ -84,5 +85,22 @@ describe('capture → journal reconciliation', () => {
     expect(
       mergeSavedCaptures(null, [{ expense: yesterday }, { expense: tomorrow }], day).data,
     ).toEqual([])
+  })
+})
+
+describe('findCategoryIdByCode', () => {
+  const categories = [
+    { id: '1', code: 'food' },
+    { id: '2', code: 'transport' },
+  ] as Category[]
+
+  it('returns the id of the category with the code', () => {
+    expect(findCategoryIdByCode(categories, 'transport')).toBe('2')
+  })
+
+  it('returns undefined without a matching code or categories', () => {
+    expect(findCategoryIdByCode(categories, 'bills')).toBeUndefined()
+    expect(findCategoryIdByCode(categories, undefined)).toBeUndefined()
+    expect(findCategoryIdByCode(null, 'food')).toBeUndefined()
   })
 })

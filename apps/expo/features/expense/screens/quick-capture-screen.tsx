@@ -8,17 +8,29 @@ import { useCallback, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
+  Image,
   Linking,
   Platform,
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { formatZoomFactor, nextZoomPreset } from '../camera-zoom'
+import {
+  pickPlaceholderPhotos,
+  placeholderPhotoUri,
+  type PlaceholderPhoto,
+} from '../placeholder-photos'
+import { usePinchZoom } from '../use-pinch-zoom'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
+
+const stripItemSize = { height: 64, width: 48 }
 
 export function QuickCaptureScreen() {
   const focused = useIsFocused()
@@ -29,11 +41,15 @@ export function QuickCaptureScreen() {
   const [isCameraReady, setIsCameraReady] = useState(false)
   const [isCapturing, setIsCapturing] = useState(false)
   const [cameraError, setCameraError] = useState(false)
+  const { width } = useWindowDimensions()
+  const { zoom, setZoom, panHandlers } = usePinchZoom()
+  const [samples, setSamples] = useState(pickPlaceholderPhotos)
   const captureLock = useRef(false)
   const active = useRef(true)
   useFocusEffect(
     useCallback(() => {
       active.current = true
+      setSamples(pickPlaceholderPhotos())
       return () => {
         active.current = false
         setIsCameraReady(false)
@@ -41,8 +57,11 @@ export function QuickCaptureScreen() {
     }, []),
   )
 
-  const openReview = (imageUri: string) => {
-    router.push({ pathname: '/review', params: { imageUri, capturedAt: new Date().toISOString() } })
+  const openReview = (imageUri: string, categoryCode?: string) => {
+    router.push({
+      pathname: '/review',
+      params: { imageUri, capturedAt: new Date().toISOString(), categoryCode },
+    })
   }
 
   const takePicture = async () => {
@@ -60,6 +79,11 @@ export function QuickCaptureScreen() {
       setIsCapturing(false)
       captureLock.current = false
     }
+  }
+
+  const selectPlaceholder = (photo: PlaceholderPhoto) => {
+    const uri = placeholderPhotoUri(photo)
+    if (uri && !captureLock.current) openReview(uri, photo.categoryCode)
   }
 
   const pickImage = async () => {
@@ -105,17 +129,21 @@ export function QuickCaptureScreen() {
           <Feather color="white" name={flash === 'off' ? 'zap-off' : 'zap'} size={20} />
         </AnimatedPressable>
       </View>
-      <View style={styles.viewfinder}>
+      <View
+        style={[styles.viewfinder, { maxHeight: width / expensePhotoAspectRatio }]}
+        {...panHandlers}
+      >
         {permission?.granted && focused && !cameraError ? (
           <CameraView
             facing={facing}
             flash={flash}
+            zoom={zoom}
             mode="picture"
-            ratio="4:3"
             onCameraReady={() => setIsCameraReady(true)}
             onMountError={() => {
               setIsCameraReady(false)
               setCameraError(true)
+              setZoom(0)
             }}
             ref={cameraRef}
             style={StyleSheet.absoluteFill}
@@ -140,16 +168,22 @@ export function QuickCaptureScreen() {
         <Corner position="tr" />
         <Corner position="bl" />
         <Corner position="br" />
+        {permission?.granted && focused && !cameraError ? (
+          <AnimatedPressable
+            accessibilityHint="Chạm để đổi mức zoom hoặc chụm hai ngón để zoom"
+            accessibilityLabel={`Mức zoom ${formatZoomFactor(zoom)}`}
+            accessibilityRole="button"
+            onPress={() => setZoom(nextZoomPreset(zoom))}
+            pressedScale={0.92}
+            style={styles.zoomButton}
+          >
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.zoomText}>
+              {formatZoomFactor(zoom)}
+            </Text>
+          </AnimatedPressable>
+        ) : null}
       </View>
-      <Text style={styles.hint}>Chụp hóa đơn hoặc khoảnh khắc chi tiêu</Text>
-      <AnimatedPressable
-        accessibilityRole="button"
-        onPress={() => router.push('/review')}
-        style={styles.manual}
-      >
-        <Feather color="white" name="plus" size={18} />
-        <Text style={styles.manualText}>Nhập tay</Text>
-      </AnimatedPressable>
+      <PlaceholderStrip disabled={isCapturing} onSelect={selectPlaceholder} photos={samples} />
       <View style={styles.controls}>
         <AnimatedPressable
           accessibilityLabel="Chọn ảnh từ thư viện"
@@ -195,6 +229,47 @@ export function QuickCaptureScreen() {
   )
 }
 
+function PlaceholderStrip({
+  disabled,
+  onSelect,
+  photos,
+}: {
+  disabled: boolean
+  photos: PlaceholderPhoto[]
+  onSelect: (photo: PlaceholderPhoto) => void
+}) {
+  return (
+    <FlatList
+      accessibilityLabel="Ảnh mẫu"
+      contentContainerStyle={styles.stripContent}
+      data={photos}
+      initialNumToRender={8}
+      windowSize={5}
+      horizontal
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => (
+        <AnimatedPressable
+          accessibilityLabel={`Dùng ảnh mẫu ${item.label}`}
+          accessibilityRole="button"
+          disabled={disabled}
+          onPress={() => onSelect(item)}
+          style={styles.stripItem}
+        >
+          <Image
+            fadeDuration={0}
+            resizeMethod="scale"
+            resizeMode="cover"
+            source={item.thumbnail}
+            style={styles.stripImage}
+          />
+        </AnimatedPressable>
+      )}
+      showsHorizontalScrollIndicator={false}
+      style={styles.strip}
+    />
+  )
+}
+
 function PermissionPrompt({
   loading,
   unavailable,
@@ -213,7 +288,7 @@ function PermissionPrompt({
       <Feather color={colors.peach} name="camera" size={34} />
       <Text style={styles.permissionText}>
         {unavailable
-          ? 'Camera chưa khả dụng. Bạn có thể chọn ảnh từ thư viện hoặc nhập tay.'
+          ? 'Camera chưa khả dụng. Bạn có thể chọn ảnh từ thư viện.'
           : canAskAgain
             ? 'Cho phép camera để chụp khoản chi'
             : 'Quyền camera đang tắt. Bật trong Cài đặt hoặc chọn ảnh từ thư viện.'}
@@ -265,8 +340,9 @@ const styles = StyleSheet.create({
   },
   controls: {
     alignItems: 'center',
-    marginTop: 'auto',
     marginBottom: 24,
+    marginTop: 'auto',
+    paddingTop: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginHorizontal: 35,
@@ -288,27 +364,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 12,
   },
-  hint: {
-    color: 'rgba(255,255,255,0.75)',
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    marginTop: 13,
-    textAlign: 'center',
-  },
   left: { left: 16 },
-  manual: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    backgroundColor: '#484440',
-    borderRadius: 20,
-    flexDirection: 'row',
-    gap: 6,
-    height: 40,
-    justifyContent: 'center',
-    marginTop: 34,
-    paddingHorizontal: 18,
-  },
-  manualText: { color: 'white', fontFamily: fonts.medium, fontSize: 15 },
   permissionButton: {
     backgroundColor: colors.peach,
     borderRadius: 20,
@@ -348,11 +404,29 @@ const styles = StyleSheet.create({
   tr: { borderRightWidth: 3, borderTopWidth: 3 },
   viewfinder: {
     alignItems: 'center',
-    borderRadius: 30,
-    aspectRatio: expensePhotoAspectRatio,
+    flex: 1,
     justifyContent: 'center',
-    marginHorizontal: 28,
-    marginTop: 20,
+    marginTop: 16,
     overflow: 'hidden',
+    width: '100%',
   },
+  strip: { flexGrow: 0, flexShrink: 0, height: 72, marginTop: 14 },
+  stripContent: { alignItems: 'center', gap: 8, paddingHorizontal: 20 },
+  stripImage: {
+    borderRadius: 12,
+    height: stripItemSize.height,
+    width: stripItemSize.width,
+  },
+  stripItem: { height: stripItemSize.height, width: stripItemSize.width },
+  zoomButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(31,27,24,0.65)',
+    borderRadius: 24,
+    bottom: 14,
+    height: 48,
+    justifyContent: 'center',
+    position: 'absolute',
+    width: 48,
+  },
+  zoomText: { color: colors.peach, fontFamily: fonts.semibold, fontSize: 14 },
 })

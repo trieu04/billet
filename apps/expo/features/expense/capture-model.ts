@@ -1,4 +1,4 @@
-import type { Expense, ExpenseList } from '@/features/api/types'
+import type { Category, Expense, ExpenseList } from '@/features/api/types'
 
 export type SavedCapture = { expense: Expense; imageUri?: string }
 export type PhotoBounds = { x: number; y: number; width: number; height: number }
@@ -8,6 +8,14 @@ export function parseCaptureAmount(value: string): string | null {
   if (!/^\d+$/.test(trimmed)) return null
   const normalized = trimmed.replace(/^0+/, '')
   return normalized || null
+}
+
+export function findCategoryIdByCode(
+  categories: Category[] | null | undefined,
+  code: string | undefined,
+): string | undefined {
+  if (!code) return undefined
+  return categories?.find((category) => category.code === code)?.id
 }
 
 export function reconcileSavedCaptures(

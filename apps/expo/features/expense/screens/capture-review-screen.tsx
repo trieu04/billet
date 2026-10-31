@@ -28,16 +28,17 @@ import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
 import { CategoryPicker } from '@/features/category/components/category-picker'
 import { useCaptureFlow } from '../capture-flow'
-import { parseCaptureAmount, type PhotoBounds } from '../capture-model'
+import { findCategoryIdByCode, parseCaptureAmount, type PhotoBounds } from '../capture-model'
 import { PhotoExpenseOverlay } from '../components/photo-expense-overlay'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
 
 export function CaptureReviewScreen() {
-  const { imageUri, capturedAt } = useLocalSearchParams<{
+  const { imageUri, capturedAt, categoryCode } = useLocalSearchParams<{
     imageUri?: string
     capturedAt?: string
+    categoryCode?: string
   }>()
   const { token } = useSession()
   const { saveCapture } = useCaptureFlow()
@@ -71,7 +72,8 @@ export function CaptureReviewScreen() {
   const [occurredAt] = useState(() =>
     capturedAt && Number.isFinite(Date.parse(capturedAt)) ? capturedAt : new Date().toISOString(),
   )
-  const selectedCategory = categoryId ?? categories?.[0]?.id
+  const selectedCategory =
+    categoryId ?? findCategoryIdByCode(categories, categoryCode) ?? categories?.[0]?.id
   const dirty = Boolean(imageUri || amount || caption || categoryId)
   const timeLabel = new Intl.DateTimeFormat('vi-VN', {
     hour: '2-digit',
