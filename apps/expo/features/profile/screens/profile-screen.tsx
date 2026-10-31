@@ -22,7 +22,6 @@ import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
 import { useBiometricLock } from '@/features/settings/biometric-lock'
 import { deviceTimezone, updateSettings } from '@/features/settings/settings-api'
-import { BottomTabBar } from '@/features/ui/bottom-tab-bar'
 import { cardShadow } from '@/features/ui/card'
 import { AnimatedPressable, useEntranceAnimation, useReducedMotion } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
@@ -142,7 +141,19 @@ export function ProfileScreen() {
   return (
     <SafeAreaView edges={[]} style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
-        <Text style={styles.title}>Hồ sơ</Text>
+        <View style={styles.header}>
+          <AnimatedPressable
+            accessibilityLabel="Quay lại"
+            accessibilityRole="button"
+            hitSlop={4}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as Href))}
+            pressedScale={0.92}
+            style={styles.back}
+          >
+            <Feather color={colors.text} name="chevron-left" size={24} />
+          </AnimatedPressable>
+          <Text style={styles.title}>Hồ sơ</Text>
+        </View>
         <AnimatedPressable
           accessibilityHint="Mở để chỉnh sửa thông tin hồ sơ"
           accessibilityRole="button"
@@ -291,7 +302,6 @@ export function ProfileScreen() {
           </Text>
         ) : null}
       </ScrollView>
-      <BottomTabBar active="profile" />
     </SafeAreaView>
   )
 }
@@ -388,7 +398,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 26,
     marginTop: 8,
   },
-  content: { paddingBottom: 116 },
+  back: {
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  content: { paddingBottom: 48 },
   flex: { flex: 1 },
   logout: { color: '#B23B32', fontFamily: fonts.semibold, fontSize: 16 },
   moments: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 14, marginTop: 6 },
@@ -410,16 +428,10 @@ const styles = StyleSheet.create({
   },
   rowLabel: { color: colors.text, fontFamily: fonts.regular, fontSize: 16 },
   rowValue: { alignItems: 'center', flexDirection: 'row', gap: 5 },
+  header: { gap: 10, marginHorizontal: 20, marginTop: 54 },
   safe: { backgroundColor: colors.canvas, flex: 1 },
   sectionLabel: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 14 },
-  title: {
-    color: colors.text,
-    fontFamily: fonts.bold,
-    fontSize: 34,
-    letterSpacing: -0.5,
-    marginHorizontal: 20,
-    marginTop: 62,
-  },
+  title: { color: colors.text, fontFamily: fonts.bold, fontSize: 34, letterSpacing: -0.5 },
   track: {
     backgroundColor: '#EADFCF',
     borderRadius: 6,

@@ -21,8 +21,7 @@ import type { ExpenseList } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
 import { ExpenseTicket, mergeSavedCaptures, useCaptureFlow } from '@/features/expense'
-import { JournalViewToggle } from '@/features/journal/components/journal-view-toggle'
-import { BottomTabBar } from '@/features/ui/bottom-tab-bar'
+import { AccountButton } from '@/features/profile/components/account-button'
 import { AnimatedPressable, useEntranceAnimation } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
@@ -98,7 +97,7 @@ export function JournalScreen() {
             </Text>
             <Text style={styles.title}>Nhật ký</Text>
           </View>
-          <JournalViewToggle active="timeline" />
+          <AccountButton />
         </View>
         <Animated.View style={[styles.moments, momentsEntrance]}>
           {loading && expenses.length === 0 ? <ActivityIndicator color={colors.link} /> : null}
@@ -181,7 +180,6 @@ export function JournalScreen() {
         <Feather color="#3A1D0E" name="camera" size={23} />
         <Text style={styles.captureText}>Thêm chi tiêu</Text>
       </AnimatedPressable>
-      <BottomTabBar active="journal" />
     </SafeAreaView>
   )
 }
@@ -198,19 +196,19 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: colors.peach,
     borderRadius: 26,
-    bottom: 98,
+    bottom: 106,
     flexDirection: 'row',
     gap: 8,
     height: 52,
     justifyContent: 'center',
     position: 'absolute',
-    shadowColor: '#D48C64',
+    shadowColor: '#8A4A2E',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
     width: 168,
   },
-  captureText: { color: '#3A1D0E', fontFamily: fonts.semibold, fontSize: 16 },
+  captureText: { color: '#2A1206', fontFamily: fonts.semibold, fontSize: 16 },
   content: { gap: 11, paddingBottom: 190, paddingHorizontal: 16, paddingTop: 42 },
   date: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 13, marginLeft: 4 },
   dayCount: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12 },

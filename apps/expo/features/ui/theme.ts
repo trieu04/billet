@@ -13,6 +13,8 @@ export const colors = {
   line: '#E6DFD4',
   link: '#8A4A2E',
   greenText: '#2F4A2A',
+  linkStrong: '#5C2D16',
+  tabInactive: '#5A524A',
 } as const
 export const fonts = {
   regular: 'Inter_400Regular',

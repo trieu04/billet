@@ -4,7 +4,7 @@ import { useFocusEffect } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Circle } from 'react-native-svg'
 
-import { BottomTabBar } from '@/features/ui/bottom-tab-bar'
+import { AccountButton } from '@/features/profile/components/account-button'
 import { cardShadow } from '@/features/ui/card'
 import { AnimatedPressable, useEntranceAnimation, useReducedMotion } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
@@ -84,7 +84,10 @@ export function StatisticsScreen() {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Thống kê</Text>
+        <View style={styles.header}>
+          <Text style={styles.title}>Thống kê</Text>
+          <AccountButton />
+        </View>
         <View accessibilityRole="tablist" style={styles.periods}>
           {statisticsPeriods.map((item) => (
             <AnimatedPressable
@@ -204,7 +207,6 @@ export function StatisticsScreen() {
           </Text>
         </View>
       </ScrollView>
-      <BottomTabBar active="statistics" />
     </SafeAreaView>
   )
 }
@@ -283,7 +285,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 16,
   },
-  content: { paddingBottom: 112 },
+  content: { paddingBottom: 124 },
   day: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 11 },
   delta: {
     backgroundColor: colors.sage,
@@ -335,6 +337,13 @@ const styles = StyleSheet.create({
     marginTop: 20,
     padding: 2,
   },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginTop: 62,
+  },
   safe: { backgroundColor: colors.canvas, flex: 1 },
   summary: {
     alignItems: 'center',
@@ -350,14 +359,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 17,
   },
-  title: {
-    color: colors.text,
-    fontFamily: fonts.bold,
-    fontSize: 34,
-    letterSpacing: -0.5,
-    marginHorizontal: 20,
-    marginTop: 62,
-  },
+  title: { color: colors.text, fontFamily: fonts.bold, fontSize: 34, letterSpacing: -0.5 },
   total: { color: colors.text, fontFamily: fonts.amount, fontSize: 38, letterSpacing: -1 },
   todayCard: { gap: 14, justifyContent: 'center', paddingTop: 20 },
   todayCount: {

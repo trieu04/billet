@@ -32,11 +32,11 @@ export default function RootLayout() {
           <AppearanceSync />
           <CaptureFlowProvider>
             <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-              <Stack.Screen name="index" options={{ animation: 'none' }} />
+              <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
               <Stack.Screen name="capture" options={{ animation: 'slide_from_bottom' }} />
               <Stack.Screen name="review" options={{ animation: 'none' }} />
               <Stack.Screen name="expense" options={{ animation: 'slide_from_right' }} />
-              <Stack.Screen name="calendar" options={{ animation: 'fade' }} />
+              <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen
                 name="settings"
                 options={{

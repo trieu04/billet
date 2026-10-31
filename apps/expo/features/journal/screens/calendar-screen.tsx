@@ -21,8 +21,7 @@ import { formatMoney, localDate, localMonth } from '@/features/api/format'
 import type { Calendar, CalendarHistory } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
-import { JournalViewToggle } from '@/features/journal/components/journal-view-toggle'
-import { BottomTabBar } from '@/features/ui/bottom-tab-bar'
+import { AccountButton } from '@/features/profile/components/account-button'
 import { expenseThumbnailAspectRatio } from '@/features/ui/media'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
@@ -97,8 +96,8 @@ export function CalendarScreen() {
   return (
     <SafeAreaView edges={[]} style={styles.safe}>
       <View style={styles.header}>
-        <Text style={styles.title}>Nhật ký</Text>
-        <JournalViewToggle active="grid" />
+        <Text style={styles.title}>Bảng</Text>
+        <AccountButton />
       </View>
       <View style={styles.legend}>
         <Text style={styles.legendText}>Mỗi chấm là một khoản</Text>
@@ -170,7 +169,6 @@ export function CalendarScreen() {
           <Feather color={colors.textSecondary} name="chevron-right" size={18} />
         </AnimatedPressable>
       ) : null}
-      <BottomTabBar active="journal" />
     </SafeAreaView>
   )
 }
@@ -439,7 +437,7 @@ const styles = StyleSheet.create({
   },
   monthsContent: {
     gap: 18,
-    paddingBottom: 172,
+    paddingBottom: 184,
     paddingHorizontal: 16,
     paddingTop: 5,
   },
@@ -466,7 +464,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.card,
     borderRadius: 22,
-    bottom: 84,
+    bottom: 102,
     flexDirection: 'row',
     gap: 12,
     height: 60,

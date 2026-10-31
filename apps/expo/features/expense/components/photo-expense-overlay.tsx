@@ -36,7 +36,7 @@ export function PhotoExpenseOverlay({
 
   return (
     <LinearGradient
-      colors={['transparent', 'rgba(31,27,24,0.88)']}
+      colors={['transparent', 'rgba(31,27,24,0.94)']}
       pointerEvents={onTitlePress || onAmountPress ? 'box-none' : 'none'}
       style={styles.overlay}
     >
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   meta: {
-    color: 'rgba(255,255,255,0.78)',
+    color: 'rgba(255,255,255,0.94)',
     fontFamily: fonts.medium,
     fontSize: 12,
     marginTop: 2,
