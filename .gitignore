@@ -25,3 +25,6 @@ data/sample/object-storage/media/*
 
 keys/*
 !keys/.gitkeep
+
+# Local MCP configuration
+.mcp.json
