@@ -32,6 +32,14 @@ export function configureApiRefresh(handler: (() => Promise<string | null>) | nu
   refreshPromise = null
 }
 
+export function refreshApiAccessToken() {
+  if (!refreshAccessToken) return Promise.resolve(null)
+  refreshPromise ??= refreshAccessToken().finally(() => {
+    refreshPromise = null
+  })
+  return refreshPromise
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   return request<T>(path, options, true)
 }
@@ -52,10 +60,7 @@ async function request<T>(
 
   const response = await fetch(resolveApiUrl(API_BASE_URL, path), { ...options, body, headers })
   if (response.status === 401 && options.token && allowRefresh && refreshAccessToken) {
-    refreshPromise ??= refreshAccessToken().finally(() => {
-      refreshPromise = null
-    })
-    const token = await refreshPromise
+    const token = await refreshApiAccessToken()
     if (token) return request<T>(path, { ...options, token }, false)
   }
   if (!response.ok) {
