@@ -26,6 +26,7 @@ import {
   type PlaceholderPhoto,
 } from '../placeholder-photos'
 import { usePinchZoom } from '../use-pinch-zoom'
+import { usePreparePhotoSuggestion } from '@/features/suggestion'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
@@ -44,6 +45,7 @@ export function QuickCaptureScreen() {
   const { width } = useWindowDimensions()
   const { zoom, setZoom, panHandlers } = usePinchZoom()
   const [samples, setSamples] = useState(pickPlaceholderPhotos)
+  const prepareSuggestion = usePreparePhotoSuggestion()
   const captureLock = useRef(false)
   const active = useRef(true)
   useFocusEffect(
@@ -58,9 +60,17 @@ export function QuickCaptureScreen() {
   )
 
   const openReview = (imageUri: string, categoryCode?: string) => {
+    const capturedAt = new Date().toISOString()
+    // The review screen shows the photo first, then starts OCR and Decision.
+    const suggestionGeneration = prepareSuggestion({ imageUri, capturedAt })
     router.push({
       pathname: '/review',
-      params: { imageUri, capturedAt: new Date().toISOString(), categoryCode },
+      params: {
+        imageUri,
+        capturedAt,
+        categoryCode,
+        suggestionGeneration: String(suggestionGeneration),
+      },
     })
   }
 

@@ -10,4 +10,4 @@ COPY --chown=expo:nodejs apps/expo ./
 RUN mkdir -p /app/.expo && chown expo:nodejs /app /app/.expo
 USER expo
 EXPOSE 6703
-CMD ["sh", "-c", "REACT_NATIVE_PACKAGER_HOSTNAME=\"${EXPO_PACKAGER_HOSTNAME:-localhost}\" exec ./node_modules/.bin/expo start --no-dev --minify --host lan --port 6703"]
+CMD ["sh", "-c", "REACT_NATIVE_PACKAGER_HOSTNAME=\"${EXPO_PACKAGER_HOSTNAME:-localhost}\" exec ./node_modules/.bin/expo start --go --no-dev --minify --host lan --port 6703"]

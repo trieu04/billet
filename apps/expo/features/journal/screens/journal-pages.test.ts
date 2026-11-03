@@ -11,7 +11,6 @@ const expense = (id: string): Expense => ({
   occurredTimezone: 'Asia/Ho_Chi_Minh',
   categoryId: '1',
   mediaAssetId: null,
-  recognitionJobId: null,
   caption: null,
   merchant: null,
   location: null,

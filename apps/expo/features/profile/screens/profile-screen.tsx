@@ -263,6 +263,22 @@ export function ProfileScreen() {
             <Feather color="#A0978D" name="chevron-right" size={18} />
           </AnimatedPressable>
           <AnimatedPressable
+            accessibilityHint="Bật tắt gợi ý từ ảnh, quản lý lựa chọn và quy tắc"
+            accessibilityRole="button"
+            onPress={() => router.push('/suggestions' as Href)}
+            style={[styles.row, styles.border]}
+          >
+            <View style={styles.flex}>
+              <Text style={styles.rowLabel}>Gợi ý tự động</Text>
+              <Text style={styles.rowHint}>
+                {profile?.settings.suggestionsEnabled === false
+                  ? 'Đang tắt'
+                  : 'Gợi ý từ ảnh và quy tắc'}
+              </Text>
+            </View>
+            <Feather color="#A0978D" name="chevron-right" size={18} />
+          </AnimatedPressable>
+          <AnimatedPressable
             accessibilityRole="button"
             onPress={() => openSettings('export')}
             style={[styles.row, styles.border]}

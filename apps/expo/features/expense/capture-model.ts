@@ -10,6 +10,15 @@ export function parseCaptureAmount(value: string): string | null {
   return normalized || null
 }
 
+/** Generation of the suggestion session passed as a route param; `undefined` when absent. */
+export function parseSuggestionGeneration(
+  value: string | string[] | undefined,
+): number | undefined {
+  const raw = Array.isArray(value) ? value[0] : value
+  if (!raw || !/^[1-9]\d*$/.test(raw)) return undefined
+  return Number(raw)
+}
+
 export function findCategoryIdByCode(
   categories: Category[] | null | undefined,
   code: string | undefined,

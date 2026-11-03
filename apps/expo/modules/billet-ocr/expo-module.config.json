@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["BilletOcrModule"]
+  },
+  "android": {
+    "modules": ["app.billet.ocr.BilletOcrModule"]
+  }
+}

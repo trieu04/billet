@@ -33,13 +33,27 @@ export type Expense = {
   occurredTimezone: string
   categoryId: string
   mediaAssetId: string | null
-  recognitionJobId: string | null
   caption: string | null
   merchant: string | null
   location: string | null
+  inferenceId?: string | null
+  imageType?: string | null
+  personalChoiceId?: string | null
+  placeKey?: string | null
+  merchantKey?: string | null
+  fieldProvenance?: Record<string, ExpenseFieldProvenance>
   version: number
   createdAt: string
   updatedAt: string
+}
+
+/** One `fieldProvenance` entry of an expense (server `FieldProvenanceDto`). */
+export type ExpenseFieldProvenance = {
+  source: 'user' | 'ocr' | 'personal_rule' | 'default_rule' | 'decision_model' | 'capture_time'
+  ruleId?: string
+  choiceId?: string
+  confidence?: number
+  outcome: 'accepted' | 'edited' | 'entered' | 'cleared' | 'suggested'
 }
 
 export type ExpenseList = {
@@ -91,6 +105,9 @@ export type Settings = {
   appearance: 'system' | 'light' | 'dark'
   reminderEnabled: boolean
   reminderTime: string | null
+  suggestionsEnabled: boolean
+  ruleLearningEnabled: boolean
+  suggestionLocationEnabled: boolean
 }
 
 export type SettingsOptions = {
@@ -130,4 +147,70 @@ export type MediaReservation = {
   sizeBytes: string
   status: string
   uploadUrl: string
+}
+
+export type SuggestionItemStatus = 'enabled' | 'disabled'
+
+/** `GET /decision-choices` item (server `DecisionChoiceResponseDto`). */
+export type DecisionChoice = {
+  id: string
+  kind: 'image_type' | 'personal'
+  key: string | null
+  label: string
+  description: string | null
+  imageType: string | null
+  placeKey: string | null
+  merchantKey: string | null
+  origin: 'system' | 'learned' | 'user'
+  status: SuggestionItemStatus
+  support: number
+  lastSelectedAt: string | null
+  version: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type DecisionChoiceInput = {
+  label?: string
+  description?: string | null
+  imageType?: string | null
+  placeKey?: string | null
+  merchantKey?: string | null
+  status?: SuggestionItemStatus
+}
+
+export type ExpenseRuleConditions = {
+  choiceId?: string
+  imageType?: string
+  placeKey?: string
+  merchantKey?: string
+}
+
+export type ExpenseRuleActions = {
+  amountMinor?: string
+  currency?: string
+  categoryId?: string
+  merchant?: string
+}
+
+/** `GET /expense-rules` item (server `ExpenseRuleResponseDto`). */
+export type ExpenseRule = {
+  id: string
+  origin: 'default' | 'learned' | 'user'
+  status: SuggestionItemStatus
+  conditions: ExpenseRuleConditions
+  actions: ExpenseRuleActions
+  currency: string | null
+  confidence: number
+  support: number
+  lastUsedAt: string | null
+  version: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type ExpenseRuleInput = {
+  conditions?: ExpenseRuleConditions
+  actions?: ExpenseRuleActions
+  status?: SuggestionItemStatus
 }

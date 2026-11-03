@@ -53,7 +53,7 @@ async function request<T>(
   if (options.token) headers.set('Authorization', `Bearer ${options.token}`)
 
   let body = options.body
-  if (body && !(body instanceof Blob) && typeof body !== 'string') {
+  if (body && !(body instanceof Blob) && !(body instanceof FormData) && typeof body !== 'string') {
     headers.set('Content-Type', 'application/json')
     body = JSON.stringify(body)
   }

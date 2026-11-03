@@ -27,18 +27,31 @@ import type { Category, Expense, MediaReservation } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
 import { CategoryPicker } from '@/features/category/components/category-picker'
+import { type SuggestionField, usePhotoSuggestion } from '@/features/suggestion'
 import { useCaptureFlow } from '../capture-flow'
-import { findCategoryIdByCode, parseCaptureAmount, type PhotoBounds } from '../capture-model'
+import {
+  findCategoryIdByCode,
+  parseCaptureAmount,
+  parseSuggestionGeneration,
+  type PhotoBounds,
+} from '../capture-model'
 import { PhotoExpenseOverlay } from '../components/photo-expense-overlay'
+import {
+  SourceBadge,
+  type SuggestionChipItem,
+  SuggestionPanel,
+  type SuggestionRow,
+} from '../components/suggestion-panel'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
 
 export function CaptureReviewScreen() {
-  const { imageUri, capturedAt, categoryCode } = useLocalSearchParams<{
+  const { imageUri, capturedAt, categoryCode, suggestionGeneration } = useLocalSearchParams<{
     imageUri?: string
     capturedAt?: string
     categoryCode?: string
+    suggestionGeneration?: string
   }>()
   const { token } = useSession()
   const { saveCapture } = useCaptureFlow()
@@ -54,9 +67,10 @@ export function CaptureReviewScreen() {
     setData: setCategories,
   } = useApiResource(loadCategories)
   const [caption, setCaption] = useState('')
-  const [editingField, setEditingField] = useState<'amount' | 'title' | null>(null)
-  const [amount, setAmount] = useState('')
-  const [categoryId, setCategoryId] = useState<string>()
+  // “Use photo”: the form opens with the amount focused; focus alone does not lock the draft.
+  const [editingField, setEditingField] = useState<'amount' | 'title' | null>(
+    imageUri ? 'amount' : null,
+  )
   const [saving, setSaving] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [exitTo, setExitTo] = useState<'camera' | 'journal'>('journal')
@@ -69,17 +83,37 @@ export function CaptureReviewScreen() {
   const reviewScrollRef = useRef<ScrollViewInstance>(null)
   const uploadedMedia = useRef<string | undefined>(undefined)
   const attempt = useRef<{ fingerprint: string; key: string } | null>(null)
-  const [occurredAt] = useState(() =>
+  const [captureTime] = useState(() =>
     capturedAt && Number.isFinite(Date.parse(capturedAt)) ? capturedAt : new Date().toISOString(),
   )
+  const suggestion = usePhotoSuggestion(
+    parseSuggestionGeneration(suggestionGeneration),
+    captureTime,
+  )
+  const { draft } = suggestion
+  const amount = draft.values.amountMinor ?? ''
+  const merchant = draft.values.merchant ?? ''
+  const occurredAt = draft.values.occurredAt ?? captureTime
+  // A suggested category only counts once it is one of the account's categories.
+  const draftCategory =
+    draft.values.categoryId && categories?.some((item) => item.id === draft.values.categoryId)
+      ? draft.values.categoryId
+      : undefined
   const selectedCategory =
-    categoryId ?? findCategoryIdByCode(categories, categoryCode) ?? categories?.[0]?.id
-  const dirty = Boolean(imageUri || amount || caption || categoryId)
-  const timeLabel = new Intl.DateTimeFormat('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(occurredAt))
+    draftCategory ?? findCategoryIdByCode(categories, categoryCode) ?? categories?.[0]?.id
+  const dirty = Boolean(imageUri || amount || caption || draft.locked)
+  const occurredFromReceipt = draft.provenance.occurredAt?.source === 'ocr'
+  const timeLabel = new Intl.DateTimeFormat(
+    'vi-VN',
+    occurredFromReceipt
+      ? { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }
+      : { hour: '2-digit', minute: '2-digit' },
+  ).format(new Date(occurredAt))
   const amountPreview = formatMoney(parseCaptureAmount(amount) ?? '0')
+  const amountSource = suggestion.sourceLabel('amountMinor')
+  const categorySource = draftCategory ? suggestion.sourceLabel('categoryId') : null
+  const setAmount = (value: string) => suggestion.edit('amountMinor', value)
+  const selectCategory = (id: string) => suggestion.edit('categoryId', id)
 
   useEffect(() => {
     if (!editingField) return
@@ -110,13 +144,18 @@ export function CaptureReviewScreen() {
     }
   })
 
+  // Retake, cancel or leaving the screen ends the suggestion session; late results are dropped.
+  const { begin: beginSuggestion, cancel: cancelSuggestion } = suggestion
+  useEffect(() => cancelSuggestion, [cancelSuggestion])
+
   // Removal is retried only after the guard has rendered with leaving=true.
   const finishLeaving = useCallback(() => {
     if (!leaving) return
+    cancelSuggestion()
     if (exitTo === 'camera') {
       router.dismissTo('/capture')
     } else router.dismissTo('/')
-  }, [exitTo, leaving])
+  }, [cancelSuggestion, exitTo, leaving])
 
   useEffect(finishLeaving, [finishLeaving])
 
@@ -138,9 +177,16 @@ export function CaptureReviewScreen() {
     locked.current = true
     setSaving(true)
     setError(null)
+    const suggestionFields = suggestion.savePayload()
+    if (suggestionFields && selectedCategory !== draft.values.categoryId) {
+      // The saved category is not the draft value (fallback or unknown id): no provenance for it.
+      suggestionFields.fieldProvenance = { ...suggestionFields.fieldProvenance }
+      delete suggestionFields.fieldProvenance.categoryId
+    }
     const fingerprint = JSON.stringify({
       amountMinor,
       caption: caption.trim(),
+      merchant: merchant.trim(),
       selectedCategory,
       occurredAt,
       imageUri,
@@ -182,9 +228,12 @@ export function CaptureReviewScreen() {
           categoryId: selectedCategory,
           mediaAssetId: uploadedMedia.current,
           caption: caption.trim() || undefined,
+          merchant: merchant.trim() || undefined,
+          ...suggestionFields,
           idempotencyKey: attempt.current.key,
         },
       })
+      suggestion.finish()
       const source = await new Promise<PhotoBounds | undefined>((resolve) => {
         if (!photoRef.current || !imageUri) {
           resolve(undefined)
@@ -202,6 +251,66 @@ export function CaptureReviewScreen() {
       locked.current = false
       setSaving(false)
     }
+  }
+
+  const fieldNames: Record<SuggestionField, string> = {
+    amountMinor: 'Số tiền',
+    categoryId: 'Danh mục',
+    merchant: 'Cửa hàng',
+    occurredAt: 'Thời gian',
+  }
+  const formatSuggestion = (field: SuggestionField, value: string) => {
+    if (field === 'amountMinor') return formatMoney(value)
+    if (field === 'categoryId') return categories?.find((item) => item.id === value)?.name ?? null
+    if (field === 'occurredAt') return formatDateTime(value)
+    return value
+  }
+  const suggestionChips: SuggestionChipItem[] = []
+  for (const field of ['amountMinor', 'categoryId', 'merchant', 'occurredAt'] as const) {
+    const chip = suggestion.suggestion(field)
+    const value = chip ? formatSuggestion(field, chip.value) : null
+    if (!chip || !value) continue
+    suggestionChips.push({
+      key: `${field}:${chip.candidateId}`,
+      field: fieldNames[field],
+      value,
+      source: chip.label,
+      onPress: () => suggestion.apply(field, chip.candidateId),
+    })
+  }
+  const merchantSource = suggestion.sourceLabel('merchant')
+  const suggestionRows: SuggestionRow[] = []
+  if (merchant || merchantSource || draft.provenance.merchant) {
+    suggestionRows.push({
+      key: 'merchant',
+      label: 'CỬA HÀNG',
+      source: merchantSource,
+      editor: (
+        <TextInput
+          accessibilityLabel="Tên cửa hàng"
+          editable={!saving}
+          maxLength={160}
+          onChangeText={(value) => suggestion.edit('merchant', value)}
+          placeholder="Tên cửa hàng"
+          placeholderTextColor={colors.textSecondary}
+          returnKeyType="done"
+          style={styles.merchantInput}
+          value={merchant}
+        />
+      ),
+    })
+  }
+  if (occurredFromReceipt) {
+    suggestionRows.push({
+      key: 'occurredAt',
+      label: 'THỜI GIAN',
+      value: formatDateTime(occurredAt),
+      source: suggestion.sourceLabel('occurredAt'),
+      action: {
+        label: 'Dùng giờ chụp ảnh',
+        onPress: () => suggestion.edit('occurredAt', draft.captureTime),
+      },
+    })
   }
 
   return (
@@ -243,6 +352,7 @@ export function CaptureReviewScreen() {
               <Image
                 accessibilityLabel="Ảnh vừa chụp"
                 resizeMode="cover"
+                onLoadEnd={() => requestAnimationFrame(beginSuggestion)}
                 source={{ uri: imageUri }}
                 style={StyleSheet.absoluteFill}
               />
@@ -280,6 +390,7 @@ export function CaptureReviewScreen() {
                     </View>
                   ) : undefined
                 }
+                amountSource={amountSource ?? undefined}
                 meta={timeLabel}
                 onAmountPress={saving ? undefined : () => setEditingField('amount')}
                 onTitlePress={saving ? undefined : () => setEditingField('title')}
@@ -335,16 +446,27 @@ export function CaptureReviewScreen() {
               <Text style={styles.helper}>Nhập số tiền của khoảnh khắc này</Text>
             </View>
           ) : null}
+          {suggestion.active ? (
+            <SuggestionPanel
+              chips={suggestionChips}
+              disabled={saving}
+              pending={suggestion.pending}
+              rows={suggestionRows}
+            />
+          ) : null}
           <View style={styles.categories}>
-            <Text style={styles.label}>DANH MỤC</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>DANH MỤC</Text>
+              {categorySource ? <SourceBadge label={categorySource} /> : null}
+            </View>
             <CategoryPicker
               categories={categories ?? []}
               disabled={saving}
               onCreated={(category) => {
                 setCategories((current) => (current ? [...current, category] : [category]))
-                setCategoryId(category.id)
+                selectCategory(category.id)
               }}
-              onSelect={setCategoryId}
+              onSelect={selectCategory}
               selectedId={selectedCategory}
             />
             {categoryError ? (
@@ -462,6 +584,16 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   categories: { padding: 4, gap: 12 },
+  labelRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  merchantInput: {
+    backgroundColor: colors.chip,
+    borderRadius: 12,
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: 16,
+    minHeight: 44,
+    paddingHorizontal: 12,
+  },
   error: { color: '#B3433C', fontFamily: fonts.medium, fontSize: 14, padding: 8 },
   footer: { paddingHorizontal: 16, paddingTop: 12, gap: 8, backgroundColor: colors.canvas },
   primary: {
@@ -481,3 +613,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 })
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}

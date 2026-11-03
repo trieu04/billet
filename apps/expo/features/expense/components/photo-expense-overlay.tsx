@@ -8,6 +8,8 @@ import { fonts } from '@/features/ui/theme'
 type Props = {
   amount: string
   amountEditor?: ReactNode
+  /** Where a machine-filled amount came from, for example “Từ hóa đơn”. */
+  amountSource?: string
   meta: string
   onAmountPress?: () => void
   onTitlePress?: () => void
@@ -18,6 +20,7 @@ type Props = {
 export function PhotoExpenseOverlay({
   amount,
   amountEditor,
+  amountSource,
   meta,
   onAmountPress,
   onTitlePress,
@@ -32,7 +35,17 @@ export function PhotoExpenseOverlay({
       <Text style={styles.meta}>{meta}</Text>
     </>
   )
-  const amountText = <Text style={styles.amount}>{amount}</Text>
+  const amountText = (
+    <>
+      {amountSource ? (
+        <Text numberOfLines={1} style={styles.amountSource}>
+          {amountSource}
+        </Text>
+      ) : null}
+      <Text style={styles.amount}>{amount}</Text>
+    </>
+  )
+  const amountLabel = amountSource ? `${amount}, ${amountSource}` : amount
 
   return (
     <LinearGradient
@@ -63,7 +76,7 @@ export function PhotoExpenseOverlay({
       ) : onAmountPress ? (
         <AnimatedPressable
           accessibilityHint="Chỉnh sửa trực tiếp số tiền trên ảnh"
-          accessibilityLabel={`Sửa số tiền: ${amount}`}
+          accessibilityLabel={`Sửa số tiền: ${amountLabel}`}
           accessibilityRole="button"
           onPress={onAmountPress}
           style={styles.amountButton}
@@ -71,7 +84,13 @@ export function PhotoExpenseOverlay({
           {amountText}
         </AnimatedPressable>
       ) : (
-        <View style={styles.amountButton}>{amountText}</View>
+        <View
+          accessible={Boolean(amountSource)}
+          accessibilityLabel={amountSource ? `Số tiền: ${amountLabel}` : undefined}
+          style={styles.amountButton}
+        >
+          {amountText}
+        </View>
       )}
     </LinearGradient>
   )
@@ -83,6 +102,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.amount,
     fontSize: 20,
     fontVariant: ['tabular-nums'],
+  },
+  amountSource: {
+    color: 'rgba(255,255,255,0.9)',
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    marginBottom: 2,
+    maxWidth: 160,
   },
   amountButton: {
     alignItems: 'flex-end',

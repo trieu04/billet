@@ -4,6 +4,7 @@ import {
   findCategoryIdByCode,
   mergeSavedCaptures,
   parseCaptureAmount,
+  parseSuggestionGeneration,
   reconcileSavedCaptures,
   removeSavedCapture,
 } from './capture-model'
@@ -17,7 +18,6 @@ const expense: Expense = {
   occurredTimezone: 'Asia/Ho_Chi_Minh',
   categoryId: '1',
   mediaAssetId: '10',
-  recognitionJobId: null,
   caption: null,
   merchant: null,
   location: null,
@@ -102,5 +102,15 @@ describe('findCategoryIdByCode', () => {
     expect(findCategoryIdByCode(categories, 'bills')).toBeUndefined()
     expect(findCategoryIdByCode(categories, undefined)).toBeUndefined()
     expect(findCategoryIdByCode(null, 'food')).toBeUndefined()
+  })
+})
+
+describe('parseSuggestionGeneration', () => {
+  it('reads a positive generation from the route param', () => {
+    expect(parseSuggestionGeneration('3')).toBe(3)
+    expect(parseSuggestionGeneration(['4', '5'])).toBe(4)
+    expect(parseSuggestionGeneration(undefined)).toBeUndefined()
+    expect(parseSuggestionGeneration('0')).toBeUndefined()
+    expect(parseSuggestionGeneration('abc')).toBeUndefined()
   })
 })

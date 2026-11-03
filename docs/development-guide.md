@@ -9,7 +9,7 @@ Hướng dẫn thiết lập, chạy và vận hành repository Billet. Xem [t�
 - Docker and Docker Compose (optional)
 - Xcode 16 or newer, an iOS Simulator, and [XcodeGen](https://github.com/yonaskolb/XcodeGen) for iOS development (optional)
 - Android Studio or JDK 17 with Android SDK 37 for Android development (optional)
-- Expo Go or a native simulator for Expo development (optional)
+- Expo Go, or Xcode / Android Studio to build the Expo development client (optional; see [Expo development build](#expo-development-build))
 
 ## Setup
 
@@ -66,6 +66,24 @@ pnpm --filter @billet/web preview
 pnpm android:build
 pnpm ios:build
 ```
+
+## Expo development build
+
+Photo expense suggestions read receipts with on-device OCR from the local Expo module `apps/expo/modules/billet-ocr` (Apple Vision on iOS, ML Kit Text Recognition v2 on Android). Native modules do not run in Expo Go, so the Expo app uses a development build (`expo-dev-client`) generated with prebuild. `apps/expo/ios` and `apps/expo/android` are generated output and ignored by Git; never commit them.
+
+```sh
+cd apps/expo
+pnpm prebuild      # generate ios/ and android/ from app.json and config plugins
+pnpm run:ios       # build and install the development client on an iOS Simulator (Xcode)
+pnpm run:android   # build and install it on an Android emulator or device (JDK 17, Android SDK)
+pnpm dev           # start Metro on port 6703; open the project from the installed development client
+```
+
+Run `pnpm prebuild` again after adding a native dependency, changing a config plugin in `app.json`, or editing `modules/billet-ocr`. Use `pnpm prebuild --clean` to regenerate the native folders from scratch (this discards local edits inside `ios/` and `android/`).
+
+- Expo Go still works with `pnpm --dir apps/expo start:go` (the Docker Compose Expo service also starts in Expo Go mode). Expo Go and the web build have no OCR: that branch is skipped and suggestions come only from the server Decision API and rules, if enabled.
+- Suggestions only appear when the server enables them (`EXPENSE_DECISION_PROVIDER` other than `disabled` for the Decision API) and the account settings allow them (Profile → “Gợi ý tự động”). Manual entry always works.
+- Location is used only when the user turns on “Dùng vị trí” and has already granted Billet foreground location permission; Billet never asks for permission just to make a suggestion.
 
 ## Docker
 

@@ -4,7 +4,15 @@ import type { Settings } from '@/features/api/types'
 export type SettingsPatch = Partial<
   Pick<
     Settings,
-    'appearance' | 'defaultCurrency' | 'locale' | 'reminderEnabled' | 'reminderTime' | 'timezone'
+    | 'appearance'
+    | 'defaultCurrency'
+    | 'locale'
+    | 'reminderEnabled'
+    | 'reminderTime'
+    | 'timezone'
+    | 'suggestionsEnabled'
+    | 'ruleLearningEnabled'
+    | 'suggestionLocationEnabled'
   >
 >
 

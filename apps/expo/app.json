@@ -30,6 +30,19 @@
           "faceIDPermission": "Allow Billet to use Face ID to unlock your private expense journal."
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Billet uses your approximate location only while you use the app, to recognize places where you often spend.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "locationFullAccuracyPermission": false,
+          "motionUsagePermission": false,
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
+      ],
       "expo-status-bar",
       "expo-apple-authentication",
       "expo-web-browser"
