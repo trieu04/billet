@@ -1,37 +1,70 @@
 import { Module } from '@nestjs/common'
+import { MulterModule } from '@nestjs/platform-express'
 import { TypeOrmModule } from '@nestjs/typeorm'
+import { decisionConfig, type DecisionConfig } from '../../configs/app.config'
 import { AuthModule } from '../auth/module'
-import { MediaModule } from '../media/module'
-import { RecognitionController } from './controller'
-import { RecognitionJobEntity } from './entities/recognition-job.entity'
-import { RecognitionService } from './service'
-import { RECOGNITION_PROVIDER } from './interface'
-import { DisabledRecognitionProvider } from './providers/disabled.provider'
-import { GoogleAiStudioRecognitionProvider } from './providers/google-ai-studio.provider'
-import { recognitionConfig, type RecognitionConfig } from '../../configs/app.config'
-import { RecognitionQuotaGuard } from './providers/quota.guard'
+import { CategoryModule } from '../category/module'
+import { UsersModule } from '../user/module'
+import { DecisionChoiceController } from './controllers/decision-choice.controller'
+import { ExpenseRuleController } from './controllers/expense-rule.controller'
+import { InferenceController } from './controllers/inference.controller'
+import { SuggestionConfigController } from './controllers/suggestion-config.controller'
+import { DecisionChoiceEntity } from './entities/decision-choice.entity'
+import { ExpenseInferenceEntity } from './entities/expense-inference.entity'
+import { ExpenseRuleEntity } from './entities/expense-rule.entity'
+import { DECISION_PROVIDER } from './interface'
+import { createDecisionProvider } from './providers/factory'
+import { ChoiceSetService } from './services/choice-set.service'
+import { DecisionChoiceService } from './services/decision-choice.service'
+import { DecisionMetricsService } from './services/decision-metrics.service'
+import { ExpenseSuggestionLinkService } from './services/expense-link.service'
+import { ExpenseRuleService } from './services/expense-rule.service'
+import { InferenceCleanupService } from './services/inference-cleanup.service'
+import { InferenceService } from './services/inference.service'
+import { LearnerService } from './services/learner.service'
+import { SuggestionConfigService } from './services/suggestion-config.service'
+
+/**
+ * Photo expense suggestions: decision API, suggestion snapshot, personal choices and rules, and
+ * the learner. Public boundary for other modules: `LearnerService` and
+ * `ExpenseSuggestionLinkService` (used by `expense`).
+ */
 @Module({
-  imports: [TypeOrmModule.forFeature([RecognitionJobEntity]), AuthModule, MediaModule],
-  controllers: [RecognitionController],
-  providers: [
-    RecognitionService,
-    DisabledRecognitionProvider,
-    GoogleAiStudioRecognitionProvider,
-    RecognitionQuotaGuard,
-    {
-      provide: RECOGNITION_PROVIDER,
-      inject: [
-        recognitionConfig.KEY,
-        DisabledRecognitionProvider,
-        GoogleAiStudioRecognitionProvider,
-      ],
-      useFactory: (
-        config: RecognitionConfig,
-        disabled: DisabledRecognitionProvider,
-        googleAiStudio: GoogleAiStudioRecognitionProvider,
-      ) => (config.provider === 'google-ai-studio' ? googleAiStudio : disabled),
-    },
+  imports: [
+    TypeOrmModule.forFeature([DecisionChoiceEntity, ExpenseRuleEntity, ExpenseInferenceEntity]),
+    // Memory storage (no `dest`), one file, size capped by EXPENSE_DECISION_MAX_IMAGE_BYTES (413).
+    MulterModule.registerAsync({
+      inject: [decisionConfig.KEY],
+      useFactory: (config: DecisionConfig) => ({
+        limits: { fileSize: config.maxImageBytes, files: 1, fields: 10, fieldSize: 1024 },
+      }),
+    }),
+    AuthModule,
+    CategoryModule,
+    UsersModule,
   ],
-  exports: [RecognitionService],
+  controllers: [
+    InferenceController,
+    SuggestionConfigController,
+    DecisionChoiceController,
+    ExpenseRuleController,
+  ],
+  providers: [
+    {
+      provide: DECISION_PROVIDER,
+      inject: [decisionConfig.KEY],
+      useFactory: (config: DecisionConfig) => createDecisionProvider(config),
+    },
+    ChoiceSetService,
+    DecisionMetricsService,
+    InferenceService,
+    InferenceCleanupService,
+    SuggestionConfigService,
+    DecisionChoiceService,
+    ExpenseRuleService,
+    LearnerService,
+    ExpenseSuggestionLinkService,
+  ],
+  exports: [DECISION_PROVIDER, LearnerService, ExpenseSuggestionLinkService],
 })
 export class RecognitionModule {}

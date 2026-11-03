@@ -96,6 +96,29 @@ export class CategoryService {
     return category
   }
 
+  /** Active categories visible to the user in catalog order, for building decision choices. */
+  async listChoices(userId: string): Promise<{ id: string; name: string }[]> {
+    return this.dataSource.query<{ id: string; name: string }[]>(
+      `SELECT id::text, name FROM categories
+       WHERE active = true AND (user_id IS NULL OR user_id = $1)
+       ORDER BY sort_order ASC, id ASC`,
+      [userId],
+    )
+  }
+
+  /**
+   * Cheap fingerprint of the categories visible to the user. Changes whenever a visible category is
+   * created, renamed, or archived, so callers can cache {@link listChoices}.
+   */
+  async catalogStamp(userId: string): Promise<string> {
+    const rows = await this.dataSource.query<{ stamp: string }[]>(
+      `SELECT count(*) FILTER (WHERE active)::text || ':' || coalesce(max(updated_at)::text, '') AS stamp
+       FROM categories WHERE user_id IS NULL OR user_id = $1`,
+      [userId],
+    )
+    return rows[0]?.stamp ?? ''
+  }
+
   private async findOwned(userId: string, id: string) {
     const category = await this.categories.findOneBy({ id, userId, active: true })
     if (!category) throw new NotFoundException('Custom category not found')

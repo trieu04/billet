@@ -19,7 +19,9 @@ SELECT count(*) AS sample_user_count FROM sample_context \gset
 \endif
 
 DELETE FROM expenses WHERE user_id = (SELECT user_id FROM sample_context);
-DELETE FROM recognition_jobs WHERE user_id = (SELECT user_id FROM sample_context);
+DELETE FROM expense_inferences WHERE user_id = (SELECT user_id FROM sample_context);
+DELETE FROM expense_rules WHERE user_id = (SELECT user_id FROM sample_context);
+DELETE FROM decision_choices WHERE user_id = (SELECT user_id FROM sample_context);
 DELETE FROM media_assets WHERE user_id = (SELECT user_id FROM sample_context);
 
 CREATE TEMP TABLE sample_media (

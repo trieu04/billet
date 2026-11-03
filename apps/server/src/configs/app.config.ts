@@ -1,4 +1,5 @@
 import { registerAs, type ConfigType } from '@nestjs/config'
+import { DECISION_PROVIDER_IDS, type DecisionProviderId } from './environment'
 
 export const appConfig = registerAs('app', () => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -78,20 +79,33 @@ export const mediaConfig = registerAs('media', () => ({
 
 export type MediaConfig = ConfigType<typeof mediaConfig>
 
-export const recognitionConfig = registerAs('recognition', () => ({
-  provider: process.env.EXPENSE_RECOGNITION_PROVIDER ?? 'disabled',
-  googleAiStudioApiKeys: parseList(process.env.EXPENSE_RECOGNITION_GOOGLE_API_KEYS, ''),
-  googleAiStudioModel: process.env.EXPENSE_RECOGNITION_GOOGLE_MODEL ?? 'gemini-2.5-flash',
-  timeoutMs: Number(process.env.EXPENSE_RECOGNITION_TIMEOUT_MS ?? 30_000),
-  requestsPerMinute: Number(process.env.EXPENSE_RECOGNITION_REQUESTS_PER_MINUTE ?? 10),
-  tokensPerMinute: Number(process.env.EXPENSE_RECOGNITION_TOKENS_PER_MINUTE ?? 250_000),
-  requestsPerDay: Number(process.env.EXPENSE_RECOGNITION_REQUESTS_PER_DAY ?? 250),
-  estimatedTokensPerRequest: Number(
-    process.env.EXPENSE_RECOGNITION_ESTIMATED_TOKENS_PER_REQUEST ?? 4_096,
-  ),
-}))
+export interface DecisionConfigValues {
+  provider: DecisionProviderId
+  model: string
+  baseUrl: string
+  apiKey: string
+  googleApiKeys: string[]
+  timeoutMs: number
+  maxImageBytes: number
+}
 
-export type RecognitionConfig = ConfigType<typeof recognitionConfig>
+/** Read photo-suggestion decision settings from an environment map (already validated at startup). */
+export function readDecisionConfig(env: NodeJS.ProcessEnv): DecisionConfigValues {
+  const provider = env.EXPENSE_DECISION_PROVIDER?.trim() || 'disabled'
+  return {
+    provider: DECISION_PROVIDER_IDS.find((id) => id === provider) ?? 'disabled',
+    model: env.EXPENSE_DECISION_MODEL?.trim() ?? '',
+    baseUrl: env.EXPENSE_DECISION_BASE_URL?.trim() ?? '',
+    apiKey: env.EXPENSE_DECISION_API_KEY?.trim() ?? '',
+    googleApiKeys: parseList(env.EXPENSE_DECISION_GOOGLE_API_KEYS, ''),
+    timeoutMs: Number(env.EXPENSE_DECISION_TIMEOUT_MS || 5_000),
+    maxImageBytes: Number(env.EXPENSE_DECISION_MAX_IMAGE_BYTES || 1_048_576),
+  }
+}
+
+export const decisionConfig = registerAs('decision', () => readDecisionConfig(process.env))
+
+export type DecisionConfig = ConfigType<typeof decisionConfig>
 
 function normalizePath(value: string): string {
   return value.trim().replace(/^\/+|\/+$/g, '')

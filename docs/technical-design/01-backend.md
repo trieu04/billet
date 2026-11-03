@@ -15,28 +15,30 @@ Billet tổ chức dữ liệu quanh **expense**: khoản chi có tiền, loại
 
 ### Module
 
-| Module                         | Trách nhiệm                                                                                                                                                   |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `user`, `auth`                 | Hồ sơ và tùy chọn (`/profile`); đăng ký, đăng nhập, social, refresh/logout, MFA, khôi phục mật khẩu                                                           |
-| `expense`                      | Create idempotent, sửa theo `version`, xóa mềm, danh sách cursor kèm tổng, lịch tháng/lịch sử                                                                 |
-| `category`                     | Danh mục hệ thống và cá nhân; chỉ chủ sở hữu sửa; từ chối xóa danh mục đang dùng                                                                              |
-| `media`                        | Reserve/upload/read ảnh riêng tư qua API; kiểm byte length và signature JPEG/PNG/WebP                                                                         |
-| `recognition`                  | `recognition-jobs` nền, vòng quét 5 giây, provider `disabled`/`google-ai-studio`; sẽ được thay theo [gợi ý chi tiêu từ ảnh](./03-photo-expense-suggestion.md) |
-| `report`                       | Tổng, chuỗi thời gian theo timezone, phân bổ danh mục, so kỳ trước                                                                                            |
-| `budget`                       | Hạn mức theo tháng/loại tiền; đã chi tính từ expense                                                                                                          |
-| `reminder`                     | Lịch nhắc từ user settings, kiểm mỗi phút, notification có deduplication key theo ngày địa phương                                                             |
-| `export`                       | Job CSV nền (5 giây), file riêng tư hết hạn tải sau 24 giờ                                                                                                    |
-| `notification`, `email`, `sms` | Hộp thư, push FCM và adapter gửi theo cấu hình                                                                                                                |
-| `realtime`                     | WebSocket xác thực, publish theo user trong một process ([contract](../../apps/server/src/modules/realtime/README.md))                                        |
+| Module                         | Trách nhiệm                                                                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `user`, `auth`                 | Hồ sơ và tùy chọn (`/profile`); đăng ký, đăng nhập, social, refresh/logout, MFA, khôi phục mật khẩu                           |
+| `expense`                      | Create idempotent, sửa theo `version`, xóa mềm, danh sách cursor kèm tổng, lịch tháng/lịch sử                                 |
+| `category`                     | Danh mục hệ thống và cá nhân; chỉ chủ sở hữu sửa; từ chối xóa danh mục đang dùng                                              |
+| `media`                        | Reserve/upload/read ảnh riêng tư qua API; kiểm byte length và signature JPEG/PNG/WebP                                         |
+| `report`                       | Tổng, chuỗi thời gian theo timezone, phân bổ danh mục, so kỳ trước                                                            |
+| `budget`                       | Hạn mức theo tháng/loại tiền; đã chi tính từ expense                                                                          |
+| `reminder`                     | Lịch nhắc từ user settings, kiểm mỗi phút, notification có deduplication key theo ngày địa phương                             |
+| `export`                       | Job CSV nền (5 giây), file riêng tư hết hạn tải sau 24 giờ                                                                    |
+| `recognition`                  | Gợi ý từ ảnh: Decision API, `suggestion-config`, choice cá nhân, rule, learner ([thiết kế](./03-photo-expense-suggestion.md)) |
+| `notification`, `email`, `sms` | Hộp thư, push FCM và adapter gửi theo cấu hình                                                                                |
+| `realtime`                     | WebSocket xác thực, publish theo user trong một process ([contract](../../apps/server/src/modules/realtime/README.md))        |
 
-Phụ thuộc đi từ composition → feature → shared primitive; feature dùng public service của nhau, không đưa entity ra client. `report`, `budget`, `export` truy vấn trực tiếp bảng `expenses`; đổi schema expense phải xét các consumer này.
+Phụ thuộc đi từ composition → feature → shared primitive; feature dùng public service của nhau, không đưa entity ra client. `report`, `budget`, `export` và learner của `recognition` truy vấn trực tiếp bảng `expenses`; đổi schema expense phải xét các consumer này. `expense` chỉ gọi `ExpenseSuggestionLinkService` và `LearnerService` của `recognition`; `recognition` đọc danh mục qua `CategoryService`.
 
 ### Luồng lưu khoản chi
 
 1. Client (Expo) giữ ảnh local và form; upload diễn ra trong thao tác lưu.
 2. Nếu có ảnh: `POST /media` reserve → `PUT /media/:id/content` raw bytes. Server kiểm owner, byte length, signature, ghi storage và đánh dấu `ready`.
 3. `POST /expenses` với `idempotencyKey`. Server kiểm tiền, thời gian, danh mục, media `ready`. Client giữ cùng key khi retry với nội dung không đổi.
-4. Chỉ báo đã lưu sau response thành công; upload thành công chưa phải đã lưu. Sau đó client cập nhật nhật ký và tổng liên quan.
+   Khi có gợi ý từ ảnh, request kèm `inferenceId`, `imageType`, `personalChoiceId`, `placeKey`, `merchantKey`, `fieldProvenance`: server kiểm `inferenceId`/`personalChoiceId` thuộc user, chuẩn hóa lại `merchantKey`, validate `placeKey` và provenance, suy ra `fieldSources`, đặt `source = recognition` khi có `inferenceId`.
+4. Sau commit (create, update, delete), `ExpenseService` gọi learner với dữ liệu đã chuẩn hóa; lỗi learner chỉ được log, không ảnh hưởng kết quả lưu.
+5. Chỉ báo đã lưu sau response thành công; upload thành công chưa phải đã lưu. Sau đó client cập nhật nhật ký và tổng liên quan.
 
 Một media có thể được dùng ở nhiều expense của cùng chủ sở hữu.
 
@@ -50,24 +52,24 @@ Một media có thể được dùng ở nhiều expense của cùng chủ sở 
 
 ## 3. Dữ liệu
 
-| Bảng                          | Nội dung chính                                                                                                                                            |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `users`, `user_settings`      | Hồ sơ, timezone, currency, tùy chọn nhắc và giao diện                                                                                                     |
-| `expenses`                    | Owner, amount/currency, `occurredAt`/timezone, category, media/job tùy chọn, caption/merchant/location, `fieldSources`, idempotency, version, `deletedAt` |
-| `categories`                  | Hệ thống (owner null) và cá nhân                                                                                                                          |
-| `media_assets`                | Storage key, MIME, bytes, trạng thái; `thumbnailKey` chưa dùng                                                                                            |
-| `recognition_jobs`            | Owner/media, provider, status, suggestion, attempts, retry, lease                                                                                         |
-| `monthly_budgets`             | Hạn mức theo user/tháng/currency                                                                                                                          |
-| `reminder_schedules`          | Lần chạy tiếp theo và ngày địa phương đã nhắc                                                                                                             |
-| `notifications`, push devices | Notification và thiết bị theo owner                                                                                                                       |
-| `export_jobs`                 | Phạm vi, status, `snapshotAt`, file key, hạn tải                                                                                                          |
+| Bảng                                                      | Nội dung chính                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`, `user_settings`                                  | Hồ sơ, timezone, currency, tùy chọn nhắc, giao diện và gợi ý từ ảnh (`suggestionsEnabled`, `ruleLearningEnabled`, `suggestionLocationEnabled`)                                                                                                                   |
+| `expenses`                                                | Owner, amount/currency, `occurredAt`/timezone, category, media tùy chọn, caption/merchant/location, `fieldSources`, idempotency, version, `deletedAt`; khóa gợi ý (`inferenceId`, `imageType`, `personalChoiceId`, `placeKey`, `merchantKey`, `fieldProvenance`) |
+| `decision_choices`, `expense_rules`, `expense_inferences` | Loại ảnh hệ thống, choice cá nhân, rule mặc định/learned/user, bản ghi Decision (không lưu ảnh, giữ 90 ngày)                                                                                                                                                     |
+| `categories`                                              | Hệ thống (owner null) và cá nhân                                                                                                                                                                                                                                 |
+| `media_assets`                                            | Storage key, MIME, bytes, trạng thái; `thumbnailKey` chưa dùng                                                                                                                                                                                                   |
+| `monthly_budgets`                                         | Hạn mức theo user/tháng/currency                                                                                                                                                                                                                                 |
+| `reminder_schedules`                                      | Lần chạy tiếp theo và ngày địa phương đã nhắc                                                                                                                                                                                                                    |
+| `notifications`, push devices                             | Notification và thiết bị theo owner                                                                                                                                                                                                                              |
+| `export_jobs`                                             | Phạm vi, status, `snapshotAt`, file key, hạn tải                                                                                                                                                                                                                 |
 
 ID bigint là chuỗi ở API. Schema thay đổi qua migration, không bật synchronize. FK không thay cho kiểm owner, soft delete và trạng thái tài nguyên.
 
 ## 4. Vận hành và giới hạn hiện tại
 
 - **Riêng tư:** kiểm owner ở mọi boundary; media chỉ đọc qua API có xác thực; không log ảnh, token hoặc URL có quyền truy cập. Credential provider đọc từ môi trường và validate lúc startup.
-- **Job và realtime:** recognition/export claim job bằng lease trong một process; chưa có row locking nên chưa an toàn khi chạy nhiều instance. Realtime cũng chỉ hoạt động trong một process.
+- **Job và realtime:** export claim job bằng lease trong một process; chưa có row locking nên chưa an toàn khi chạy nhiều instance. Realtime cũng chỉ hoạt động trong một process.
 - **Budget:** lọc tháng theo biên ngày SQL, chưa theo timezone tài khoản như report/calendar.
 - **Export:** `snapshotAt` là mốc worker chọn để lọc theo `updated_at`, không phải snapshot point-in-time. CSV không kèm ảnh.
 - **Media:** chỉ kiểm signature; chưa decode, chưa giới hạn pixel, chưa tạo thumbnail; chưa có cleanup file theo `expiresAt`.

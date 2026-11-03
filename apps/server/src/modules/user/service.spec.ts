@@ -38,6 +38,9 @@ describe('UsersService settings', () => {
       appearance: Appearance.System,
       reminderEnabled: true,
       reminderTime: '20:00:00',
+      suggestionsEnabled: true,
+      ruleLearningEnabled: true,
+      suggestionLocationEnabled: false,
     } as UserSettingsEntity
     const settings = {
       findOneBy: jest.fn().mockResolvedValue(persisted),
@@ -61,6 +64,9 @@ describe('UsersService settings', () => {
       appearance: Appearance.Light,
       reminderEnabled: true,
       reminderTime: '20:00',
+      suggestionsEnabled: true,
+      ruleLearningEnabled: true,
+      suggestionLocationEnabled: false,
     })
     expect(settings.findOneBy).toHaveBeenCalledTimes(2)
   })
@@ -75,6 +81,9 @@ describe('UsersService settings', () => {
       appearance: Appearance.System,
       reminderEnabled: true,
       reminderTime: '20:00:00',
+      suggestionsEnabled: true,
+      ruleLearningEnabled: true,
+      suggestionLocationEnabled: false,
     } as UserSettingsEntity
     const settings = {
       findOneBy: jest.fn().mockResolvedValue(persisted),
@@ -92,5 +101,43 @@ describe('UsersService settings', () => {
     expect(settings.save).toHaveBeenCalledWith(
       expect.objectContaining({ reminderEnabled: false, reminderTime: null }),
     )
+  })
+
+  it('updates and returns the photo suggestion settings', async () => {
+    const persisted = {
+      id: '7',
+      userId: '1',
+      defaultCurrency: 'VND',
+      timezone: 'Asia/Ho_Chi_Minh',
+      locale: 'vi',
+      appearance: Appearance.System,
+      reminderEnabled: false,
+      reminderTime: null,
+      suggestionsEnabled: true,
+      ruleLearningEnabled: true,
+      suggestionLocationEnabled: false,
+    } as UserSettingsEntity
+    const settings = {
+      findOneBy: jest.fn().mockResolvedValue(persisted),
+      save: jest.fn().mockImplementation(async (value: UserSettingsEntity) => value),
+      create: jest.fn(),
+    }
+    const service = new UsersService(
+      {} as Repository<UserEntity>,
+      settings as unknown as Repository<UserSettingsEntity>,
+      {} as DataSource,
+    )
+
+    const result = await service.updateSettings('1', {
+      suggestionsEnabled: false,
+      ruleLearningEnabled: false,
+      suggestionLocationEnabled: true,
+    })
+
+    expect(result).toMatchObject({
+      suggestionsEnabled: false,
+      ruleLearningEnabled: false,
+      suggestionLocationEnabled: true,
+    })
   })
 })

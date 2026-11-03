@@ -1,6 +1,6 @@
 import { Column, Entity, Index } from 'typeorm'
 import { BaseEntity } from '../../../shared/entities/base.entity'
-import { JobStatus } from '../../recognition/entities/recognition-job.entity'
+import { JobStatus } from '../constants'
 
 @Entity({ name: 'export_jobs' })
 @Index(['status', 'availableAt'])

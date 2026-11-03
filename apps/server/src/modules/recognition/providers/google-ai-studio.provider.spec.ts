@@ -1,186 +1,165 @@
-import { Readable } from 'node:stream'
-import type { RecognitionConfig } from '../../../configs/app.config'
-import type { MediaService } from '../../media/service'
-import { RecognitionRateLimitError } from '../interface'
-import { GoogleAiStudioRecognitionProvider, normalizeSuggestion } from './google-ai-studio.provider'
-import { RecognitionQuotaGuard } from './quota.guard'
+import { DecisionProviderError } from '../interface'
+import { GoogleAiStudioDecisionProvider } from './google-ai-studio.provider'
+import {
+  hangingResponse,
+  jsonResponse,
+  mockFetch,
+  sampleInput,
+  validDecision,
+} from './test-support'
 
-describe('GoogleAiStudioRecognitionProvider', () => {
-  afterEach(() => jest.restoreAllMocks())
+function geminiResponse(text: string, usage?: Record<string, number>): Response {
+  return jsonResponse({
+    candidates: [{ content: { parts: [{ text }] } }],
+    usageMetadata: usage,
+  })
+}
 
-  it('sends the owned image and returns a normalized suggestion', async () => {
-    const data = Buffer.from('receipt')
-    const media = {
-      open: jest.fn().mockResolvedValue({
-        stream: Readable.from(data),
-        mimeType: 'image/jpeg',
-        size: data.length,
+function provider(keys = ['key-a', 'key-b']): GoogleAiStudioDecisionProvider {
+  return new GoogleAiStudioDecisionProvider({
+    model: 'gemini-test',
+    apiKeys: keys,
+    maxImageBytes: 1_048_576,
+    maxChoices: 64,
+  })
+}
+
+async function reasonOf(promise: Promise<unknown>): Promise<string | undefined> {
+  try {
+    await promise
+  } catch (error: unknown) {
+    if (error instanceof DecisionProviderError) return error.reason
+    throw error
+  }
+  return undefined
+}
+
+describe('GoogleAiStudioDecisionProvider', () => {
+  let restore: () => void = () => undefined
+  afterEach(() => restore())
+
+  it('sends the inline JPEG with a JSON schema and returns the parsed decision and usage', async () => {
+    const mock = mockFetch([
+      geminiResponse(JSON.stringify(validDecision), {
+        promptTokenCount: 320,
+        candidatesTokenCount: 24,
       }),
-    } as unknown as MediaService
-    const config = {
-      provider: 'google-ai-studio',
-      googleAiStudioApiKeys: ['secret-key'],
-      googleAiStudioModel: 'gemini-test',
-      timeoutMs: 10_000,
-      requestsPerMinute: 10,
-      tokensPerMinute: 250_000,
-      requestsPerDay: 250,
-      estimatedTokensPerRequest: 4_096,
-    } as RecognitionConfig
-    const quota = new RecognitionQuotaGuard(config)
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          candidates: [
-            {
-              content: {
-                parts: [
-                  {
-                    text: JSON.stringify({
-                      amountMinor: '125000',
-                      currency: 'vnd',
-                      merchant: '  Quán ăn  ',
-                      categoryCode: 'food',
-                      confidence: { amountMinor: 0.98 },
-                    }),
-                  },
-                ],
-              },
-            },
-          ],
-        }),
-        { status: 200 },
-      ),
-    )
+    ])
+    restore = mock.restore
+    const controller = new AbortController()
 
-    const result = await new GoogleAiStudioRecognitionProvider(media, config, quota).recognize(
-      '7',
-      '8',
-    )
+    const output = await provider().decide(sampleInput, controller.signal)
 
-    expect(media.open).toHaveBeenCalledWith('7', '8')
-    expect(result).toEqual({
-      amountMinor: '125000',
-      currency: 'VND',
-      merchant: 'Quán ăn',
-      categoryCode: 'food',
-      confidence: { amountMinor: 0.98 },
+    expect(output).toEqual({
+      ...validDecision,
+      usage: { inputTokens: 320, outputTokens: 24 },
     })
-    const [url, request] = fetchMock.mock.calls[0]
-    expect(url).toBe(
+    const [request] = mock.requests
+    expect(request.url).toBe(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent',
     )
-    expect(request?.headers).toEqual(expect.objectContaining({ 'x-goog-api-key': 'secret-key' }))
-    expect(String(request?.body)).toContain(data.toString('base64'))
+    expect(request.url).not.toContain('key-')
+    expect(request.headers['x-goog-api-key']).toBe('key-a')
+    expect(request.signal).toBe(controller.signal)
+    const body = request.body as {
+      contents: { parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] }[]
+      generationConfig: { responseMimeType: string; responseJsonSchema: unknown }
+    }
+    expect(body.generationConfig.responseMimeType).toBe('application/json')
+    expect(body.generationConfig.responseJsonSchema).toBeDefined()
+    const parts = body.contents[0].parts
+    expect(parts[0].text).toContain('- c1: Eating out')
+    expect(parts[1].inlineData).toEqual({
+      mimeType: 'image/jpeg',
+      data: Buffer.from(sampleInput.image.bytes).toString('base64'),
+    })
   })
 
-  it('does not include a provider response body in an HTTP error', async () => {
-    const media = {
-      open: jest.fn().mockImplementation(async () => ({
-        stream: Readable.from(Buffer.from('x')),
-        mimeType: 'image/png',
-        size: 1,
-      })),
-    } as unknown as MediaService
-    const config = {
-      provider: 'google-ai-studio',
-      googleAiStudioApiKeys: ['secret-key'],
-      googleAiStudioModel: 'gemini-test',
-      timeoutMs: 10_000,
-      requestsPerMinute: 10,
-      tokensPerMinute: 250_000,
-      requestsPerDay: 250,
-      estimatedTokensPerRequest: 4_096,
-    } as RecognitionConfig
-    const quota = new RecognitionQuotaGuard(config)
-    jest
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response('sensitive upstream details', { status: 500 }))
-
-    await expect(
-      new GoogleAiStudioRecognitionProvider(media, config, quota).recognize('7', '8'),
-    ).rejects.toThrow('Google AI Studio request failed with status 500')
-  })
-
-  it('uses API keys in round-robin order', async () => {
-    const media = {
-      open: jest.fn().mockImplementation(async () => ({
-        stream: Readable.from(Buffer.from('x')),
-        mimeType: 'image/png',
-        size: 1,
-      })),
-    } as unknown as MediaService
-    const config = {
-      provider: 'google-ai-studio',
-      googleAiStudioApiKeys: ['key-1', 'key-2'],
-      googleAiStudioModel: 'gemini-test',
-      timeoutMs: 10_000,
-      requestsPerMinute: 10,
-      tokensPerMinute: 250_000,
-      requestsPerDay: 250,
-      estimatedTokensPerRequest: 4_096,
-    } as RecognitionConfig
-    const response = () =>
-      new Response(
-        JSON.stringify({
-          candidates: [{ content: { parts: [{ text: '{"confidence":{}}' }] } }],
-        }),
-        { status: 200 },
-      )
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => response())
-    const provider = new GoogleAiStudioRecognitionProvider(
-      media,
-      config,
-      new RecognitionQuotaGuard(config),
-    )
-
-    await provider.recognize('7', '8')
-    await provider.recognize('7', '8')
-    await provider.recognize('7', '8')
-
-    expect(fetchMock.mock.calls.map(([, request]) => request?.headers)).toEqual([
-      expect.objectContaining({ 'x-goog-api-key': 'key-1' }),
-      expect.objectContaining({ 'x-goog-api-key': 'key-2' }),
-      expect.objectContaining({ 'x-goog-api-key': 'key-1' }),
+  it('rotates keys across requests', async () => {
+    const mock = mockFetch([geminiResponse(JSON.stringify(validDecision))])
+    restore = mock.restore
+    const subject = provider()
+    const signal = new AbortController().signal
+    await subject.decide(sampleInput, signal)
+    await subject.decide(sampleInput, signal)
+    await subject.decide(sampleInput, signal)
+    expect(mock.requests.map((request) => request.headers['x-goog-api-key'])).toEqual([
+      'key-a',
+      'key-b',
+      'key-a',
     ])
   })
 
-  it('does not call the provider when the aggregate key-pool quota is exhausted', async () => {
-    const media = {
-      open: jest.fn().mockResolvedValue({
-        stream: Readable.from(Buffer.from('x')),
-        mimeType: 'image/png',
-        size: 1,
-      }),
-    } as unknown as MediaService
-    const config = {
-      provider: 'google-ai-studio',
-      googleAiStudioApiKeys: ['key-1', 'key-2'],
-      googleAiStudioModel: 'gemini-test',
-      timeoutMs: 10_000,
-      requestsPerMinute: 1,
-      tokensPerMinute: 250_000,
-      requestsPerDay: 250,
-      estimatedTokensPerRequest: 4_096,
-    } as RecognitionConfig
-    const quota = new RecognitionQuotaGuard(config)
-    quota.acquire()
-    const fetchMock = jest.spyOn(globalThis, 'fetch')
+  it('moves to the next key on 429', async () => {
+    const mock = mockFetch([jsonResponse({}, 429), geminiResponse(JSON.stringify(validDecision))])
+    restore = mock.restore
 
-    await expect(
-      new GoogleAiStudioRecognitionProvider(media, config, quota).recognize('7', '8'),
-    ).rejects.toBeInstanceOf(RecognitionRateLimitError)
-    expect(fetchMock).not.toHaveBeenCalled()
+    const output = await provider().decide(sampleInput, new AbortController().signal)
+
+    expect(output.imageType.ref).toBe('t1')
+    expect(mock.requests.map((request) => request.headers['x-goog-api-key'])).toEqual([
+      'key-a',
+      'key-b',
+    ])
   })
-})
 
-describe('normalizeSuggestion', () => {
-  it('rejects unsupported categories and invalid confidence values', () => {
-    expect(() =>
-      normalizeSuggestion({ categoryCode: 'travel', confidence: { categoryCode: 0.8 } }),
-    ).toThrow('categoryCode is not supported')
-    expect(() => normalizeSuggestion({ confidence: { amountMinor: 2 } })).toThrow(
-      'confidence.amountMinor must be between 0 and 1',
+  it('maps 429 on every key to provider_rate_limited', async () => {
+    const mock = mockFetch([jsonResponse({}, 429)])
+    restore = mock.restore
+    await expect(
+      reasonOf(provider().decide(sampleInput, new AbortController().signal)),
+    ).resolves.toBe('provider_rate_limited')
+    expect(mock.requests).toHaveLength(2)
+  })
+
+  it('maps other non-2xx responses to provider_error without trying other keys', async () => {
+    const mock = mockFetch([jsonResponse({ error: 'boom' }, 500)])
+    restore = mock.restore
+    await expect(
+      reasonOf(provider().decide(sampleInput, new AbortController().signal)),
+    ).resolves.toBe('provider_error')
+    expect(mock.requests).toHaveLength(1)
+  })
+
+  it('maps network failures to provider_error', async () => {
+    const mock = mockFetch([new TypeError('fetch failed')])
+    restore = mock.restore
+    await expect(
+      reasonOf(provider().decide(sampleInput, new AbortController().signal)),
+    ).resolves.toBe('provider_error')
+  })
+
+  it.each([
+    ['text that is not JSON', geminiResponse('nope')],
+    [
+      'ill-typed JSON',
+      geminiResponse(JSON.stringify({ imageType: { ref: 't1', confidence: 'high' } })),
+    ],
+    ['no candidates', jsonResponse({ candidates: [] })],
+    ['a non-JSON body', new Response('<html>', { status: 200 })],
+  ])('maps %s to invalid_output', async (_name, response) => {
+    const mock = mockFetch([response])
+    restore = mock.restore
+    await expect(
+      reasonOf(provider().decide(sampleInput, new AbortController().signal)),
+    ).resolves.toBe('invalid_output')
+  })
+
+  it('maps an abort during the request to timeout', async () => {
+    const mock = mockFetch([hangingResponse])
+    restore = mock.restore
+    const controller = new AbortController()
+    const pending = reasonOf(provider().decide(sampleInput, controller.signal))
+    controller.abort()
+    await expect(pending).resolves.toBe('timeout')
+  })
+
+  it('does not call the provider when the signal is already aborted', async () => {
+    const mock = mockFetch([geminiResponse(JSON.stringify(validDecision))])
+    restore = mock.restore
+    await expect(reasonOf(provider().decide(sampleInput, AbortSignal.abort()))).resolves.toBe(
+      'timeout',
     )
+    expect(mock.requests).toHaveLength(0)
   })
 })

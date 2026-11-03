@@ -13,6 +13,7 @@ import {
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiExtraModels,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
@@ -31,10 +32,12 @@ import {
   ExpenseListResponseDto,
   ExpenseQueryDto,
   ExpenseResponseDto,
+  FieldProvenanceDto,
   UpdateExpenseDto,
 } from './dto'
 import { ExpenseService } from './service'
 @ApiTags('expenses')
+@ApiExtraModels(FieldProvenanceDto)
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('expenses')
@@ -44,7 +47,7 @@ export class ExpenseController {
   @ApiOperation({
     summary: 'Create an expense',
     description:
-      'Adds an expense to the authenticated account. Reusing the same idempotency key returns the original expense instead of creating a duplicate.',
+      'Adds an expense to the authenticated account. Reusing the same idempotency key returns the original expense instead of creating a duplicate. Photo suggestion fields (`inferenceId`, `imageType`, `personalChoiceId`, `placeKey`, `merchantKey`, `fieldProvenance`) are validated against the account and feed the learner after the expense is saved.',
   })
   @ApiCreatedResponse({ type: ExpenseResponseDto })
   create(@CurrentUser() u: AuthUser, @Body() b: CreateExpenseDto) {

@@ -10,7 +10,23 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator'
+
+const nullable = () => ValidateIf((_object, value) => value !== undefined && value !== null)
+
+/** One `fieldProvenance` entry (OpenAPI shape; the recognition module validates it). */
+export class FieldProvenanceDto {
+  @ApiProperty({
+    enum: ['user', 'ocr', 'personal_rule', 'default_rule', 'decision_model', 'capture_time'],
+  })
+  source: string
+  @ApiPropertyOptional({ type: String, pattern: '^[1-9]\\d*$' }) ruleId?: string
+  @ApiPropertyOptional({ type: String, pattern: '^[1-9]\\d*$' }) choiceId?: string
+  @ApiPropertyOptional({ minimum: 0, maximum: 1 }) confidence?: number
+  @ApiProperty({ enum: ['accepted', 'edited', 'entered', 'cleared', 'suggested'] })
+  outcome: string
+}
 
 export class CreateExpenseDto {
   @ApiProperty({ pattern: '^[1-9]\\d*$' }) @Matches(/^[1-9]\d*$/) amountMinor: string
@@ -19,7 +35,6 @@ export class CreateExpenseDto {
   @ApiProperty({ example: 'Asia/Ho_Chi_Minh' }) @IsString() @MaxLength(64) occurredTimezone: string
   @ApiPropertyOptional() @IsOptional() @Matches(/^[1-9]\d*$/) categoryId?: string
   @ApiPropertyOptional() @IsOptional() @Matches(/^[1-9]\d*$/) mediaAssetId?: string
-  @ApiPropertyOptional() @IsOptional() @Matches(/^[1-9]\d*$/) recognitionJobId?: string
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) caption?: string
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(160) merchant?: string
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(240) location?: string
@@ -31,10 +46,71 @@ export class CreateExpenseDto {
   @IsOptional()
   @Matches(/^-?(?:180(?:\.0{1,6})?|(?:1[0-7]\d|[0-9]?\d)(?:\.\d{1,6})?)$/)
   longitude?: string
-  @ApiPropertyOptional({ type: Object }) @IsOptional() @IsObject() fieldSources?: Record<
-    string,
-    string
-  >
+  @ApiPropertyOptional({
+    type: Object,
+    deprecated: true,
+    description: 'Legacy field → source map; derived from fieldProvenance when that is sent.',
+  })
+  @IsOptional()
+  @IsObject()
+  fieldSources?: Record<string, string>
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    pattern: '^[1-9]\\d*$',
+    description:
+      'Inference (POST /expense-inferences) of the photo; marks the expense as recognition.',
+  })
+  @nullable()
+  @Matches(/^[1-9]\d*$/)
+  inferenceId?: string | null
+  @ApiPropertyOptional({
+    nullable: true,
+    enum: [
+      'receipt',
+      'invoice',
+      'parking_ticket',
+      'transport_ticket',
+      'payment_screenshot',
+      'food',
+      'product',
+      'other',
+    ],
+  })
+  @nullable()
+  @IsString()
+  @MaxLength(40)
+  imageType?: string | null
+  @ApiPropertyOptional({ type: String, nullable: true, pattern: '^[1-9]\\d*$' })
+  @nullable()
+  @Matches(/^[1-9]\d*$/)
+  personalChoiceId?: string | null
+  @ApiPropertyOptional({
+    nullable: true,
+    pattern: '^[0-9bcdefghjkmnpqrstuvwxyz]{7}$',
+    description: '7-character geohash of the capture location.',
+  })
+  @nullable()
+  @IsString()
+  @MaxLength(7)
+  placeKey?: string | null
+  @ApiPropertyOptional({
+    nullable: true,
+    maxLength: 160,
+    description: 'Merchant key; the server re-normalizes it (no diacritics, lowercase).',
+  })
+  @nullable()
+  @IsString()
+  @MaxLength(160)
+  merchantKey?: string | null
+  @ApiPropertyOptional({
+    type: 'object',
+    additionalProperties: { $ref: '#/components/schemas/FieldProvenanceDto' },
+    description: 'Per field (amountMinor, occurredAt, merchant, categoryId): source and outcome.',
+  })
+  @IsOptional()
+  @IsObject()
+  fieldProvenance?: Record<string, FieldProvenanceDto>
   @ApiProperty({ maxLength: 100 })
   @IsString()
   @Matches(/^[A-Za-z0-9._:-]{8,100}$/)
@@ -77,10 +153,19 @@ export class ExpenseResponseDto {
   @ApiProperty() occurredTimezone: string
   @ApiProperty() categoryId: string
   @ApiProperty({ nullable: true }) mediaAssetId: string | null
-  @ApiProperty({ nullable: true }) recognitionJobId: string | null
   @ApiProperty({ nullable: true }) caption: string | null
   @ApiProperty({ nullable: true }) merchant: string | null
   @ApiProperty({ nullable: true }) location: string | null
+  @ApiProperty({ type: String, nullable: true }) inferenceId: string | null
+  @ApiProperty({ type: String, nullable: true }) imageType: string | null
+  @ApiProperty({ type: String, nullable: true }) personalChoiceId: string | null
+  @ApiProperty({ type: String, nullable: true }) placeKey: string | null
+  @ApiProperty({ type: String, nullable: true }) merchantKey: string | null
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { $ref: '#/components/schemas/FieldProvenanceDto' },
+  })
+  fieldProvenance: Record<string, FieldProvenanceDto>
   @ApiProperty() version: number
   @ApiProperty({ format: 'date-time' }) createdAt: string
   @ApiProperty({ format: 'date-time' }) updatedAt: string

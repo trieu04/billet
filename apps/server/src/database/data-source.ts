@@ -9,11 +9,13 @@ import { UserEntity } from '../modules/user/entities/user.entity'
 import { UserSettingsEntity } from '../modules/user/entities/user-settings.entity'
 import { CategoryEntity } from '../modules/category/entities/category.entity'
 import { MediaAssetEntity } from '../modules/media/entities/media-asset.entity'
-import { RecognitionJobEntity } from '../modules/recognition/entities/recognition-job.entity'
 import { ExpenseEntity } from '../modules/expense/entities/expense.entity'
 import { MonthlyBudgetEntity } from '../modules/budget/entities/monthly-budget.entity'
 import { ReminderScheduleEntity } from '../modules/reminder/entities/reminder-schedule.entity'
 import { ExportJobEntity } from '../modules/export/entities/export-job.entity'
+import { DecisionChoiceEntity } from '../modules/recognition/entities/decision-choice.entity'
+import { ExpenseInferenceEntity } from '../modules/recognition/entities/expense-inference.entity'
+import { ExpenseRuleEntity } from '../modules/recognition/entities/expense-rule.entity'
 import { snakeNamingStrategy } from './snake-naming.strategy'
 
 const applicationDataSource = new DataSource({
@@ -36,11 +38,13 @@ const applicationDataSource = new DataSource({
     RefreshTokenEntity,
     CategoryEntity,
     MediaAssetEntity,
-    RecognitionJobEntity,
     ExpenseEntity,
     MonthlyBudgetEntity,
     ReminderScheduleEntity,
     ExportJobEntity,
+    DecisionChoiceEntity,
+    ExpenseRuleEntity,
+    ExpenseInferenceEntity,
   ],
   migrations: [`${__dirname}/migrations/*{.ts,.js}`],
 })

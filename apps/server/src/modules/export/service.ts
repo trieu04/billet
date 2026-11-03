@@ -10,7 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { randomBytes } from 'node:crypto'
 import { DataSource, Repository } from 'typeorm'
 import { OBJECT_STORAGE, type ObjectStorage } from '../../common/storage/interface'
-import { JobStatus } from '../recognition/entities/recognition-job.entity'
+import { JobStatus } from './constants'
 import type { CreateExportDto } from './dto'
 import { ExportJobEntity } from './entities/export-job.entity'
 @Injectable()

@@ -5,7 +5,11 @@ import { DataSource, Repository } from 'typeorm'
 import { CategoryService } from '../category/service'
 import { MediaService } from '../media/service'
 import { RealtimeService } from '../realtime/services/realtime.service'
-import { RecognitionService } from '../recognition/service'
+import {
+  ExpenseSuggestionLinkService,
+  type ExpenseSuggestionInput,
+} from '../recognition/services/expense-link.service'
+import { LearnerService, type ExpenseLearningSignal } from '../recognition/services/learner.service'
 import type { CreateExpenseDto, ExpenseQueryDto, ExpenseResponseDto, UpdateExpenseDto } from './dto'
 import { ExpenseEntity, ExpenseSource } from './entities/expense.entity'
 import { buildCalendarHistory, type CalendarAggregateRow } from './calendar'
@@ -21,7 +25,8 @@ export class ExpenseService {
     private readonly categories: CategoryService,
     private readonly media: MediaService,
     private readonly realtime: RealtimeService,
-    private readonly recognition: RecognitionService,
+    private readonly suggestionLinks: ExpenseSuggestionLinkService,
+    private readonly learner: LearnerService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -43,21 +48,25 @@ export class ExpenseService {
     }
     const category = await this.categories.resolve(userId, input.categoryId)
     if (input.mediaAssetId) await this.media.assertReady(userId, input.mediaAssetId)
-    if (input.recognitionJobId)
-      await this.recognition.assertAccepted(userId, input.recognitionJobId, input.mediaAssetId)
+    const suggestion = await this.suggestionLinks.resolve(userId, suggestionInput(input))
     const entity = this.expenses.create({
       ...input,
       userId,
       categoryId: category.id,
       mediaAssetId: input.mediaAssetId ?? null,
-      recognitionJobId: input.recognitionJobId ?? null,
       caption: clean(input.caption),
       merchant: clean(input.merchant),
       location: clean(input.location),
       latitude: input.latitude ?? null,
       longitude: input.longitude ?? null,
-      source: input.recognitionJobId ? ExpenseSource.Recognition : ExpenseSource.Manual,
-      fieldSources: input.fieldSources ?? {},
+      inferenceId: suggestion.inferenceId ?? null,
+      imageType: suggestion.imageType ?? null,
+      personalChoiceId: suggestion.personalChoiceId ?? null,
+      placeKey: suggestion.placeKey ?? null,
+      merchantKey: suggestion.merchantKey ?? null,
+      fieldProvenance: suggestion.fieldProvenance ?? {},
+      source: suggestion.inferenceId ? ExpenseSource.Recognition : ExpenseSource.Manual,
+      fieldSources: suggestion.fieldSources ?? input.fieldSources ?? {},
       requestHash: hash,
       occurredAt: new Date(input.occurredAt),
     })
@@ -69,6 +78,7 @@ export class ExpenseService {
       throw error
     }
     await this.changed(userId, saved.id)
+    await this.learner.afterExpenseChange(userId, null, learningSignal(saved))
     return this.toResponse(saved)
   }
 
@@ -112,6 +122,11 @@ export class ExpenseService {
     if (expense.version !== input.version)
       throw new ConflictException('Expense was changed; reload before editing')
     this.validateInput(input)
+    const before = learningSignal(expense)
+    const suggestion = await this.suggestionLinks.resolve(userId, suggestionInput(input), {
+      inferenceId: expense.inferenceId,
+      personalChoiceId: expense.personalChoiceId,
+    })
     if (input.categoryId)
       expense.categoryId = (await this.categories.resolve(userId, input.categoryId)).id
     if (input.mediaAssetId && input.mediaAssetId !== expense.mediaAssetId)
@@ -121,29 +136,32 @@ export class ExpenseService {
       'currency',
       'occurredTimezone',
       'mediaAssetId',
-      'recognitionJobId',
       'latitude',
       'longitude',
-      'fieldSources',
     ] as const
     for (const key of mutable)
       if (input[key] !== undefined) Object.assign(expense, { [key]: input[key] })
     if (input.occurredAt) expense.occurredAt = new Date(input.occurredAt)
     for (const key of ['caption', 'merchant', 'location'] as const)
       if (key in input) expense[key] = clean(input[key])
-    if (input.recognitionJobId)
-      await this.recognition.assertAccepted(
-        userId,
-        input.recognitionJobId,
-        input.mediaAssetId ?? expense.mediaAssetId ?? undefined,
-      )
+    for (const key of [
+      'inferenceId',
+      'imageType',
+      'personalChoiceId',
+      'placeKey',
+      'merchantKey',
+    ] as const)
+      if (suggestion[key] !== undefined) expense[key] = suggestion[key] ?? null
+    if (suggestion.fieldProvenance) expense.fieldProvenance = suggestion.fieldProvenance
+    if (suggestion.fieldSources) expense.fieldSources = suggestion.fieldSources
+    else if (input.fieldSources !== undefined) expense.fieldSources = input.fieldSources
+    if (suggestion.inferenceId) expense.source = ExpenseSource.Recognition
     const result = await this.expenses
       .createQueryBuilder()
       .update()
       .set({
         categoryId: expense.categoryId,
         mediaAssetId: expense.mediaAssetId,
-        recognitionJobId: expense.recognitionJobId,
         amountMinor: expense.amountMinor,
         currency: expense.currency,
         occurredAt: expense.occurredAt,
@@ -154,6 +172,13 @@ export class ExpenseService {
         latitude: expense.latitude,
         longitude: expense.longitude,
         fieldSources: expense.fieldSources,
+        inferenceId: expense.inferenceId,
+        imageType: expense.imageType,
+        personalChoiceId: expense.personalChoiceId,
+        placeKey: expense.placeKey,
+        merchantKey: expense.merchantKey,
+        fieldProvenance: expense.fieldProvenance,
+        source: expense.source,
         version: () => '"version" + 1',
       })
       .where('id = :id AND user_id = :userId AND version = :version', {
@@ -165,12 +190,16 @@ export class ExpenseService {
     if (!result.affected) throw new ConflictException('Expense was changed; reload before editing')
     const saved = await this.findOwned(userId, id)
     await this.changed(userId, id)
+    await this.learner.afterExpenseChange(userId, before, learningSignal(saved))
     return this.toResponse(saved)
   }
 
   async remove(userId: string, id: string): Promise<void> {
+    const existing = await this.expenses.findOneBy({ id, userId })
     const result = await this.expenses.softDelete({ id, userId })
-    if (result.affected) await this.changed(userId, id)
+    if (!result.affected) return
+    await this.changed(userId, id)
+    if (existing) await this.learner.afterExpenseChange(userId, learningSignal(existing), null)
   }
 
   async calendar(userId: string, month: string, currency: string, timezone: string) {
@@ -260,14 +289,40 @@ export class ExpenseService {
       occurredTimezone: e.occurredTimezone,
       categoryId: e.categoryId,
       mediaAssetId: e.mediaAssetId,
-      recognitionJobId: e.recognitionJobId,
       caption: e.caption,
       merchant: e.merchant,
       location: e.location,
+      inferenceId: e.inferenceId,
+      imageType: e.imageType,
+      personalChoiceId: e.personalChoiceId,
+      placeKey: e.placeKey,
+      merchantKey: e.merchantKey,
+      fieldProvenance: e.fieldProvenance,
       version: e.version,
       createdAt: e.createdAt.toISOString(),
       updatedAt: e.updatedAt.toISOString(),
     }
+  }
+}
+function suggestionInput(input: Partial<CreateExpenseDto>): ExpenseSuggestionInput {
+  return {
+    inferenceId: input.inferenceId,
+    imageType: input.imageType,
+    personalChoiceId: input.personalChoiceId,
+    placeKey: input.placeKey,
+    merchantKey: input.merchantKey,
+    fieldProvenance: input.fieldProvenance,
+  }
+}
+/** Normalized learning features of a stored expense for the recognition learner. */
+function learningSignal(e: ExpenseEntity): ExpenseLearningSignal {
+  return {
+    currency: e.currency,
+    personalChoiceId: e.personalChoiceId,
+    imageType: e.imageType,
+    placeKey: e.placeKey,
+    merchantKey: e.merchantKey,
+    fieldProvenance: { ...e.fieldProvenance },
   }
 }
 function clean(value: string | undefined | null): string | null {

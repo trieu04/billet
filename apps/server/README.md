@@ -63,11 +63,13 @@ Expense journal endpoints:
 - `POST|GET /api/v1/expenses`, `GET|PATCH|DELETE /api/v1/expenses/:id`
 - `GET /api/v1/expenses/calendar`, `GET /api/v1/expenses/calendar/history`
 - `POST /api/v1/media`, then `PUT /api/v1/media/:id/content`
-- `POST|GET /api/v1/recognition-jobs`
 - `GET /api/v1/reports/spending`
 - `GET|PUT /api/v1/budgets`
 - `POST /api/v1/reminders/sync`
 - `POST|GET /api/v1/exports`, `GET /api/v1/exports/:id`, and the authenticated download route
+- Photo suggestions: `POST /api/v1/expense-inferences`, `GET /api/v1/suggestion-config`,
+  `GET|POST /api/v1/decision-choices`, `PATCH|DELETE /api/v1/decision-choices/:id`,
+  `GET|POST /api/v1/expense-rules`, `PATCH|DELETE /api/v1/expense-rules/:id`
 
 Amounts use minor currency units encoded as decimal strings, and all identifiers are
 bigint strings. Expense creation requires an idempotency key. Updates require the
@@ -77,29 +79,145 @@ mix currencies.
 Private media and exports use the injectable object-storage boundary. Development
 defaults to owner-only files under `LOCAL_OBJECT_STORAGE_DIRECTORY`; Docker persists this path in
 the `billet-storage` volume. Replace the provider with a private S3-compatible adapter
-for production. Receipt recognition is also provider-backed; the default disabled
-provider records bounded retries and a visible failed status without blocking manual
-expense capture.
-
-To enable receipt extraction with a Gemini API key created in Google AI Studio, set
-`EXPENSE_RECOGNITION_PROVIDER=google-ai-studio` and
-`EXPENSE_RECOGNITION_GOOGLE_API_KEYS` (one key or comma-separated keys). The default
-model is `gemini-2.5-flash`; override it with `EXPENSE_RECOGNITION_GOOGLE_MODEL` when needed.
-Images stay behind the authenticated media boundary and the API key is used only by
-the server. `EXPENSE_RECOGNITION_TIMEOUT_MS` controls the upstream request timeout.
-`EXPENSE_RECOGNITION_REQUESTS_PER_MINUTE`, `EXPENSE_RECOGNITION_TOKENS_PER_MINUTE`,
-and `EXPENSE_RECOGNITION_REQUESTS_PER_DAY` apply conservative
-rolling quota guards before each request; no provider request is sent while an aggregate
-limit is exhausted. TPM reservations are reconciled with Gemini's reported token usage.
-`EXPENSE_RECOGNITION_GOOGLE_API_KEYS` accepts a comma-separated key pool and selects keys in pure
-round-robin order. Configure RPM, TPM, and RPD as totals for the whole pool. Gemini
-quotas are commonly scoped to a project/model, so multiple keys from one project do not
-increase those upstream quotas. The built-in counters are process-local and assume the
-current single server worker; use a shared quota store before scaling the recognition
-worker horizontally.
+for production.
 
 Set `OPENAPI_ENABLED=false` to disable the OpenAPI UI. `HTTP_CORS_ALLOWED_ORIGINS` accepts a
 comma-separated allowlist. Environment configuration is validated during startup.
+
+## Photo expense suggestion: decision provider
+
+`src/modules/recognition` defines the `DecisionProvider` contract (`interface.ts`) that classifies
+a compressed JPEG into one of the supplied image types, categories and personal choices. Choices
+are passed as short request-scoped `ref` codes and the provider answers with refs plus a
+confidence from 0 to 1; `category` and `personal` may be `null`. `assertDecisionRefs` in
+`decision-output.ts` checks that every returned ref belongs to the request. Adapters normalize
+failures to `DecisionProviderError` with reason `timeout`, `provider_rate_limited`,
+`provider_error`, `invalid_output`, or `disabled`, honor the `AbortSignal`, and return token usage
+when the provider reports it. Nothing logs images, labels, or raw provider output.
+
+Configuration (validated at startup; `.env.example` lists all of them):
+
+| Variable                           | Default    | Notes                                                                                          |
+| ---------------------------------- | ---------- | ---------------------------------------------------------------------------------------------- |
+| `EXPENSE_DECISION_PROVIDER`        | `disabled` | `disabled`, `fake`, `google-ai-studio`, `openai-compatible`. `fake` is rejected in production. |
+| `EXPENSE_DECISION_MODEL`           |            | Required for `google-ai-studio` and `openai-compatible`.                                       |
+| `EXPENSE_DECISION_BASE_URL`        |            | Required for `openai-compatible`; Chat Completions base URL such as `https://host/v1`.         |
+| `EXPENSE_DECISION_API_KEY`         |            | Required for `openai-compatible`; sent as a Bearer token.                                      |
+| `EXPENSE_DECISION_GOOGLE_API_KEYS` |            | Required for `google-ai-studio`; comma-separated pool, rotated per request and on HTTP 429.    |
+| `EXPENSE_DECISION_TIMEOUT_MS`      | `5000`     | Integer between 500 and 30000.                                                                 |
+| `EXPENSE_DECISION_MAX_IMAGE_BYTES` | `1048576`  | Largest compressed image accepted, 1024 to 10485760.                                           |
+
+Other adapters (`span-02`, `d1-ultra`, `jev`, `decider`, `gpt-luna-decision`) are added one by
+one in benchmark order; `DecisionProvider.id` is an open string for that reason.
+
+### Decision benchmark
+
+Compare providers on a labelled photo set kept outside the repository (never commit images or
+results that contain personal data):
+
+```sh
+pnpm --filter @billet/server bench:decision --provider <fake|google-ai-studio|openai-compatible> --dataset <dir> [--runs <n>] [--json]
+```
+
+Provider settings come from the same `EXPENSE_DECISION_*` variables (an `apps/server/.env` file is
+loaded when present), and `--provider` overrides `EXPENSE_DECISION_PROVIDER`. The dataset
+directory contains the images and a `labels.json`:
+
+```json
+{
+  "locale": "vi",
+  "choices": {
+    "imageTypes": [
+      { "key": "receipt", "label": "Receipt", "description": "Printed bill or invoice" },
+      { "key": "food", "label": "Food" }
+    ],
+    "categories": [{ "label": "Eating out" }, { "label": "Transport" }],
+    "personal": [{ "label": "Parking at Nguyen Hue" }]
+  },
+  "images": [
+    { "file": "receipt-01.jpg", "imageType": "receipt", "category": "Eating out" },
+    {
+      "file": "ticket-02.jpg",
+      "imageType": "receipt",
+      "category": "Transport",
+      "personal": "Parking at Nguyen Hue"
+    }
+  ]
+}
+```
+
+- `imageTypes` need a unique `key` (the expected value in `images[].imageType`); `categories` and
+  `personal` are identified by unique `label`. `description` is optional and goes into the prompt.
+- `images[].category` and `images[].personal` are labels from the lists; omit them or use `null`
+  when no category or personal choice applies. `file` is relative to the dataset directory.
+- Every image is compressed like the client (orientation applied, long edge 1024 px, JPEG quality
+  0.6, EXIF stripped, retry at 0.45 above 400 KB) with `sharp` (a devDependency), then sent to the
+  provider once per run. Attempts run sequentially with `EXPENSE_DECISION_TIMEOUT_MS` as the deadline.
+
+The report shows accuracy and macro-F1 (over expected and predicted classes; no category counts as
+`(none)`) for image type and category, personal-choice precision, recall and coverage, a
+confidence calibration table with ECE for each, latency P50/P95 over all attempts, token usage, and
+cost per image when the provider reports `costMicroUsd`. Failed attempts (timeouts, rate limits,
+invalid output) are counted by reason and excluded from the quality metrics. The command exits
+non-zero when no attempt succeeds. With `--provider fake` it exercises the pipeline without network
+access; its pseudo-random answers make the quality numbers meaningless.
+
+## Photo expense suggestion: API, rules, and learner
+
+Design: [`docs/technical-design/03-photo-expense-suggestion.md`](../../docs/technical-design/03-photo-expense-suggestion.md).
+
+- `POST /expense-inferences` (multipart: `image` JPEG, `clientRequestId`, `timezone`, `locale`,
+  optional `placeKey`; optional `X-Billet-Deadline-Ms` header). The server builds the choice set
+  (8 system image types, the account categories, up to 20 enabled personal choices with the same
+  `placeKey` first), maps database ids to short refs, and calls one provider within
+  `min(deadline, EXPENSE_DECISION_TIMEOUT_MS)`; below 1 s it skips the provider (`deadline`). The
+  call is aborted when the client disconnects. Output outside the choice set is
+  `invalid_output`. Provider failures always return `200` with `status: unavailable` and a
+  `reason`; `suggestionsEnabled=false` or `EXPENSE_DECISION_PROVIDER=disabled` return
+  `status: disabled`. `413` (over `EXPENSE_DECISION_MAX_IMAGE_BYTES`), `415` (not a JPEG by magic
+  bytes), and `400` (fields) reject the input. Results are stored per
+  `(user, clientRequestId)` and replayed on repeat; the image itself is never stored.
+  `imageType.id` is the image type key; `category.id` and `personalChoice.id` are bigint ids.
+- `GET /suggestion-config` returns the client snapshot (image types, enabled personal choices and
+  learned/user rules, default rules, thresholds, `decisionImage`, `features`) with an `ETag`;
+  `If-None-Match` returns `304`.
+- `/decision-choices` and `/expense-rules` list system items (read-only, `404` on change) and the
+  account items; `PATCH` requires the current `version` (`409` when stale). Editing a `learned`
+  item turns it into a `user` item; deleting one blocks relearning its key for 90 days. Caps: 100
+  personal choices and 500 rules; the least used `learned` item is evicted first.
+- `PATCH /profile/settings` accepts `suggestionsEnabled` (default `true`), `ruleLearningEnabled`
+  (default `true`), and `suggestionLocationEnabled` (default `false`; without it a `placeKey` is
+  ignored).
+- Expense create/update accept `inferenceId` and `personalChoiceId` (must belong to the account),
+  `imageType`, `placeKey` (7-character geohash), `merchantKey` (re-normalized with the shared
+  rules in `utils/keys.ts`), and `fieldProvenance` (field → `{ source, ruleId?, choiceId?,
+  confidence?, outcome }`). `fieldSources` is derived from `fieldProvenance`, and `source` becomes
+  `recognition` when `inferenceId` is present.
+- After an expense is created, updated, or deleted, `ExpenseService` calls `LearnerService`
+  (best effort; failures are logged without amounts or labels). The pure core in
+  `utils/learning.ts` reads up to 10 expenses within 180 days per learning key and currency,
+  weights them with a 60-day half-life, creates a `learned` personal choice for
+  `imageType+placeKey` / `imageType+merchantKey` at 3 expenses, and creates or updates a rule when
+  one amount holds at least 60% of the weight over at least 3 expenses (lowering or disabling the
+  learned rule otherwise). It never changes `user` items.
+- Choice sets are cached per user in process: categories are revalidated on every request with a
+  cheap catalog fingerprint, personal choices are invalidated on change, and a 60-second TTL bounds
+  staleness across instances.
+- A daily job removes inferences older than 90 days. Deleting an account cascades to its choices,
+  rules, and inferences. Each inference logs one `expense_inference` JSON line (provider, model,
+  status, reason, latency, image size, tokens), and per-provider request/token totals are logged
+  as `expense_inference_usage` when each minute and day window closes.
+
+The database-backed e2e suite (`test/expense-suggestions.e2e-spec.ts`) is skipped unless
+`E2E_DATABASE=true`. Run it against a disposable, migrated PostgreSQL, for example:
+
+```sh
+docker run -d --rm --name billet-e2e-pg -e POSTGRES_USER=billet -e POSTGRES_PASSWORD=billet \
+  -e POSTGRES_DB=billet -p 6719:5432 postgres:16-alpine
+E2E_DATABASE=true DATABASE_PORT=6719 DATABASE_PASSWORD=billet OPENAPI_PATH=docs \
+  pnpm --filter @billet/server test:e2e
+docker stop billet-e2e-pg
+```
 
 ## Adding a feature
 

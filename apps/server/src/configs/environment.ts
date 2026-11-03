@@ -1,6 +1,13 @@
 const NODE_ENVIRONMENTS = ['development', 'test', 'production'] as const
+export const DECISION_PROVIDER_IDS = [
+  'disabled',
+  'fake',
+  'google-ai-studio',
+  'openai-compatible',
+] as const
+export type DecisionProviderId = (typeof DECISION_PROVIDER_IDS)[number]
+
 const REGISTRATION_VERIFICATION_POLICIES = ['none', 'email', 'phone', 'one_of', 'both'] as const
-const RECOGNITION_PROVIDERS = ['disabled', 'google-ai-studio'] as const
 
 export function validateEnvironment(environment: Record<string, unknown>): Record<string, unknown> {
   const errors: string[] = []
@@ -21,14 +28,12 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
     'one_of',
   )
   const mediaMaxFileSizeBytes = getNumber(environment, 'MEDIA_MAX_FILE_SIZE_BYTES', 15_000_000)
-  const recognitionProvider = getString(environment, 'EXPENSE_RECOGNITION_PROVIDER', 'disabled')
-  const recognitionTimeoutMs = getNumber(environment, 'EXPENSE_RECOGNITION_TIMEOUT_MS', 30_000)
-  const recognitionLimits = [
-    ['EXPENSE_RECOGNITION_REQUESTS_PER_MINUTE', 10],
-    ['EXPENSE_RECOGNITION_TOKENS_PER_MINUTE', 250_000],
-    ['EXPENSE_RECOGNITION_REQUESTS_PER_DAY', 250],
-    ['EXPENSE_RECOGNITION_ESTIMATED_TOKENS_PER_REQUEST', 4_096],
-  ] as const
+  const decisionTimeoutMs = getNumber(environment, 'EXPENSE_DECISION_TIMEOUT_MS', 5_000)
+  const decisionMaxImageBytes = getNumber(
+    environment,
+    'EXPENSE_DECISION_MAX_IMAGE_BYTES',
+    1_048_576,
+  )
 
   if (!NODE_ENVIRONMENTS.includes(nodeEnv as (typeof NODE_ENVIRONMENTS)[number])) {
     errors.push(`NODE_ENV must be one of: ${NODE_ENVIRONMENTS.join(', ')}`)
@@ -64,28 +69,28 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
     errors.push('MEDIA_MAX_FILE_SIZE_BYTES must be a positive integer')
   }
   if (
-    !RECOGNITION_PROVIDERS.includes(recognitionProvider as (typeof RECOGNITION_PROVIDERS)[number])
-  ) {
-    errors.push(`EXPENSE_RECOGNITION_PROVIDER must be one of: ${RECOGNITION_PROVIDERS.join(', ')}`)
-  }
-  for (const [key, fallback] of recognitionLimits) {
-    const value = getNumber(environment, key, fallback)
-    if (!Number.isSafeInteger(value) || value < 1) errors.push(`${key} must be a positive integer`)
-  }
-  if (
-    !Number.isInteger(recognitionTimeoutMs) ||
-    recognitionTimeoutMs < 1_000 ||
-    recognitionTimeoutMs > 120_000
-  ) {
-    errors.push('EXPENSE_RECOGNITION_TIMEOUT_MS must be an integer between 1000 and 120000')
-  }
-  if (
     !webSocketPath.startsWith('/') ||
     webSocketPath.includes('?') ||
     webSocketPath.includes('#')
   ) {
     errors.push('REALTIME_WEBSOCKET_PATH must be an absolute path without query or fragment')
   }
+
+  if (
+    !Number.isInteger(decisionTimeoutMs) ||
+    decisionTimeoutMs < 500 ||
+    decisionTimeoutMs > 30_000
+  ) {
+    errors.push('EXPENSE_DECISION_TIMEOUT_MS must be an integer between 500 and 30000')
+  }
+  if (
+    !Number.isInteger(decisionMaxImageBytes) ||
+    decisionMaxImageBytes < 1_024 ||
+    decisionMaxImageBytes > 10_485_760
+  ) {
+    errors.push('EXPENSE_DECISION_MAX_IMAGE_BYTES must be an integer between 1024 and 10485760')
+  }
+  validateDecisionProvider(environment, nodeEnv, errors)
 
   validateBoolean(environment, 'OPENAPI_ENABLED', errors)
   validateBoolean(environment, 'DATABASE_SSL_ENABLED', errors)
@@ -115,12 +120,6 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
     errors,
   )
 
-  if (recognitionProvider === 'google-ai-studio' && !hasConfiguredApiKey(environment)) {
-    errors.push(
-      'EXPENSE_RECOGNITION_GOOGLE_API_KEYS is required when EXPENSE_RECOGNITION_PROVIDER=google-ai-studio',
-    )
-  }
-
   validateRequiredWhenEnabled(environment, 'FCM_ENABLED', ['FCM_SERVICE_ACCOUNT_FILE'], errors)
 
   if (errors.length > 0) {
@@ -130,9 +129,53 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
   return environment
 }
 
-function hasConfiguredApiKey(environment: Record<string, unknown>): boolean {
-  const keys = environment.EXPENSE_RECOGNITION_GOOGLE_API_KEYS
-  return typeof keys === 'string' && keys.split(',').some((value) => value.trim().length > 0)
+function validateDecisionProvider(
+  environment: Record<string, unknown>,
+  nodeEnv: string,
+  errors: string[],
+): void {
+  const provider = getString(environment, 'EXPENSE_DECISION_PROVIDER', 'disabled')
+  if (!DECISION_PROVIDER_IDS.includes(provider as DecisionProviderId)) {
+    errors.push(`EXPENSE_DECISION_PROVIDER must be one of: ${DECISION_PROVIDER_IDS.join(', ')}`)
+    return
+  }
+  const requireKeys = (keys: string[]) => {
+    for (const key of keys) {
+      if (typeof environment[key] !== 'string' || environment[key].trim() === '') {
+        errors.push(`${key} is required when EXPENSE_DECISION_PROVIDER=${provider}`)
+      }
+    }
+  }
+  if (provider === 'fake' && nodeEnv === 'production') {
+    errors.push('EXPENSE_DECISION_PROVIDER=fake is not allowed when NODE_ENV=production')
+  }
+  if (provider === 'google-ai-studio') {
+    requireKeys(['EXPENSE_DECISION_MODEL', 'EXPENSE_DECISION_GOOGLE_API_KEYS'])
+    const keys = environment.EXPENSE_DECISION_GOOGLE_API_KEYS
+    if (
+      typeof keys === 'string' &&
+      keys.trim() !== '' &&
+      keys.split(',').every((key) => key.trim() === '')
+    ) {
+      errors.push('EXPENSE_DECISION_GOOGLE_API_KEYS must contain at least one key')
+    }
+  }
+  if (provider === 'openai-compatible') {
+    requireKeys(['EXPENSE_DECISION_MODEL', 'EXPENSE_DECISION_BASE_URL', 'EXPENSE_DECISION_API_KEY'])
+    const baseUrl = environment.EXPENSE_DECISION_BASE_URL
+    if (typeof baseUrl === 'string' && baseUrl.trim() !== '' && !isHttpUrl(baseUrl.trim())) {
+      errors.push('EXPENSE_DECISION_BASE_URL must be an http or https URL')
+    }
+  }
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
 }
 
 function validateRequiredWhenEnabled(

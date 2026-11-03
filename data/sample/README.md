@@ -22,7 +22,8 @@ when creating it. `DATABASE_URL` overrides the local PostgreSQL connection.
 When `psql` is unavailable and `DATABASE_URL` is unset, the loader uses `psql`
 inside the local Compose PostgreSQL container.
 
-Reloading replaces the target user's expenses, recognition jobs, and media.
+Reloading replaces the target user's expenses and media and clears its photo
+suggestion history (inferences, personal choices, and rules).
 The dataset contains 22 expenses across September and October 2026, linked to ten
 reusable sample photographs. In each month, day 13 has four photos, day 14 has an
 expense without a photo, day 15 has three photos, day 16 has two, and day 17 has

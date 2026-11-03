@@ -165,6 +165,9 @@ export class UsersService {
       appearance: settings.appearance,
       reminderEnabled: settings.reminderEnabled,
       reminderTime: settings.reminderTime?.slice(0, 5) ?? null,
+      suggestionsEnabled: settings.suggestionsEnabled,
+      ruleLearningEnabled: settings.ruleLearningEnabled,
+      suggestionLocationEnabled: settings.suggestionLocationEnabled,
     }
   }
 

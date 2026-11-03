@@ -15,6 +15,31 @@ describe('validateEnvironment', () => {
   )
 
   it.each([
+    [{ EXPENSE_DECISION_PROVIDER: 'disabled' }],
+    [{ EXPENSE_DECISION_PROVIDER: 'fake' }],
+    [{ EXPENSE_DECISION_PROVIDER: 'fake', NODE_ENV: 'test' }],
+    [
+      {
+        EXPENSE_DECISION_PROVIDER: 'google-ai-studio',
+        EXPENSE_DECISION_MODEL: 'gemini-x',
+        EXPENSE_DECISION_GOOGLE_API_KEYS: 'a,b',
+        EXPENSE_DECISION_TIMEOUT_MS: '8000',
+        EXPENSE_DECISION_MAX_IMAGE_BYTES: '524288',
+      },
+    ],
+    [
+      {
+        EXPENSE_DECISION_PROVIDER: 'openai-compatible',
+        EXPENSE_DECISION_MODEL: 'm',
+        EXPENSE_DECISION_BASE_URL: 'https://gateway.example.test/v1',
+        EXPENSE_DECISION_API_KEY: 'k',
+      },
+    ],
+  ])('accepts decision provider configuration %p', (environment) => {
+    expect(validateEnvironment(environment)).toEqual(environment)
+  })
+
+  it.each([
     [{ NODE_ENV: 'staging' }, 'NODE_ENV'],
     [{ SERVER_PORT: '0' }, 'SERVER_PORT'],
     [{ SERVER_PORT: 'not-a-number' }, 'SERVER_PORT'],
@@ -32,41 +57,56 @@ describe('validateEnvironment', () => {
     [{ MEDIA_MAX_FILE_SIZE_BYTES: '0' }, 'MEDIA_MAX_FILE_SIZE_BYTES'],
     [{ MEDIA_MAX_FILE_SIZE_BYTES: 'not-a-number' }, 'MEDIA_MAX_FILE_SIZE_BYTES'],
     [{ REALTIME_WEBSOCKET_PATH: 'ws' }, 'REALTIME_WEBSOCKET_PATH'],
+    [{ EXPENSE_DECISION_PROVIDER: 'span-02' }, 'EXPENSE_DECISION_PROVIDER'],
+    [{ EXPENSE_DECISION_TIMEOUT_MS: '100' }, 'EXPENSE_DECISION_TIMEOUT_MS'],
+    [{ EXPENSE_DECISION_TIMEOUT_MS: '60000' }, 'EXPENSE_DECISION_TIMEOUT_MS'],
+    [{ EXPENSE_DECISION_TIMEOUT_MS: 'slow' }, 'EXPENSE_DECISION_TIMEOUT_MS'],
+    [{ EXPENSE_DECISION_MAX_IMAGE_BYTES: '0' }, 'EXPENSE_DECISION_MAX_IMAGE_BYTES'],
+    [{ EXPENSE_DECISION_PROVIDER: 'google-ai-studio' }, 'EXPENSE_DECISION_MODEL'],
+    [
+      { EXPENSE_DECISION_PROVIDER: 'google-ai-studio', EXPENSE_DECISION_MODEL: 'gemini-x' },
+      'EXPENSE_DECISION_GOOGLE_API_KEYS',
+    ],
+    [
+      {
+        EXPENSE_DECISION_PROVIDER: 'google-ai-studio',
+        EXPENSE_DECISION_MODEL: 'gemini-x',
+        EXPENSE_DECISION_GOOGLE_API_KEYS: ' , ',
+      },
+      'at least one key',
+    ],
+    [{ EXPENSE_DECISION_PROVIDER: 'openai-compatible' }, 'EXPENSE_DECISION_BASE_URL'],
+    [
+      {
+        EXPENSE_DECISION_PROVIDER: 'openai-compatible',
+        EXPENSE_DECISION_MODEL: 'm',
+        EXPENSE_DECISION_BASE_URL: 'https://gateway.example.test/v1',
+      },
+      'EXPENSE_DECISION_API_KEY',
+    ],
+    [
+      {
+        EXPENSE_DECISION_PROVIDER: 'openai-compatible',
+        EXPENSE_DECISION_MODEL: 'm',
+        EXPENSE_DECISION_BASE_URL: 'ftp://gateway.example.test',
+        EXPENSE_DECISION_API_KEY: 'k',
+      },
+      'http or https URL',
+    ],
+    [
+      {
+        NODE_ENV: 'production',
+        AUTH_JWT_SECRET: 'a-real-secret',
+        EXPENSE_DECISION_PROVIDER: 'fake',
+      },
+      'not allowed when NODE_ENV=production',
+    ],
     [{ FCM_ENABLED: 'true' }, 'FCM_SERVICE_ACCOUNT_FILE'],
-    [{ EXPENSE_RECOGNITION_PROVIDER: 'other' }, 'EXPENSE_RECOGNITION_PROVIDER'],
-    [{ EXPENSE_RECOGNITION_PROVIDER: 'google-ai-studio' }, 'EXPENSE_RECOGNITION_GOOGLE_API_KEYS'],
-    [{ EXPENSE_RECOGNITION_TIMEOUT_MS: '500' }, 'EXPENSE_RECOGNITION_TIMEOUT_MS'],
-    [{ EXPENSE_RECOGNITION_REQUESTS_PER_MINUTE: '0' }, 'EXPENSE_RECOGNITION_REQUESTS_PER_MINUTE'],
-    [{ EXPENSE_RECOGNITION_TOKENS_PER_MINUTE: 'many' }, 'EXPENSE_RECOGNITION_TOKENS_PER_MINUTE'],
     [
       { AUTH_REGISTRATION_VERIFICATION_POLICY: 'sometimes' },
       'AUTH_REGISTRATION_VERIFICATION_POLICY',
     ],
   ])('rejects invalid configuration %p', (environment, expectedMessage) => {
     expect(() => validateEnvironment(environment)).toThrow(expectedMessage)
-  })
-
-  it.each(['', '   ', ', ,'])('rejects an empty recognition key pool %p', (keys) => {
-    expect(() =>
-      validateEnvironment({
-        EXPENSE_RECOGNITION_PROVIDER: 'google-ai-studio',
-        EXPENSE_RECOGNITION_GOOGLE_API_KEYS: keys,
-      }),
-    ).toThrow('EXPENSE_RECOGNITION_GOOGLE_API_KEYS is required')
-  })
-
-  it.each(['test-key', 'key-1, key-2'])('accepts recognition keys %p', (keys) => {
-    const environment = {
-      EXPENSE_RECOGNITION_PROVIDER: 'google-ai-studio',
-      EXPENSE_RECOGNITION_GOOGLE_API_KEYS: keys,
-      EXPENSE_RECOGNITION_GOOGLE_MODEL: 'gemini-2.5-flash',
-      EXPENSE_RECOGNITION_TIMEOUT_MS: '15000',
-      EXPENSE_RECOGNITION_REQUESTS_PER_MINUTE: '10',
-      EXPENSE_RECOGNITION_TOKENS_PER_MINUTE: '250000',
-      EXPENSE_RECOGNITION_REQUESTS_PER_DAY: '250',
-      EXPENSE_RECOGNITION_ESTIMATED_TOKENS_PER_REQUEST: '4096',
-    }
-
-    expect(validateEnvironment(environment)).toEqual(environment)
   })
 })

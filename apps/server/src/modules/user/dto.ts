@@ -58,6 +58,18 @@ export class UpdateSettingsDto {
   @ValidateIf((_object, value) => value !== undefined && value !== null)
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
   reminderTime?: string | null
+  @ApiPropertyOptional({ description: 'Enable photo expense suggestions.' })
+  @IsOptional()
+  @IsBoolean()
+  suggestionsEnabled?: boolean
+  @ApiPropertyOptional({ description: 'Learn personal choices and rules from saved expenses.' })
+  @IsOptional()
+  @IsBoolean()
+  ruleLearningEnabled?: boolean
+  @ApiPropertyOptional({ description: 'Use a coarse device location (placeKey) for suggestions.' })
+  @IsOptional()
+  @IsBoolean()
+  suggestionLocationEnabled?: boolean
 }
 
 export class UpdateProfileDto {
@@ -83,6 +95,9 @@ export class UserSettingsResponseDto {
   @ApiProperty({ enum: Appearance }) appearance: Appearance
   @ApiProperty() reminderEnabled: boolean
   @ApiProperty({ nullable: true }) reminderTime: string | null
+  @ApiProperty({ default: true }) suggestionsEnabled: boolean
+  @ApiProperty({ default: true }) ruleLearningEnabled: boolean
+  @ApiProperty({ default: false }) suggestionLocationEnabled: boolean
 }
 export class ProfileResponseDto extends UserResponseDto {
   @ApiProperty({ type: UserSettingsResponseDto }) settings: UserSettingsResponseDto

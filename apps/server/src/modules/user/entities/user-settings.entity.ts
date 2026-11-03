@@ -34,4 +34,16 @@ export class UserSettingsEntity extends BaseEntity {
 
   @Column({ type: 'time', nullable: true })
   reminderTime: string | null
+
+  /** Photo expense suggestions; when off, clients send no images and the server calls no provider. */
+  @Column({ default: true })
+  suggestionsEnabled: boolean
+
+  /** Learn personal choices and rules from saved expenses. */
+  @Column({ default: true })
+  ruleLearningEnabled: boolean
+
+  /** Use a coarse device location (placeKey) for suggestions. Opt-in. */
+  @Column({ default: false })
+  suggestionLocationEnabled: boolean
 }

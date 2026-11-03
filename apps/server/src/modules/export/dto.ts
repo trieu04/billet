@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import { IsDateString, IsInt, IsOptional, Matches, Max, Min } from 'class-validator'
-import { JobStatus } from '../recognition/entities/recognition-job.entity'
+import { JobStatus } from './constants'
 export class CreateExportDto {
   @ApiPropertyOptional() @IsOptional() @IsDateString() from?: string
   @ApiPropertyOptional() @IsOptional() @IsDateString() to?: string
