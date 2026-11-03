@@ -1,0 +1,31 @@
+{
+  "$comment": "Shared by the Expo client and the server. Any implementation of placeKey and merchantKey must reproduce these exactly.",
+  "geohash": [
+    { "latitude": 57.64911, "longitude": 10.40744, "precision": 11, "expected": "u4pruydqqvj" },
+    { "latitude": 57.64911, "longitude": 10.40744, "precision": 7, "expected": "u4pruyd" },
+    { "latitude": 42.6, "longitude": -5.6, "precision": 5, "expected": "ezs42" },
+    { "latitude": 42.6, "longitude": -5.6, "precision": 12, "expected": "ezs42e44yx96" },
+    { "latitude": 21.0285, "longitude": 105.8542, "precision": 7, "expected": "w7er8u0" },
+    { "latitude": 10.7769, "longitude": 106.7009, "precision": 7, "expected": "w3gvk1c" },
+    { "latitude": 16.0544, "longitude": 108.2022, "precision": 7, "expected": "w6ugq4w" },
+    { "latitude": -33.8688, "longitude": 151.2093, "precision": 7, "expected": "r3gx2f7" },
+    { "latitude": 48.8584, "longitude": 2.2945, "precision": 7, "expected": "u09tunq" },
+    { "latitude": 0, "longitude": 0, "precision": 7, "expected": "s000000" },
+    { "latitude": -90, "longitude": -180, "precision": 7, "expected": "0000000" },
+    { "latitude": 90, "longitude": 180, "precision": 7, "expected": "zzzzzzz" }
+  ],
+  "merchantKey": [
+    { "input": "Highlands Coffee", "expected": "highlands coffee" },
+    { "input": "  HIGHLANDS   COFFEE  ", "expected": "highlands coffee" },
+    { "input": "Quán Cơm Tấm Sài Gòn", "expected": "quan com tam sai gon" },
+    { "input": "BÃI GIỬ XE TÒA A", "expected": "bai giu xe toa a" },
+    { "input": "Đặng Văn Đức - Chi nhánh 2", "expected": "dang van duc chi nhanh 2" },
+    { "input": "đồ ăn Đà Nẵng", "expected": "do an da nang" },
+    { "input": "Circle K (Q.1)", "expected": "circle k q 1" },
+    { "input": "Bách hóa XANH,  #1234", "expected": "bach hoa xanh 1234" },
+    { "input": "Phở 24 & Bún Bò", "expected": "pho 24 bun bo" },
+    { "input": "Tiệm bánh Mì", "expected": "tiem banh mi" },
+    { "input": "***", "expected": "" },
+    { "input": "", "expected": "" }
+  ]
+}
