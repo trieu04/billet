@@ -31,7 +31,6 @@ struct Expense: Codable, Identifiable, Hashable, Sendable {
     let occurredTimezone: String
     let categoryId: String
     let mediaAssetId: String?
-    let recognitionJobId: String?
     let caption: String?
     let merchant: String?
     let location: String?

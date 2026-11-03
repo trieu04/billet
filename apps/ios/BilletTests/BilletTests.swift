@@ -87,7 +87,6 @@ final class BilletTests: XCTestCase {
             occurredTimezone: "Asia/Ho_Chi_Minh",
             categoryId: "1",
             mediaAssetId: nil,
-            recognitionJobId: nil,
             caption: nil,
             merchant: nil,
             location: nil,

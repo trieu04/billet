@@ -41,7 +41,6 @@ data class Expense(
     val occurredTimezone: String,
     val categoryId: String,
     val mediaAssetId: String? = null,
-    val recognitionJobId: String? = null,
     val caption: String? = null,
     val merchant: String? = null,
     val location: String? = null,
