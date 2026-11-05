@@ -48,7 +48,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Billet uses your approximate location only while you use the app, to recognize places where you often spend.",
+          "locationWhenInUsePermission": "Billet uses your location only while you use the app, to fill in where you spent and to recognize places where you often spend.",
           "locationAlwaysAndWhenInUsePermission": false,
           "locationAlwaysPermission": false,
           "locationFullAccuracyPermission": false,

@@ -1,8 +1,7 @@
-import { Feather } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Animated, Platform, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useState } from 'react'
+import { ActivityIndicator, Alert, Animated, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { AuthenticatedImage } from '@/features/api/authenticated-image'
@@ -11,15 +10,17 @@ import { formatMoney } from '@/features/api/format'
 import type { Category, Expense } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
-import { CategoryPicker } from '@/features/category/components/category-picker'
 import { useCaptureFlow } from '@/features/expense/capture-flow'
+import { ExpenseDetailRow } from '@/features/expense/components/expense-detail-row'
+import {
+  ExpenseEditForm,
+  type ExpenseEditField,
+} from '@/features/expense/components/expense-edit-form'
 import { PhotoExpenseOverlay } from '@/features/expense/components/photo-expense-overlay'
 import { Receipt } from '@/features/expense/components/receipt'
-import { AnimatedPressable, useEntranceAnimation, useReducedMotion } from '@/features/ui/motion'
+import { AnimatedPressable, useEntranceAnimation } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
-
-const useNativeDriver = Platform.OS !== 'web'
 
 export function ExpenseDetailScreen() {
   const params = useLocalSearchParams<{ id?: string }>()
@@ -37,76 +38,10 @@ export function ExpenseDetailScreen() {
     [params.id],
   )
   const { data, error, loading, setData } = useApiResource(load)
-  const [expanded, setExpanded] = useState(false)
-  const [categoryId, setCategoryId] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const reducedMotion = useReducedMotion()
-  const [sheetProgress] = useState(() => new Animated.Value(0))
+  const [editing, setEditing] = useState<{ field?: ExpenseEditField } | null>(null)
   const screenEntrance = useEntranceAnimation(20, 8)
   const expense = data?.expense
   const categories = data?.categories ?? []
-  const displayedCategoryId = categoryId ?? expense?.categoryId ?? ''
-  const displayedCategory = categories.find((item) => item.id === displayedCategoryId)
-
-  useEffect(() => {
-    if (!expanded) return
-    if (reducedMotion) {
-      sheetProgress.setValue(1)
-      return
-    }
-    Animated.spring(sheetProgress, {
-      toValue: 1,
-      damping: 24,
-      stiffness: 250,
-      mass: 0.8,
-      useNativeDriver,
-    }).start()
-  }, [expanded, reducedMotion, sheetProgress])
-
-  const openSheet = () => {
-    sheetProgress.setValue(reducedMotion ? 1 : 0)
-    setExpanded(true)
-  }
-
-  const closeSheet = () => {
-    if (reducedMotion) {
-      setExpanded(false)
-      return
-    }
-    Animated.timing(sheetProgress, {
-      toValue: 0,
-      duration: 210,
-      useNativeDriver,
-    }).start(({ finished }) => {
-      if (finished) setExpanded(false)
-    })
-  }
-
-  const save = async () => {
-    if (!token || !expense) return
-    setSaving(true)
-    try {
-      const updated = await apiRequest<Expense>(`/expenses/${expense.id}`, {
-        method: 'PATCH',
-        token,
-        body: {
-          version: expense.version,
-          caption: expense.caption,
-          categoryId: displayedCategoryId,
-        },
-      })
-      setData({ expense: updated, categories })
-      setCategoryId(null)
-      closeSheet()
-    } catch (reason) {
-      Alert.alert(
-        'Không thể lưu thay đổi',
-        reason instanceof Error ? reason.message : 'Hãy thử lại.',
-      )
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const remove = () =>
     Alert.alert('Xóa khoản chi?', 'Khoản chi này sẽ bị xóa khỏi Journal.', [
@@ -151,12 +86,27 @@ export function ExpenseDetailScreen() {
     )
   }
 
-  const occurredAt = new Date(expense.occurredAt)
-  const timestamp = formatTimestamp(occurredAt)
-  const photoTime = occurredAt.toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  if (editing && token) {
+    return (
+      <ExpenseEditForm
+        categories={categories}
+        expense={expense}
+        initialField={editing.field}
+        onCancel={() => setEditing(null)}
+        onCategoryCreated={(category) =>
+          setData({ expense, categories: [...categories, category] })
+        }
+        onSaved={(updated) => {
+          setData({ expense: updated, categories })
+          setEditing(null)
+        }}
+        photo={<PhotoMedia expense={expense} token={token} />}
+        token={token}
+      />
+    )
+  }
+
+  const edit = (field?: ExpenseEditField) => setEditing({ field })
 
   return (
     <SafeAreaView edges={[]} style={styles.safe}>
@@ -178,10 +128,8 @@ export function ExpenseDetailScreen() {
           </AnimatedPressable>
           <Text style={styles.navTitle}>Chi tiết</Text>
           <AnimatedPressable
-            accessibilityHint="Nhấn giữ để xóa khoản chi"
             accessibilityRole="button"
-            onLongPress={remove}
-            onPress={openSheet}
+            onPress={() => edit()}
             pressedScale={0.94}
             style={styles.editButton}
           >
@@ -189,140 +137,54 @@ export function ExpenseDetailScreen() {
           </AnimatedPressable>
         </View>
 
-        <Photo expense={expense} time={photoTime} token={token} />
-
-        <View style={styles.metadataCard}>
-          <View style={styles.categoryChip}>
-            <View
-              style={[
-                styles.categoryDot,
-                { backgroundColor: displayedCategory?.color || '#FFFFFF' },
-              ]}
+        <View style={styles.photoFrame}>
+          <View style={styles.photo}>
+            <PhotoMedia expense={expense} token={token} />
+            <PhotoExpenseOverlay
+              amount={formatMoney(expense.amountMinor, expense.currency)}
+              category={categories.find((item) => item.id === expense.categoryId)}
+              title={expense.caption || expense.merchant || 'Khoản chi'}
             />
-            <Text numberOfLines={1} style={styles.categoryText}>
-              {displayedCategory?.name || 'Khác'}
-            </Text>
           </View>
-          <Text numberOfLines={1} style={styles.merchant}>
-            {expense.merchant || 'Chưa thêm cửa hàng'}
-          </Text>
         </View>
 
-        <AnimatedPressable accessibilityRole="button" onPress={openSheet} style={styles.moreButton}>
-          <Text style={styles.moreText}>Thông tin khác</Text>
-          <Feather color="#8C847B" name="chevron-right" size={18} />
+        <View style={styles.details}>
+          <ExpenseDetailRow icon="clock" label="Thời gian" onPress={() => edit('time')}>
+            <Text numberOfLines={1} style={styles.value}>
+              {formatTimestamp(new Date(expense.occurredAt))}
+            </Text>
+          </ExpenseDetailRow>
+          <ExpenseDetailRow icon="shopping-bag" label="Cửa hàng" onPress={() => edit('merchant')}>
+            <Text numberOfLines={1} style={expense.merchant ? styles.value : styles.placeholder}>
+              {expense.merchant || 'Thêm cửa hàng'}
+            </Text>
+          </ExpenseDetailRow>
+          <ExpenseDetailRow icon="map-pin" label="Địa điểm" onPress={() => edit('location')}>
+            <Text numberOfLines={2} style={expense.location ? styles.value : styles.placeholder}>
+              {expense.location || 'Thêm địa điểm'}
+            </Text>
+          </ExpenseDetailRow>
+        </View>
+
+        <AnimatedPressable accessibilityRole="button" onPress={remove} style={styles.deleteButton}>
+          <Text style={styles.deleteText}>Xóa khoản chi</Text>
         </AnimatedPressable>
       </Animated.ScrollView>
-
-      {expanded ? (
-        <View accessibilityViewIsModal style={StyleSheet.absoluteFill}>
-          <AnimatedPressable
-            accessibilityLabel="Đóng thông tin khác"
-            onPress={closeSheet}
-            style={[
-              styles.scrim,
-              {
-                opacity: sheetProgress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 0.22],
-                }),
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.sheet,
-              {
-                transform: [
-                  {
-                    translateY: sheetProgress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [584, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <View style={styles.grabber} />
-            <Text style={styles.sheetTitle}>Thông tin khác</Text>
-            <AnimatedPressable onPress={closeSheet} style={styles.doneButton}>
-              <Text style={styles.doneText}>Xong</Text>
-            </AnimatedPressable>
-
-            <View style={styles.sheetCategories}>
-              <Text style={styles.sheetCategoriesLabel}>Danh mục</Text>
-              <CategoryPicker
-                categories={categories}
-                disabled={saving}
-                onCreated={(category) => {
-                  setData((current) =>
-                    current
-                      ? { ...current, categories: [...current.categories, category] }
-                      : current,
-                  )
-                  setCategoryId(category.id)
-                }}
-                onSelect={setCategoryId}
-                selectedId={displayedCategoryId}
-              />
-            </View>
-            <SheetField
-              label="Cửa hàng"
-              onPress={() => Alert.alert('Cửa hàng', expense.merchant || 'Chưa thêm cửa hàng')}
-              top={194}
-              value={expense.merchant || 'Thêm cửa hàng'}
-            />
-            <SheetField label="Ngày & giờ" onPress={() => undefined} top={274} value={timestamp} />
-            <SheetField
-              label="Địa điểm"
-              onPress={() => Alert.alert('Địa điểm', expense.location || 'Chưa thêm địa điểm')}
-              placeholder={!expense.location}
-              top={354}
-              value={expense.location || 'Thêm địa điểm'}
-            />
-
-            <AnimatedPressable
-              accessibilityRole="button"
-              disabled={saving}
-              onPress={() => void save()}
-              pressedScale={0.98}
-              style={styles.saveButton}
-            >
-              {saving ? (
-                <ActivityIndicator color={colors.text} />
-              ) : (
-                <Text style={styles.saveText}>Lưu</Text>
-              )}
-            </AnimatedPressable>
-          </Animated.View>
-        </View>
-      ) : null}
     </SafeAreaView>
   )
 }
 
-function Photo({ expense, time, token }: { expense: Expense; time: string; token: string | null }) {
+function PhotoMedia({ expense, token }: { expense: Expense; token: string | null }) {
+  if (!expense.mediaAssetId || !token) return <PhotoFallback />
   return (
-    <View style={styles.photo}>
-      {expense.mediaAssetId && token ? (
-        <AuthenticatedImage
-          accessibilityLabel="Ảnh khoản chi"
-          fallback={<PhotoFallback />}
-          mediaAssetId={expense.mediaAssetId}
-          resizeMode="cover"
-          style={styles.photoImage}
-          token={token}
-        />
-      ) : (
-        <PhotoFallback />
-      )}
-      <PhotoExpenseOverlay
-        amount={formatMoney(expense.amountMinor, expense.currency)}
-        meta={time}
-        title={expense.caption || expense.merchant || 'Khoản chi'}
-      />
-    </View>
+    <AuthenticatedImage
+      accessibilityLabel="Ảnh khoản chi"
+      fallback={<PhotoFallback />}
+      mediaAssetId={expense.mediaAssetId}
+      resizeMode="cover"
+      style={styles.photoImage}
+      token={token}
+    />
   )
 }
 
@@ -338,38 +200,6 @@ function PhotoFallback() {
   )
 }
 
-function SheetField({
-  children,
-  label,
-  onPress,
-  placeholder = false,
-  top,
-  value,
-}: {
-  children?: React.ReactNode
-  label: string
-  onPress: () => void
-  placeholder?: boolean
-  top: number
-  value?: string
-}) {
-  return (
-    <AnimatedPressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={[styles.sheetField, { top }]}
-    >
-      <Text style={styles.sheetFieldLabel}>{label}</Text>
-      {children ?? (
-        <Text numberOfLines={1} style={[styles.sheetFieldValue, placeholder && styles.placeholder]}>
-          {value}
-        </Text>
-      )}
-      <Feather color="#8C847B" name="chevron-right" size={18} style={styles.sheetChevron} />
-    </AnimatedPressable>
-  )
-}
-
 function formatTimestamp(value: Date) {
   const today = new Date()
   const sameDay = value.toDateString() === today.toDateString()
@@ -381,18 +211,6 @@ function formatTimestamp(value: Date) {
 const styles = StyleSheet.create({
   back: { alignItems: 'center', flexDirection: 'row', height: 40, width: 112 },
   backGlyph: { color: colors.link, fontFamily: fonts.regular, fontSize: 22, marginRight: 5 },
-  categoryChip: {
-    alignItems: 'center',
-    backgroundColor: colors.sage,
-    borderRadius: 17,
-    flexDirection: 'row',
-    gap: 6,
-    height: 34,
-    maxWidth: 128,
-    paddingHorizontal: 12,
-  },
-  categoryDot: { borderRadius: 4, height: 8, width: 8 },
-  categoryText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 13 },
   center: {
     alignItems: 'center',
     backgroundColor: colors.canvas,
@@ -400,8 +218,23 @@ const styles = StyleSheet.create({
     gap: 12,
     justifyContent: 'center',
   },
-  doneButton: { position: 'absolute', right: 20, top: 31 },
-  doneText: { color: colors.link, fontFamily: fonts.semibold, fontSize: 16 },
+  deleteButton: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    minHeight: 44,
+    paddingHorizontal: 16,
+  },
+  deleteText: { color: '#B3433C', fontFamily: fonts.medium, fontSize: 15 },
+  details: {
+    backgroundColor: colors.card,
+    borderCurve: 'continuous',
+    borderRadius: 20,
+    marginHorizontal: 16,
+    marginTop: 12,
+    overflow: 'hidden',
+  },
   editButton: { alignItems: 'flex-end', height: 40, justifyContent: 'center', width: 80 },
   editText: { fontFamily: fonts.semibold },
   error: {
@@ -413,45 +246,7 @@ const styles = StyleSheet.create({
   },
   errorButton: { paddingHorizontal: 20, paddingVertical: 12 },
   errorButtonText: { color: colors.link, fontFamily: fonts.semibold, fontSize: 15 },
-  grabber: {
-    alignSelf: 'center',
-    backgroundColor: '#DDD5C9',
-    borderRadius: 3,
-    height: 5,
-    marginTop: 9,
-    width: 36,
-  },
   loadingText: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 14 },
-  merchant: {
-    color: colors.textSecondary,
-    flex: 1,
-    fontFamily: fonts.medium,
-    fontSize: 14,
-    marginLeft: 16,
-    textAlign: 'right',
-  },
-  metadataCard: {
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: 18,
-    flexDirection: 'row',
-    height: 54,
-    marginHorizontal: 16,
-    marginTop: 12,
-    paddingHorizontal: 14,
-  },
-  moreButton: {
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    flexDirection: 'row',
-    height: 56,
-    justifyContent: 'space-between',
-    marginHorizontal: 16,
-    marginTop: 16,
-    paddingHorizontal: 18,
-  },
-  moreText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 16 },
   nav: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -463,89 +258,17 @@ const styles = StyleSheet.create({
   navAction: { color: colors.link, fontFamily: fonts.regular, fontSize: 17 },
   navTitle: { color: colors.text, fontFamily: fonts.semibold, fontSize: 17 },
   photo: {
-    borderRadius: 30,
     aspectRatio: expensePhotoAspectRatio,
-    marginHorizontal: 16,
-    marginTop: 16,
+    borderCurve: 'continuous',
+    borderRadius: 24,
     overflow: 'hidden',
-    position: 'relative',
+    width: '100%',
   },
+  photoFrame: { marginTop: 16, paddingHorizontal: 16 },
   photoImage: { alignItems: 'center', height: '100%', justifyContent: 'center', width: '100%' },
-  placeholder: { color: '#A89E93' },
+  placeholder: { color: colors.textSecondary, fontFamily: fonts.medium, fontSize: 16 },
   safe: { backgroundColor: colors.canvas, flex: 1 },
-  saveButton: {
-    alignItems: 'center',
-    backgroundColor: colors.peach,
-    borderRadius: 27,
-    bottom: 48,
-    height: 54,
-    justifyContent: 'center',
-    left: 16,
-    position: 'absolute',
-    right: 16,
-  },
-  saveText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 17 },
   screen: { flex: 1 },
   screenContent: { paddingBottom: 32 },
-  scrim: {
-    backgroundColor: colors.camera,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  sheet: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    bottom: 0,
-    height: 584,
-    left: 0,
-    overflow: 'hidden',
-    position: 'absolute',
-    right: 0,
-  },
-  sheetCategories: { gap: 8, left: 0, position: 'absolute', right: 0, top: 72 },
-  sheetCategoriesLabel: {
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    fontSize: 12,
-    marginHorizontal: 16,
-  },
-  sheetChevron: { position: 'absolute', right: 14, top: 27 },
-  sheetField: {
-    borderColor: '#F0EADF',
-    borderRadius: 16,
-    borderWidth: 1,
-    height: 72,
-    left: 16,
-    position: 'absolute',
-    right: 16,
-  },
-  sheetFieldLabel: {
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    fontSize: 12,
-    left: 15,
-    position: 'absolute',
-    top: 10,
-  },
-  sheetFieldValue: {
-    color: colors.text,
-    fontFamily: fonts.regular,
-    fontSize: 16,
-    left: 15,
-    position: 'absolute',
-    right: 42,
-    top: 32,
-  },
-  sheetTitle: {
-    color: colors.text,
-    fontFamily: fonts.bold,
-    fontSize: 20,
-    left: 20,
-    position: 'absolute',
-    top: 34,
-  },
+  value: { color: colors.text, fontFamily: fonts.medium, fontSize: 16 },
 })

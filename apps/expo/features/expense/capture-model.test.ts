@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { Category, Expense, ExpenseList } from '../api/types'
 import {
+  amountDigits,
+  amountSuggestionValues,
+  formatDateTimeInput,
+  parseDateTimeInput,
   findCategoryIdByCode,
+  formatAmountInput,
+  formatPlaceLabel,
   mergeSavedCaptures,
+  nextScrollOffset,
   parseCaptureAmount,
   parseSuggestionGeneration,
   reconcileSavedCaptures,
@@ -112,5 +119,98 @@ describe('parseSuggestionGeneration', () => {
     expect(parseSuggestionGeneration(undefined)).toBeUndefined()
     expect(parseSuggestionGeneration('0')).toBeUndefined()
     expect(parseSuggestionGeneration('abc')).toBeUndefined()
+  })
+})
+
+describe('amount input', () => {
+  it('groups digits like the journal', () => {
+    expect(formatAmountInput('')).toBe('')
+    expect(formatAmountInput('500')).toBe('500')
+    expect(formatAmountInput('1000')).toBe('1.000')
+    expect(formatAmountInput('1250000')).toBe('1.250.000')
+  })
+
+  it('reads the digits back from the grouped text', () => {
+    expect(amountDigits('1.250.000')).toBe('1250000')
+    expect(parseCaptureAmount(amountDigits(formatAmountInput('1250000')))).toBe('1250000')
+  })
+
+  it('caps the amount at 15 digits', () => {
+    expect(amountDigits('1234567890123456789')).toBe('123456789012345')
+  })
+})
+
+describe('formatPlaceLabel', () => {
+  it('joins the useful parts of an address', () => {
+    expect(
+      formatPlaceLabel({
+        name: '135 Nam Kỳ Khởi Nghĩa',
+        street: 'Nam Kỳ Khởi Nghĩa',
+        district: 'Quận 1',
+        city: 'Hồ Chí Minh',
+      }),
+    ).toBe('135 Nam Kỳ Khởi Nghĩa, Quận 1, Hồ Chí Minh')
+  })
+
+  it('falls back to wider areas and returns nothing for an empty address', () => {
+    expect(formatPlaceLabel({ subregion: 'Thủ Đức', region: 'Hồ Chí Minh' })).toBe(
+      'Thủ Đức, Hồ Chí Minh',
+    )
+    expect(formatPlaceLabel({ name: ' ', city: null })).toBe('')
+  })
+})
+
+describe('nextScrollOffset', () => {
+  it('leaves a visible block alone', () => {
+    expect(nextScrollOffset({ top: 100, bottom: 200, viewport: 300, offset: 0 })).toBeNull()
+  })
+
+  it('scrolls a block covered by the keyboard up just enough', () => {
+    expect(nextScrollOffset({ top: 500, bottom: 560, viewport: 300, offset: 0 })).toBe(268)
+  })
+
+  it('scrolls back to a block above the viewport', () => {
+    expect(nextScrollOffset({ top: 40, bottom: 100, viewport: 300, offset: 200 })).toBe(32)
+    expect(nextScrollOffset({ top: 2, bottom: 100, viewport: 300, offset: 200 })).toBe(0)
+  })
+
+  it('shows the end of a block taller than the viewport', () => {
+    expect(nextScrollOffset({ top: 10, bottom: 400, viewport: 300, offset: 0 })).toBe(108)
+  })
+})
+
+describe('amountSuggestionValues', () => {
+  it('reads short typed digits as thousands', () => {
+    expect(amountSuggestionValues('12', [])).toEqual(['12000', '120000'])
+    expect(amountSuggestionValues('125', [])).toEqual(['125000', '1250000'])
+  })
+
+  it('puts receipt amounts first, even before anything is typed', () => {
+    expect(amountSuggestionValues('', ['58000'])).toEqual(['58000'])
+    expect(amountSuggestionValues('12', ['58000'])).toEqual(['58000', '12000', '120000'])
+  })
+
+  it('does not repeat a value or offer what is already typed', () => {
+    expect(amountSuggestionValues('12', ['12000', '12'])).toEqual(['12000', '120000'])
+    expect(amountSuggestionValues('58000', ['58000'])).toEqual([])
+  })
+
+  it('stops guessing for long or zero-led input', () => {
+    expect(amountSuggestionValues('1250', [])).toEqual([])
+    expect(amountSuggestionValues('012', [])).toEqual([])
+    expect(amountSuggestionValues('1.250', [])).toEqual([])
+  })
+})
+
+describe('date time input', () => {
+  it('round-trips a local time', () => {
+    const iso = new Date(2026, 10, 5, 19, 7).toISOString()
+    expect(formatDateTimeInput(iso)).toBe('05/11/2026 19:07')
+    expect(parseDateTimeInput('05/11/2026 19:07')).toBe(iso)
+  })
+
+  it('rejects text that is not a real date', () => {
+    expect(parseDateTimeInput('31/02/2026 10:00')).toBeNull()
+    expect(parseDateTimeInput('5/11/2026')).toBeNull()
   })
 })

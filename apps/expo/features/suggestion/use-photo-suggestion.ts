@@ -26,6 +26,8 @@ export type PhotoSuggestion = {
   sourceLabel(field: SuggestionField): string | null
   /** Best tap-to-apply suggestion for a field. */
   suggestion(field: SuggestionField): PhotoSuggestionChip | null
+  /** All tap-to-apply suggestions for a field, best first. */
+  suggestions(field: SuggestionField): PhotoSuggestionChip[]
   edit(field: SuggestionField, value: string | null | undefined): void
   apply(field: SuggestionField, candidateId: string): void
   /** Extra expense fields to send on create; `null` without a photo session. */
@@ -94,6 +96,15 @@ export function usePhotoSuggestion(
     [choices, draft],
   )
 
+  const suggestions = useCallback(
+    (field: SuggestionField): PhotoSuggestionChip[] =>
+      (draft.suggestions[field] ?? []).map((item) => ({
+        ...item,
+        label: describeSource(item, choices),
+      })),
+    [choices, draft],
+  )
+
   return useMemo(
     () => ({
       active,
@@ -104,12 +115,13 @@ export function usePhotoSuggestion(
       begin: session.start,
       sourceLabel,
       suggestion,
+      suggestions,
       edit: session.edit,
       apply: session.apply,
       savePayload: () => (active ? session.savePayload() : null),
       finish: session.finish,
       cancel: session.cancel,
     }),
-    [active, draft, session, sourceLabel, state.branches, state.status, suggestion],
+    [active, draft, session, sourceLabel, state.branches, state.status, suggestion, suggestions],
   )
 }

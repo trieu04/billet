@@ -3,6 +3,7 @@ import { Image, StyleSheet, Text, type StyleProp, View, type ViewStyle } from 'r
 import Svg, { Line } from 'react-native-svg'
 
 import { AuthenticatedImage } from '@/features/api/authenticated-image'
+import type { Category } from '@/features/api/types'
 import { Receipt } from './receipt'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
@@ -12,6 +13,8 @@ import { PhotoExpenseOverlay } from './photo-expense-overlay'
 type Props = {
   amount?: string
   backdropColor?: string
+  /** Shown on the photo with `overlay`. */
+  category?: Category
   compact?: boolean
   mediaAssetId?: string
   mediaToken?: string
@@ -26,6 +29,7 @@ type Props = {
 export function ExpenseTicket({
   amount = '58.000₫',
   backdropColor,
+  category,
   compact = false,
   mediaAssetId,
   mediaToken,
@@ -68,7 +72,7 @@ export function ExpenseTicket({
         <PhotoFallback compact={compact} gradient={gradient} />
       )}
       {overlay ? (
-        <PhotoExpenseOverlay amount={amount} meta={meta} title={store} />
+        <PhotoExpenseOverlay amount={amount} category={category} title={store} />
       ) : (
         <View style={[styles.ticket, compact && styles.compactTicket]}>
           <View pointerEvents="none" style={styles.perforation}>

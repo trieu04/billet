@@ -17,13 +17,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { apiRequest } from '@/features/api/client'
 import { formatMoney, startOfLocalDay } from '@/features/api/format'
-import type { ExpenseList } from '@/features/api/types'
+import type { Category, ExpenseList } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
 import { ExpenseTicket, mergeSavedCaptures, useCaptureFlow } from '@/features/expense'
 import { AccountButton } from '@/features/profile/components/account-button'
 import { AnimatedPressable, useEntranceAnimation } from '@/features/ui/motion'
-import { expensePhotoAspectRatio } from '@/features/ui/media'
+import { expenseCardWidth, expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
 import { formatJournalDay, groupExpensesByDay } from './journal-model'
 import { loadAllJournalPages } from './journal-pages'
@@ -49,6 +49,11 @@ export function JournalScreen() {
     })
   }, [])
   const { data, error, loading, refresh } = useApiResource(load)
+  const loadCategories = useCallback(
+    (token: string) => apiRequest<Category[]>('/categories', { token }),
+    [],
+  )
+  const { data: categories, refresh: refreshCategories } = useApiResource(loadCategories)
   useEffect(() => {
     if (data) reconcileCaptures(data.data)
   }, [data, reconcileCaptures])
@@ -59,12 +64,13 @@ export function JournalScreen() {
         return
       }
       void refresh()
-    }, [refresh]),
+      void refreshCategories()
+    }, [refresh, refreshCategories]),
   )
   const journal = mergeSavedCaptures(data, captures, startOfLocalDay())
   const expenses = journal.data
   const dayGroups = groupExpensesByDay(expenses)
-  const cardWidth = Math.min(220, windowWidth - 112)
+  const cardWidth = expenseCardWidth(windowWidth)
   const measureInsertion = useCallback(() => {
     if (!focused || !insertingId) return
     scrollRef.current?.scrollTo({ y: 0, animated: false })
@@ -142,15 +148,12 @@ export function JournalScreen() {
                     <View style={expense.id === insertingId ? { opacity: 0 } : undefined}>
                       <ExpenseTicket
                         amount={formatMoney(expense.amountMinor, expense.currency)}
+                        category={categories?.find((item) => item.id === expense.categoryId)}
                         mediaAssetId={expense.mediaAssetId ?? undefined}
                         mediaToken={token ?? undefined}
                         imageUri={
                           captures.find((capture) => capture.expense.id === expense.id)?.imageUri
                         }
-                        meta={new Intl.DateTimeFormat('vi-VN', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        }).format(new Date(expense.occurredAt))}
                         onPress={() =>
                           router.push({ pathname: '/expense', params: { id: expense.id } })
                         }
