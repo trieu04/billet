@@ -59,18 +59,16 @@ export function QuickCaptureScreen() {
     }, []),
   )
 
-  const openReview = (imageUri: string, categoryCode?: string) => {
+  const openReview = (imageUri: string, sample?: { categoryCode?: string }) => {
     const capturedAt = new Date().toISOString()
-    // The review screen shows the photo first, then starts OCR and Decision.
-    const suggestionGeneration = prepareSuggestion({ imageUri, capturedAt })
+    // The review screen shows the photo first, then starts OCR and Decision. Sample photos carry
+    // their own category and are not real receipts, so they skip both.
+    const suggestionGeneration = sample
+      ? undefined
+      : String(prepareSuggestion({ imageUri, capturedAt }))
     router.push({
       pathname: '/review',
-      params: {
-        imageUri,
-        capturedAt,
-        categoryCode,
-        suggestionGeneration: String(suggestionGeneration),
-      },
+      params: { imageUri, capturedAt, categoryCode: sample?.categoryCode, suggestionGeneration },
     })
   }
 
@@ -93,7 +91,7 @@ export function QuickCaptureScreen() {
 
   const selectPlaceholder = (photo: PlaceholderPhoto) => {
     const uri = placeholderPhotoUri(photo)
-    if (uri && !captureLock.current) openReview(uri, photo.categoryCode)
+    if (uri && !captureLock.current) openReview(uri, { categoryCode: photo.categoryCode })
   }
 
   const pickImage = async () => {
