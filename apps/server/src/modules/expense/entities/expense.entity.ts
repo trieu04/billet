@@ -21,6 +21,7 @@ export enum ExpenseSource {
 @Index('idx_expenses_learning_choice', ['userId', 'personalChoiceId', 'occurredAt'])
 @Index('idx_expenses_learning_place', ['userId', 'imageType', 'placeKey', 'occurredAt'])
 @Index('idx_expenses_learning_merchant', ['userId', 'merchantKey', 'occurredAt'])
+@Index('idx_expenses_inference', ['inferenceId'])
 export class ExpenseEntity extends SoftDeleteBaseEntity {
   @Column({ type: 'bigint' }) userId: string
   @Column({ type: 'bigint' }) categoryId: string

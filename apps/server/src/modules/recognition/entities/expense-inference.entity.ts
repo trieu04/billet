@@ -36,5 +36,7 @@ export class ExpenseInferenceEntity extends BaseEntity {
   @Column({ type: 'jsonb', nullable: true }) selections: InferenceSelections | null
   @Column({ type: 'integer' }) imageBytes: number
   @Column({ type: 'integer' }) latencyMs: number
+  /** Whether the provider was called; `latencyMs` can be 0 even when it was. */
+  @Column({ default: false }) providerCalled: boolean
   @Column({ type: 'jsonb', nullable: true }) usage: InferenceUsage | null
 }

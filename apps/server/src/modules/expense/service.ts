@@ -12,6 +12,7 @@ import {
 import { LearnerService, type ExpenseLearningSignal } from '../recognition/services/learner.service'
 import type { CreateExpenseDto, ExpenseQueryDto, ExpenseResponseDto, UpdateExpenseDto } from './dto'
 import { ExpenseEntity, ExpenseSource } from './entities/expense.entity'
+import type { FieldOutcomeCount, InferenceOutcomeFilter, LinkedExpenseFields } from './interface'
 import { buildCalendarHistory, type CalendarAggregateRow } from './calendar'
 
 interface Cursor {
@@ -115,6 +116,66 @@ export class ExpenseService {
           : null,
       totals,
     }
+  }
+
+  /**
+   * Saved outcome counts per suggestion field for active expenses linked to inferences in the
+   * filter. Reads only provenance keys and outcomes, never expense content.
+   */
+  async fieldOutcomes(filter: InferenceOutcomeFilter): Promise<FieldOutcomeCount[]> {
+    const params: unknown[] = [filter.from, filter.to]
+    let extra = ''
+    if (filter.provider) {
+      params.push(filter.provider)
+      extra += ` AND i.provider = $${params.length}`
+    }
+    if (filter.model) {
+      params.push(filter.model)
+      extra += ` AND i.model = $${params.length}`
+    }
+    const rows = await this.dataSource.query<
+      { field: string; outcome: string | null; count: number }[]
+    >(
+      `SELECT entry.key AS field, entry.value->>'outcome' AS outcome, count(*)::int AS count
+       FROM expenses e
+       JOIN expense_inferences i ON i.id = e.inference_id
+       CROSS JOIN LATERAL jsonb_each(e.field_provenance) AS entry
+       WHERE e.deleted_at IS NULL AND i.created_at >= $1 AND i.created_at < $2${extra}
+       GROUP BY 1, 2
+       ORDER BY 1, 2`,
+      params,
+    )
+    return rows.flatMap((row) => (row.outcome ? [{ ...row, outcome: row.outcome }] : []))
+  }
+
+  /** Provenance of the active expenses linked to one inference, without ids or rule references. */
+  async fieldsForInference(inferenceId: string): Promise<LinkedExpenseFields[]> {
+    const rows = await this.expenses.find({
+      select: { id: true, mediaAssetId: true, fieldProvenance: true },
+      where: { inferenceId },
+      order: { id: 'ASC' },
+    })
+    return rows.map((row) => ({
+      hasPhoto: row.mediaAssetId !== null,
+      fields: Object.entries(row.fieldProvenance).map(([field, entry]) => ({
+        field,
+        source: entry.source,
+        outcome: entry.outcome,
+        confidence: entry.confidence ?? null,
+      })),
+    }))
+  }
+
+  /** Opens the saved photo of a linked expense, by its position in {@link fieldsForInference}. */
+  async openInferencePhoto(inferenceId: string, index: number) {
+    const rows = await this.expenses.find({
+      select: { id: true, userId: true, mediaAssetId: true },
+      where: { inferenceId },
+      order: { id: 'ASC' },
+    })
+    const row = rows[index]
+    if (!row?.mediaAssetId) throw new NotFoundException('Photo not found')
+    return this.media.open(row.userId, row.mediaAssetId)
   }
 
   async update(userId: string, id: string, input: UpdateExpenseDto): Promise<ExpenseResponseDto> {

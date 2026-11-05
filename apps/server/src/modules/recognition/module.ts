@@ -14,20 +14,23 @@ import { ExpenseInferenceEntity } from './entities/expense-inference.entity'
 import { ExpenseRuleEntity } from './entities/expense-rule.entity'
 import { DECISION_PROVIDER } from './interface'
 import { createDecisionProvider } from './providers/factory'
+import { CatalogAdminService } from './services/catalog-admin.service'
 import { ChoiceSetService } from './services/choice-set.service'
 import { DecisionChoiceService } from './services/decision-choice.service'
 import { DecisionMetricsService } from './services/decision-metrics.service'
 import { ExpenseSuggestionLinkService } from './services/expense-link.service'
 import { ExpenseRuleService } from './services/expense-rule.service'
+import { InferenceAdminService } from './services/inference-admin.service'
 import { InferenceCleanupService } from './services/inference-cleanup.service'
 import { InferenceService } from './services/inference.service'
 import { LearnerService } from './services/learner.service'
+import { PlaygroundService } from './services/playground.service'
 import { SuggestionConfigService } from './services/suggestion-config.service'
 
 /**
  * Photo expense suggestions: decision API, suggestion snapshot, personal choices and rules, and
  * the learner. Public boundary for other modules: `LearnerService` and
- * `ExpenseSuggestionLinkService` (used by `expense`).
+ * `ExpenseSuggestionLinkService` (used by `expense`), and the admin services (used by `admin`).
  */
 @Module({
   imports: [
@@ -64,7 +67,17 @@ import { SuggestionConfigService } from './services/suggestion-config.service'
     ExpenseRuleService,
     LearnerService,
     ExpenseSuggestionLinkService,
+    InferenceAdminService,
+    CatalogAdminService,
+    PlaygroundService,
   ],
-  exports: [DECISION_PROVIDER, LearnerService, ExpenseSuggestionLinkService],
+  exports: [
+    DECISION_PROVIDER,
+    LearnerService,
+    ExpenseSuggestionLinkService,
+    InferenceAdminService,
+    CatalogAdminService,
+    PlaygroundService,
+  ],
 })
 export class RecognitionModule {}

@@ -46,6 +46,17 @@ interface Outcome {
   called: boolean
 }
 
+/** Result of {@link InferenceService.tryDecision}. */
+export interface DecisionTrial {
+  provider: string
+  model: string
+  status: InferenceStatus
+  reason: string | null
+  selections: InferenceSelections | null
+  usage: InferenceUsage | null
+  latencyMs: number
+}
+
 @Injectable()
 export class InferenceService {
   constructor(
@@ -61,6 +72,10 @@ export class InferenceService {
   /** Largest image accepted: the smaller of the configured and the provider limit. */
   get maxImageBytes(): number {
     return Math.min(this.config.maxImageBytes, this.provider.limits.maxImageBytes)
+  }
+
+  get maxChoices(): number {
+    return this.provider.limits.maxChoices
   }
 
   get providerEnabled(): boolean {
@@ -89,6 +104,50 @@ export class InferenceService {
         usage: outcome.usage,
       })
     return toResponse(stored.entity)
+  }
+
+  /**
+   * Call the provider with a prepared choice set and validate its output, without storing anything.
+   * Used by the admin playground; provider failures come back as `unavailable`, never as a throw.
+   */
+  async tryDecision(
+    choiceSet: ChoiceSet,
+    image: Uint8Array,
+    locale: string,
+    signal: AbortSignal,
+  ): Promise<DecisionTrial> {
+    const base = { provider: this.provider.id, model: this.provider.model }
+    if (!this.providerEnabled)
+      return {
+        ...base,
+        status: 'disabled',
+        reason: 'provider_disabled',
+        selections: null,
+        usage: null,
+        latencyMs: 0,
+      }
+    const startedAt = Date.now()
+    const result = await this.callProvider(
+      { image: { bytes: image, mimeType: 'image/jpeg' }, choices: choiceSet.choices, locale },
+      this.config.timeoutMs,
+      signal,
+    )
+    const latencyMs = Date.now() - startedAt
+    const outcome: Pick<Outcome, 'status' | 'reason' | 'selections' | 'usage'> =
+      'reason' in result
+        ? { status: 'unavailable', reason: result.reason, selections: null, usage: null }
+        : this.validate(choiceSet, result.output)
+    this.metrics.record({
+      ...base,
+      origin: 'playground',
+      status: outcome.status,
+      reason: outcome.reason,
+      called: true,
+      latencyMs,
+      imageBytes: image.byteLength,
+      usage: outcome.usage,
+    })
+    return { ...base, ...outcome, latencyMs }
   }
 
   /** Remove inference records created before `cutoff`; returns the number removed. */
@@ -211,6 +270,7 @@ export class InferenceService {
         selections: outcome.selections,
         imageBytes: request.image.byteLength,
         latencyMs: outcome.latencyMs,
+        providerCalled: outcome.called,
         usage: outcome.usage,
       })
       .orIgnore()

@@ -4,6 +4,8 @@ import type { InferenceStatus, InferenceUsage } from '../entities/expense-infere
 export interface InferenceMetric {
   provider: string
   model: string
+  /** Set for requests that are not user inferences; their cost still counts in the totals. */
+  origin?: 'playground'
   status: InferenceStatus
   reason: string | null
   /** Whether the provider was called (counts as a provider request). */
@@ -48,6 +50,7 @@ export class DecisionMetricsService {
         event: 'expense_inference',
         provider: metric.provider,
         model: metric.model,
+        origin: metric.origin,
         status: metric.status,
         reason: metric.reason,
         latencyMs: metric.latencyMs,

@@ -47,6 +47,7 @@ describe('AuthService', () => {
     registrationVerificationPolicy: 'none',
     googleClientIds: [],
     appleClientIds: [],
+    adminUserIds: [],
   })
 
   beforeEach(() => jest.clearAllMocks())
@@ -93,6 +94,7 @@ describe('AuthService', () => {
         registrationVerificationPolicy: 'email',
         googleClientIds: [],
         appleClientIds: [],
+        adminUserIds: [],
       },
     )
     await expect(
@@ -119,6 +121,7 @@ describe('AuthService', () => {
           registrationVerificationPolicy: policy,
           googleClientIds: [],
           appleClientIds: [],
+          adminUserIds: [],
         },
       )
       await expect(
@@ -185,6 +188,7 @@ describe('AuthService', () => {
         registrationVerificationPolicy: 'none',
         googleClientIds: [],
         appleClientIds: [],
+        adminUserIds: [],
       },
       undefined,
       undefined,

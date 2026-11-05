@@ -31,6 +31,7 @@ export const authConfig = registerAs('auth', () => ({
   registrationVerificationPolicy: process.env.AUTH_REGISTRATION_VERIFICATION_POLICY ?? 'one_of',
   googleClientIds: parseList(process.env.AUTH_GOOGLE_OIDC_CLIENT_IDS, ''),
   appleClientIds: parseList(process.env.AUTH_APPLE_OIDC_CLIENT_IDS, ''),
+  adminUserIds: parseList(process.env.ADMIN_USER_IDS, ''),
 }))
 
 export type AuthConfig = ConfigType<typeof authConfig>

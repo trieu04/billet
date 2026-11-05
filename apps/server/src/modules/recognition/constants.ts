@@ -66,6 +66,9 @@ export const MAX_RULES_PER_USER = 500
 /** Deleting a choice or rule blocks the learner from recreating its key for this long. */
 export const SUPPRESSION_DAYS = 90
 
+/** Decision calls one admin can make from the playground per minute on one instance. */
+export const PLAYGROUND_MAX_PER_MINUTE = 20
+
 /** Inference records are removed after this many days. */
 export const INFERENCE_RETENTION_DAYS = 90
 

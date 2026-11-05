@@ -68,6 +68,10 @@ export class ChoiceSetService {
     return values
   }
 
+  invalidateImageTypes(): void {
+    this.imageTypes = null
+  }
+
   invalidate(userId: string): void {
     this.cache.delete(userId)
   }

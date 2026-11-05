@@ -15,6 +15,7 @@ import {
 } from './configs/app.config'
 import { validateEnvironment } from './configs/environment'
 import { DatabaseModule } from './database/database.module'
+import { AdminModule } from './modules/admin/module'
 import { AuthModule } from './modules/auth/module'
 import { EmailModule } from './modules/email/module'
 import { HealthModule } from './modules/health/module'
@@ -66,6 +67,7 @@ import { UsersModule } from './modules/user/module'
     ReminderModule,
     ExportModule,
     HealthModule,
+    AdminModule,
   ],
 })
 export class AppModule implements NestModule {

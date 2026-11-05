@@ -1,3 +1,5 @@
+import { isPositiveBigint } from '../shared/validators/bigint'
+
 const NODE_ENVIRONMENTS = ['development', 'test', 'production'] as const
 export const DECISION_PROVIDER_IDS = [
   'disabled',
@@ -91,6 +93,10 @@ export function validateEnvironment(environment: Record<string, unknown>): Recor
     errors.push('EXPENSE_DECISION_MAX_IMAGE_BYTES must be an integer between 1024 and 10485760')
   }
   validateDecisionProvider(environment, nodeEnv, errors)
+  const adminUserIds = getString(environment, 'ADMIN_USER_IDS', '').trim()
+  if (adminUserIds && adminUserIds.split(',').some((item) => !isPositiveBigint(item.trim()))) {
+    errors.push('ADMIN_USER_IDS must be a comma-separated list of positive user ids')
+  }
 
   validateBoolean(environment, 'OPENAPI_ENABLED', errors)
   validateBoolean(environment, 'DATABASE_SSL_ENABLED', errors)

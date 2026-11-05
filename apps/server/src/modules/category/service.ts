@@ -16,6 +16,13 @@ interface CategoryRow {
   usage_count: string
 }
 
+export interface SystemCategory {
+  id: string
+  code: string
+  name: string
+  active: boolean
+}
+
 @Injectable()
 export class CategoryService {
   constructor(
@@ -103,6 +110,15 @@ export class CategoryService {
        WHERE active = true AND (user_id IS NULL OR user_id = $1)
        ORDER BY sort_order ASC, id ASC`,
       [userId],
+    )
+  }
+
+  /** System categories (no owner), including archived ones so old references still resolve. */
+  async listSystemCategories(): Promise<SystemCategory[]> {
+    return this.dataSource.query<SystemCategory[]>(
+      `SELECT id::text, code, name, active FROM categories
+       WHERE user_id IS NULL
+       ORDER BY sort_order ASC, id ASC`,
     )
   }
 

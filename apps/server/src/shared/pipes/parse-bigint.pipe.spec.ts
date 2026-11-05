@@ -12,3 +12,15 @@ describe('ParseBigIntPipe', () => {
     expect(() => pipe.transform(value)).toThrow(BadRequestException)
   })
 })
+
+describe('ParseBigIntPipe range', () => {
+  const pipe = new ParseBigIntPipe()
+
+  it('accepts the largest PostgreSQL bigint', () => {
+    expect(pipe.transform('9223372036854775807')).toBe('9223372036854775807')
+  })
+
+  it('rejects a value above it', () => {
+    expect(() => pipe.transform('9223372036854775808')).toThrow(BadRequestException)
+  })
+})

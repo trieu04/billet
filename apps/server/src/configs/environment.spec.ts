@@ -5,6 +5,10 @@ describe('validateEnvironment', () => {
     expect(validateEnvironment({})).toEqual({})
   })
 
+  it.each(['', '101', '101, 102', '9223372036854775807'])('accepts ADMIN_USER_IDS %j', (ids) => {
+    expect(validateEnvironment({ ADMIN_USER_IDS: ids })).toEqual({ ADMIN_USER_IDS: ids })
+  })
+
   it.each(['none', 'email', 'phone', 'one_of', 'both'])(
     'accepts registration verification policy %s',
     (policy) => {
@@ -45,6 +49,12 @@ describe('validateEnvironment', () => {
     [{ SERVER_PORT: 'not-a-number' }, 'SERVER_PORT'],
     [{ API_PATH_PREFIX: '///' }, 'API_PATH_PREFIX'],
     [{ OPENAPI_ENABLED: 'yes' }, 'OPENAPI_ENABLED'],
+    [{ ADMIN_USER_IDS: 'devt' }, 'ADMIN_USER_IDS'],
+    [{ ADMIN_USER_IDS: '101,0' }, 'ADMIN_USER_IDS'],
+    [{ ADMIN_USER_IDS: '9223372036854775808' }, 'ADMIN_USER_IDS'],
+    [{ ADMIN_USER_IDS: '101,' }, 'ADMIN_USER_IDS'],
+    [{ ADMIN_USER_IDS: '101,,102' }, 'ADMIN_USER_IDS'],
+    [{ ADMIN_USER_IDS: ',' }, 'ADMIN_USER_IDS'],
     [{ DATABASE_PORT: '70000' }, 'DATABASE_PORT'],
     [{ DATABASE_SSL_ENABLED: 'yes' }, 'DATABASE_SSL_ENABLED'],
     [{ NODE_ENV: 'production' }, 'AUTH_JWT_SECRET'],

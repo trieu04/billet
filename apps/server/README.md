@@ -219,6 +219,24 @@ E2E_DATABASE=true DATABASE_PORT=6719 DATABASE_PASSWORD=billet OPENAPI_PATH=docs 
 docker stop billet-e2e-pg
 ```
 
+## Admin API
+
+`/api/v1/admin/**` serves the recognition admin page at `/admin` on the web app: statistics, a
+de-identified inference log, the system image type and default rule catalog, and a provider
+playground. Access is limited to the accounts in `ADMIN_USER_IDS`, a comma-separated list of user
+ids (not usernames, which anyone can register). Empty means nobody; a change needs a restart. Find
+an id with `SELECT id FROM users WHERE username = '...'`.
+
+JSON responses never contain email, username, amounts, merchants, place keys, captions, media ids,
+or personal choice and user category names; `userId` is the only reference to a person. The one
+exception to that de-identification is
+`GET /api/v1/admin/recognition/inferences/:id/linked-expenses/:index/photo`, which returns the photo
+saved with a linked expense. That photo can show a merchant, an amount, or a face, and views are not
+logged. Images sent to the provider are never stored, so an inference without a saved expense photo
+has nothing to show. The playground
+uses the real provider and its real cost, stores nothing, and allows 20 requests per minute per
+admin on each instance.
+
 ## Adding a feature
 
 1. Create a singular `src/modules/<feature>` folder with a `module.ts` entry point.
