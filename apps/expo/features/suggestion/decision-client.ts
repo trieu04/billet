@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system'
 import { Platform } from 'react-native'
 
 import { apiRequest } from '@/features/api/client'
@@ -42,7 +43,7 @@ async function appendImage(form: FormData, uri: string) {
     form.append('image', new Blob([blob], { type: 'image/jpeg' }), 'photo.jpg')
     return
   }
-  // React Native streams file parts described by uri/name/type instead of Blob contents.
-  const part = { uri, name: 'photo.jpg', type: 'image/jpeg' }
-  form.append('image', part as unknown as Blob)
+  // Expo's fetch rejects React Native `{ uri, name, type }` parts; it reads Blob-like parts
+  // (anything with `bytes()`), and a `File` streams the temporary JPEG without a JS-side copy.
+  form.append('image', new File(uri))
 }
