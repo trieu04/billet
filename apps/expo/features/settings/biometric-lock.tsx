@@ -21,6 +21,7 @@ const BIOMETRIC_KEY = 'billet.biometric-lock'
 type BiometricContextValue = {
   available: boolean
   enabled: boolean
+  locked: boolean
   loading: boolean
   setEnabled(value: boolean): Promise<boolean>
 }
@@ -55,7 +56,7 @@ export function BiometricLockProvider({ children }: PropsWithChildren) {
         LocalAuthentication.hasHardwareAsync(),
         LocalAuthentication.isEnrolledAsync(),
         SecureStore.getItemAsync(BIOMETRIC_KEY),
-      ])
+      ]).catch(() => [false, false, null] as const)
       const isAvailable = hardware && enrolled
       const isEnabled = isAvailable && stored === 'enabled'
       setAvailable(isAvailable)
@@ -96,8 +97,8 @@ export function BiometricLockProvider({ children }: PropsWithChildren) {
   )
 
   const value = useMemo(
-    () => ({ available, enabled, loading, setEnabled }),
-    [available, enabled, loading, setEnabled],
+    () => ({ available, enabled, locked, loading, setEnabled }),
+    [available, enabled, loading, locked, setEnabled],
   )
 
   return (

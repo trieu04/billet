@@ -13,6 +13,8 @@ import { AccessibilityInfo, Animated, Image, Platform, StyleSheet } from 'react-
 
 import { useReducedMotion } from '@/features/ui/motion'
 import type { Expense } from '@/features/api/types'
+import type { DraftState } from '@/features/share'
+import { SharedCaptureCoordinator } from './shared-capture'
 import {
   type PhotoBounds,
   reconcileSavedCaptures,
@@ -28,6 +30,11 @@ type CaptureFlow = {
   insertPhoto: (id: string, destination: PhotoBounds) => void
   reconcileCaptures: (expenses: Expense[]) => void
   removeCapture: (id: string) => void
+  reviewState: { active: boolean; draft: DraftState; sharedImageId?: string }
+  reportReviewState: (state: { active: boolean; draft: DraftState; sharedImageId?: string }) => void
+  replacementAllowed: boolean
+  allowReviewReplacement: () => void
+  finishReviewReplacement: () => void
 }
 
 const CaptureContext = createContext<CaptureFlow | null>(null)
@@ -38,6 +45,14 @@ export function CaptureFlowProvider({ children }: PropsWithChildren) {
   const moving = useRef(false)
   const [progress] = useState(() => new Animated.Value(0))
   const [destination, setDestination] = useState<PhotoBounds | null>(null)
+  const [reviewState, setReviewState] = useState<{
+    active: boolean
+    draft: DraftState
+    sharedImageId?: string
+  }>({ active: false, draft: 'idle' })
+  const [replacementAllowed, setReplacementAllowed] = useState(false)
+  const allowReviewReplacement = useCallback(() => setReplacementAllowed(true), [])
+  const finishReviewReplacement = useCallback(() => setReplacementAllowed(false), [])
   const reducedMotion = useReducedMotion()
 
   useEffect(() => {
@@ -105,13 +120,30 @@ export function CaptureFlowProvider({ children }: PropsWithChildren) {
       insertPhoto,
       reconcileCaptures,
       removeCapture,
+      reviewState,
+      reportReviewState: setReviewState,
+      replacementAllowed,
+      allowReviewReplacement,
+      finishReviewReplacement,
     }),
-    [captures, insertPhoto, reconcileCaptures, removeCapture, saveCapture, transition],
+    [
+      captures,
+      allowReviewReplacement,
+      finishReviewReplacement,
+      insertPhoto,
+      reconcileCaptures,
+      removeCapture,
+      replacementAllowed,
+      reviewState,
+      saveCapture,
+      transition,
+    ],
   )
   const source = transition?.source
   return (
     <CaptureContext.Provider value={value}>
       {children}
+      <SharedCaptureCoordinator />
       {transition?.imageUri && source ? (
         <Animated.View
           testID="capture-photo-transition"

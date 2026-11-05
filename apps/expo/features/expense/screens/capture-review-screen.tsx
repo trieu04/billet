@@ -27,6 +27,7 @@ import type { Category, Expense, MediaReservation } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
 import { CategoryPicker } from '@/features/category/components/category-picker'
+import { useShareInbox } from '@/features/share'
 import { type SuggestionField, usePhotoSuggestion } from '@/features/suggestion'
 import { useCaptureFlow } from '../capture-flow'
 import {
@@ -47,14 +48,19 @@ import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
 
 export function CaptureReviewScreen() {
-  const { imageUri, capturedAt, categoryCode, suggestionGeneration } = useLocalSearchParams<{
-    imageUri?: string
-    capturedAt?: string
-    categoryCode?: string
-    suggestionGeneration?: string
-  }>()
+  const { imageUri, capturedAt, categoryCode, suggestionGeneration, source, sharedImageId } =
+    useLocalSearchParams<{
+      imageUri?: string
+      capturedAt?: string
+      categoryCode?: string
+      suggestionGeneration?: string
+      source?: 'shared'
+      sharedImageId?: string
+    }>()
   const { token } = useSession()
-  const { saveCapture } = useCaptureFlow()
+  const { saveCapture, reportReviewState, replacementAllowed, finishReviewReplacement } =
+    useCaptureFlow()
+  const { completeSharedImage } = useShareInbox()
   const insets = useSafeAreaInsets()
   const loadCategories = useCallback(
     (accessToken: string) => apiRequest<Category[]>('/categories', { token: accessToken }),
@@ -94,6 +100,12 @@ export function CaptureReviewScreen() {
   const amount = draft.values.amountMinor ?? ''
   const merchant = draft.values.merchant ?? ''
   const occurredAt = draft.values.occurredAt ?? captureTime
+  const [timeEditor, setTimeEditor] = useState(() => ({
+    source: occurredAt,
+    value: formatDateTimeInput(occurredAt),
+  }))
+  const timeInput =
+    timeEditor.source === occurredAt ? timeEditor.value : formatDateTimeInput(occurredAt)
   // A suggested category only counts once it is one of the account's categories.
   const draftCategory =
     draft.values.categoryId && categories?.some((item) => item.id === draft.values.categoryId)
@@ -114,6 +126,21 @@ export function CaptureReviewScreen() {
   const categorySource = draftCategory ? suggestion.sourceLabel('categoryId') : null
   const setAmount = (value: string) => suggestion.edit('amountMinor', value)
   const selectCategory = (id: string) => suggestion.edit('categoryId', id)
+  const userDirty = Boolean(caption.trim() || draft.locked)
+
+  useEffect(() => {
+    reportReviewState({
+      active: true,
+      draft: saving ? 'saving' : userDirty ? 'dirty' : 'clean',
+      sharedImageId,
+    })
+  }, [reportReviewState, saving, sharedImageId, userDirty])
+
+  useEffect(() => () => reportReviewState({ active: false, draft: 'idle' }), [reportReviewState])
+
+  useEffect(() => {
+    finishReviewReplacement()
+  }, [finishReviewReplacement, sharedImageId])
 
   useEffect(() => {
     if (!editingField) return
@@ -137,9 +164,9 @@ export function CaptureReviewScreen() {
     ])
   }
 
-  usePreventRemove(!leaving && (dirty || saving), () => {
+  usePreventRemove(!replacementAllowed && !leaving && (dirty || saving), () => {
     if (!locked.current) {
-      setExitTo('camera')
+      setExitTo(source === 'shared' ? 'journal' : 'camera')
       confirmDiscard(() => setLeaving(true))
     }
   })
@@ -151,11 +178,15 @@ export function CaptureReviewScreen() {
   // Removal is retried only after the guard has rendered with leaving=true.
   const finishLeaving = useCallback(() => {
     if (!leaving) return
-    cancelSuggestion()
-    if (exitTo === 'camera') {
-      router.dismissTo('/capture')
-    } else router.dismissTo('/')
-  }, [cancelSuggestion, exitTo, leaving])
+    void (async () => {
+      cancelSuggestion()
+      if (source === 'shared' && sharedImageId) await completeSharedImage(sharedImageId)
+      if (exitTo === 'camera') {
+        if (source === 'shared') router.replace('/capture')
+        else router.dismissTo('/capture')
+      } else router.dismissTo('/')
+    })()
+  }, [cancelSuggestion, completeSharedImage, exitTo, leaving, sharedImageId, source])
 
   useEffect(finishLeaving, [finishLeaving])
 
@@ -166,11 +197,24 @@ export function CaptureReviewScreen() {
     else setLeaving(true)
   }
 
+  // Applies the typed time; an untouched field keeps the machine value and its provenance.
+  const commitTimeInput = (): string | null => {
+    if (timeInput === formatDateTimeInput(occurredAt)) return occurredAt
+    const parsed = parseDateTimeInput(timeInput)
+    if (parsed) suggestion.edit('occurredAt', parsed)
+    return parsed
+  }
+
   const save = async () => {
     if (!token || locked.current) return
     const amountMinor = parseCaptureAmount(amount)
     if (!amountMinor) {
       setError('Nhập số tiền lớn hơn 0, chỉ gồm các chữ số.')
+      return
+    }
+    const savedOccurredAt = commitTimeInput()
+    if (!savedOccurredAt) {
+      setError('Nhập thời gian theo dạng DD/MM/YYYY HH:mm.')
       return
     }
     Keyboard.dismiss()
@@ -188,7 +232,7 @@ export function CaptureReviewScreen() {
       caption: caption.trim(),
       merchant: merchant.trim(),
       selectedCategory,
-      occurredAt,
+      occurredAt: savedOccurredAt,
       imageUri,
     })
     if (attempt.current?.fingerprint !== fingerprint)
@@ -223,7 +267,7 @@ export function CaptureReviewScreen() {
         body: {
           amountMinor,
           currency: 'VND',
-          occurredAt,
+          occurredAt: savedOccurredAt,
           occurredTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Ho_Chi_Minh',
           categoryId: selectedCategory,
           mediaAssetId: uploadedMedia.current,
@@ -234,7 +278,7 @@ export function CaptureReviewScreen() {
         },
       })
       suggestion.finish()
-      const source = await new Promise<PhotoBounds | undefined>((resolve) => {
+      const photoBounds = await new Promise<PhotoBounds | undefined>((resolve) => {
         if (!photoRef.current || !imageUri) {
           resolve(undefined)
           return
@@ -243,7 +287,11 @@ export function CaptureReviewScreen() {
           resolve(width > 0 ? { x, y, width, height } : undefined),
         )
       })
-      saveCapture({ expense, imageUri }, source)
+      saveCapture(
+        { expense, imageUri: source === 'shared' ? undefined : imageUri },
+        source === 'shared' ? undefined : photoBounds,
+      )
+      if (sharedImageId) await completeSharedImage(sharedImageId)
       setExitTo('journal')
       setLeaving(true)
     } catch (reason) {
@@ -300,18 +348,36 @@ export function CaptureReviewScreen() {
       ),
     })
   }
-  if (occurredFromReceipt) {
-    suggestionRows.push({
-      key: 'occurredAt',
-      label: 'THỜI GIAN',
-      value: formatDateTime(occurredAt),
-      source: suggestion.sourceLabel('occurredAt'),
-      action: {
-        label: 'Dùng giờ chụp ảnh',
-        onPress: () => suggestion.edit('occurredAt', draft.captureTime),
-      },
-    })
-  }
+  suggestionRows.push({
+    key: 'occurredAt',
+    label: 'THỜI GIAN',
+    source: suggestion.sourceLabel('occurredAt'),
+    editor: (
+      <TextInput
+        accessibilityHint="Nhập theo dạng ngày tháng năm, giờ phút"
+        accessibilityLabel="Thời gian chi tiêu"
+        editable={!saving}
+        onBlur={() => {
+          if (!commitTimeInput()) {
+            setError('Nhập thời gian theo dạng DD/MM/YYYY HH:mm.')
+            setTimeEditor({ source: occurredAt, value: formatDateTimeInput(occurredAt) })
+          }
+        }}
+        onChangeText={(value) => setTimeEditor({ source: occurredAt, value })}
+        placeholder="DD/MM/YYYY HH:mm"
+        placeholderTextColor={colors.textSecondary}
+        returnKeyType="done"
+        style={styles.timeInput}
+        value={timeInput}
+      />
+    ),
+    action: occurredFromReceipt
+      ? {
+          label: source === 'shared' ? 'Dùng giờ nhận ảnh' : 'Dùng giờ chụp ảnh',
+          onPress: () => suggestion.edit('occurredAt', draft.captureTime),
+        }
+      : undefined,
+  })
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
@@ -333,7 +399,9 @@ export function CaptureReviewScreen() {
           onPress={() => leave('camera')}
           style={styles.retake}
         >
-          <Text style={styles.retakeText}>{imageUri ? 'Chụp lại' : 'Chụp ảnh'}</Text>
+          <Text style={styles.retakeText}>
+            {imageUri ? (source === 'shared' ? 'Đổi ảnh' : 'Chụp lại') : 'Chụp ảnh'}
+          </Text>
         </AnimatedPressable>
       </View>
       <KeyboardAvoidingView
@@ -594,6 +662,15 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 12,
   },
+  timeInput: {
+    backgroundColor: colors.chip,
+    borderRadius: 12,
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: 16,
+    minHeight: 44,
+    paddingHorizontal: 12,
+  },
   error: { color: '#B3433C', fontFamily: fonts.medium, fontSize: 14, padding: 8 },
   footer: { paddingHorizontal: 16, paddingTop: 12, gap: 8, backgroundColor: colors.canvas },
   primary: {
@@ -622,4 +699,32 @@ function formatDateTime(value: string) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value))
+}
+
+function formatDateTimeInput(value: string) {
+  const date = new Date(value)
+  const part = (number: number) => String(number).padStart(2, '0')
+  return `${part(date.getDate())}/${part(date.getMonth() + 1)}/${date.getFullYear()} ${part(date.getHours())}:${part(date.getMinutes())}`
+}
+
+function parseDateTimeInput(value: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/.exec(value.trim())
+  if (!match) return null
+  const [, dayText, monthText, yearText, hourText, minuteText] = match
+  const day = Number(dayText)
+  const month = Number(monthText)
+  const year = Number(yearText)
+  const hour = Number(hourText)
+  const minute = Number(minuteText)
+  const date = new Date(year, month - 1, day, hour, minute)
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day ||
+    date.getHours() !== hour ||
+    date.getMinutes() !== minute
+  ) {
+    return null
+  }
+  return date.toISOString()
 }

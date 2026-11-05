@@ -142,4 +142,35 @@ export const receiptFixtures: ReceiptFixture[] = [
     lines: lines('*** QUÁN CƠM TẤM 68 ***', 'Tong tien: 1.250.000 VND', 'TIEN KHACH DUA 1500000'),
     expected: { amount: '1250000', merchant: 'QUÁN CƠM TẤM 68' },
   },
+  {
+    name: 'anonymized bank transfer receipt ignores accounts, balance, reference and fee',
+    lines: lines(
+      'NGÂN HÀNG MẪU',
+      'GIAO DỊCH THÀNH CÔNG',
+      'Thời gian: 30/10/2026 21:17',
+      'Tài khoản nguồn: 0123 4567 8901',
+      'Người nhận: NGUYEN VAN A',
+      'Số tài khoản: 0987 6543 2100',
+      'Số tiền giao dịch: 850.000 VND',
+      'Phí dịch vụ: 11.000 VND',
+      'Số dư còn lại: 12.345.678 VND',
+      'Mã giao dịch: FT261234567890',
+      'Nội dung: THANH TOAN DON HANG',
+    ),
+    expected: {
+      amount: '850000',
+      date: '2026-10-30T14:17:00.000Z',
+      merchant: 'NGÂN HÀNG MẪU',
+    },
+  },
+  {
+    name: 'balance due stays a total',
+    lines: lines('CAFE MAU', 'Balance due: 120.000'),
+    expected: { amount: '120000' },
+  },
+  {
+    name: 'payment from an account stays a total',
+    lines: lines('NGÂN HÀNG MẪU', 'Thanh toán từ tài khoản: 850.000 VND', 'Số dư: 12.345.678 VND'),
+    expected: { amount: '850000' },
+  },
 ]

@@ -13,6 +13,7 @@ import { SessionGuard, SessionProvider } from '@/features/auth/session'
 import { CaptureFlowProvider } from '@/features/expense'
 import { BiometricLockProvider } from '@/features/settings/biometric-lock'
 import { AppearanceSync } from '@/features/settings/appearance-sync'
+import { ShareInboxProvider } from '@/features/share'
 import { SuggestionProvider } from '@/features/suggestion'
 
 export default function RootLayout() {
@@ -28,34 +29,36 @@ export default function RootLayout() {
 
   return (
     <SessionProvider>
-      <SuggestionProvider>
-        <SessionGuard>
-          <BiometricLockProvider>
-            <AppearanceSync />
-            <CaptureFlowProvider>
-              <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-                <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-                <Stack.Screen name="capture" options={{ animation: 'slide_from_bottom' }} />
-                <Stack.Screen name="review" options={{ animation: 'none' }} />
-                <Stack.Screen name="expense" options={{ animation: 'slide_from_right' }} />
-                <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
-                <Stack.Screen name="suggestions" options={{ animation: 'slide_from_right' }} />
-                <Stack.Screen
-                  name="settings"
-                  options={{
-                    animation: 'slide_from_bottom',
-                    presentation: 'formSheet',
-                    sheetAllowedDetents: [0.55, 0.9],
-                    sheetCornerRadius: 28,
-                    sheetGrabberVisible: true,
-                  }}
-                />
-              </Stack>
-              <StatusBar style="auto" />
-            </CaptureFlowProvider>
-          </BiometricLockProvider>
-        </SessionGuard>
-      </SuggestionProvider>
+      <ShareInboxProvider>
+        <SuggestionProvider>
+          <SessionGuard>
+            <BiometricLockProvider>
+              <AppearanceSync />
+              <CaptureFlowProvider>
+                <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+                  <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+                  <Stack.Screen name="capture" options={{ animation: 'slide_from_bottom' }} />
+                  <Stack.Screen name="review" options={{ animation: 'none' }} />
+                  <Stack.Screen name="expense" options={{ animation: 'slide_from_right' }} />
+                  <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
+                  <Stack.Screen name="suggestions" options={{ animation: 'slide_from_right' }} />
+                  <Stack.Screen
+                    name="settings"
+                    options={{
+                      animation: 'slide_from_bottom',
+                      presentation: 'formSheet',
+                      sheetAllowedDetents: [0.55, 0.9],
+                      sheetCornerRadius: 28,
+                      sheetGrabberVisible: true,
+                    }}
+                  />
+                </Stack>
+                <StatusBar style="auto" />
+              </CaptureFlowProvider>
+            </BiometricLockProvider>
+          </SessionGuard>
+        </SuggestionProvider>
+      </ShareInboxProvider>
     </SessionProvider>
   )
 }

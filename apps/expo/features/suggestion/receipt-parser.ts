@@ -125,7 +125,9 @@ type AmountToken = { value: number; hasSeparator: boolean; hasCurrency: boolean 
 const CASH_LINE =
   /\b(?:tien mat|tien khach dua|khach dua|khach tra|tien thua|tien thoi|thoi lai|tra lai|tien tra lai|cash|change|tien tip)\b/
 const CONTACT_LINE =
-  /\b(?:dt|tel|sdt|hotline|phone|fax|zalo|mst|ma so thue|tax code|stk|dia chi|dc|ma don|ma hd|so hd|so hoa don|bill no|order no|bien so|so ve|ma ve)\b/
+  /\b(?:dt|tel|sdt|hotline|phone|fax|zalo|mst|ma so thue|tax code|stk|so tai khoan|ma giao dich|transaction id|so du|balance(?! due)|dia chi|dc|ma don|ma hd|so hd|so hoa don|bill no|order no|bien so|so ve|ma ve)\b/
+// Labels that only mean an identifier when they start the line: "Thanh toan tu tai khoan" is a total.
+const ACCOUNT_LINE = /^\W*(?:tai khoan|reference)\b/
 const TAX_OR_DISCOUNT_LINE =
   /\b(?:vat|thue|gtgt|giam gia|chiet khau|khuyen mai|discount|phi dich vu|phi phuc vu|service charge|voucher|diem tich luy|tich diem|points?)\b/
 const SUBTOTAL_LINE =
@@ -135,7 +137,7 @@ const SUBTOTAL_LINE =
 const TOTAL_TIERS: ReadonlyArray<{ pattern: RegExp; confidence: number }> = [
   {
     pattern:
-      /\b(?:tong cong thanh toan|tong tien thanh toan|tong thanh toan|so tien thanh toan|tien thanh toan|can thanh toan|phai thanh toan|grand total|amount due|total due|balance due)\b/,
+      /\b(?:tong cong thanh toan|tong tien thanh toan|tong thanh toan|so tien thanh toan|so tien giao dich|so tien chuyen|tien thanh toan|can thanh toan|phai thanh toan|grand total|amount due|total due|balance due)\b/,
     confidence: 0.95,
   },
   { pattern: /\bthanh toan\b/, confidence: 0.92 },
@@ -160,7 +162,8 @@ function classifyLine(norm: string): { kind: LineKind; confidence: number } {
     .replace(/\([^)]*\)/g, ' ')
     .replace(/\b(?:da|bao)\s+gom\b.*$/, ' ')
     .replace(/\bincl\w*\b.*$/, ' ')
-  if (CONTACT_LINE.test(core) || CASH_LINE.test(core)) return { kind: 'excluded', confidence: 0 }
+  if (CONTACT_LINE.test(core) || ACCOUNT_LINE.test(core) || CASH_LINE.test(core))
+    return { kind: 'excluded', confidence: 0 }
   if (SUBTOTAL_LINE.test(core)) return { kind: 'subtotal', confidence: SUBTOTAL_CONFIDENCE }
   if (TAX_OR_DISCOUNT_LINE.test(core)) return { kind: 'excluded', confidence: 0 }
   for (const tier of TOTAL_TIERS) {

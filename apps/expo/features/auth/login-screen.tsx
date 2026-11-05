@@ -33,7 +33,9 @@ export function LoginScreen() {
     }),
   )
   const appleEnabled =
-    Platform.OS === 'ios' && Boolean(process.env.EXPO_PUBLIC_APPLE_OAUTH_CLIENT_ID)
+    Platform.OS === 'ios' &&
+    process.env.EXPO_PUBLIC_APPLE_SIGN_IN_ENABLED === 'true' &&
+    Boolean(process.env.EXPO_PUBLIC_APPLE_OAUTH_CLIENT_ID)
   const socialEnabled = googleEnabled || appleEnabled
 
   const run = async (action: () => Promise<void>) => {

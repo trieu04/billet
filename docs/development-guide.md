@@ -85,6 +85,12 @@ Run `pnpm prebuild` again after adding a native dependency, changing a config pl
 - Suggestions only appear when the server enables them (`EXPENSE_DECISION_PROVIDER` other than `disabled` for the Decision API) and the account settings allow them (Profile → “Gợi ý tự động”). Manual entry always works.
 - Location is used only when the user turns on “Dùng vị trí” and has already granted Billet foreground location permission; Billet never asks for permission just to make a suggestion.
 
+### Test Expo share intake
+
+Share intake requires the generated development client; Expo Go and the web export intentionally disable the native adapter. The config plugin generates the iOS Share Extension with App Group `group.app.billet.mobile`, bundle ID `app.billet.mobile.share-extension`, and the Android single-image `ACTION_SEND` filter with `MainActivity.launchMode=singleTask`. Enable the same App Group for both iOS identifiers in Apple Developer before signing a device or release build.
+
+After `pnpm prebuild`, build the client with `pnpm run:ios` or `pnpm run:android`. On iOS Simulator, add a PNG or JPEG to Photos, share it, and select Billet; device validation must also use a signed build because extension signing and source-app behavior can differ from Simulator. On Android emulator or device, share one image from Photos or Files and select Billet. Verify the image opens in review only after login and biometric unlock, can be discarded or saved once, does not return after reopening from Recents, and expires or is removed on logout. PDF, text, links, and multiple images are intentionally unsupported.
+
 ## Docker
 
 Build and run PostgreSQL, the API, web application, and the preserved Expo/Metro server:

@@ -73,6 +73,7 @@ Các yêu cầu nghiệp vụ về tiền, thời gian, quyền sở hữu và t
 | Tài khoản         | Truy cập tài khoản cá nhân, đăng xuất, khôi phục truy cập      | P0      |
 | Ghi nhận          | Nhập tay, chụp/chọn ảnh, số tiền, thời gian, caption tùy chọn  | P0      |
 | Suy luận từ ảnh   | Gợi ý cá nhân hóa từ ảnh và lịch sử đã xác nhận                | P1      |
+| Nhận chia sẻ      | Nhận một ảnh từ share sheet của app khác để ghi khoản chi      | P1      |
 | Nhật ký           | Xem khoản chi theo ngày, tổng ngày, chi tiết và ảnh            | P0      |
 | Quản lý khoản chi | Sửa thông tin, xóa có xác nhận, không tạo trùng khi thử lại    | P0      |
 | Lịch và thống kê  | Xem lịch tháng, tổng kỳ, biểu đồ và phân bổ danh mục           | P0      |
@@ -122,6 +123,7 @@ Mã yêu cầu dùng để liên kết với thiết kế, backlog và kiểm th
 | FR-04 | Nhận gợi ý cá nhân hóa từ ảnh — P1                                 | Có thể gửi ảnh đã nén để phân loại ngay khi chụp/chọn, chỉ dùng cho lượt đó và không lưu; chụp lại/hủy dừng xử lý; người dùng tắt được; không chặn nhập hoặc lưu; nêu cơ sở và độ tin cậy; mọi gợi ý có thể sửa/bỏ qua; không ghi đè dữ liệu đã nhập/lưu |
 | FR-05 | Lưu ảnh và caption cùng khoản chi                                  | Sau lưu, mở chi tiết thấy đúng ảnh và caption; caption trống vẫn hợp lệ; ghi nhận một ảnh mỗi khoản ở MVP                                                                                                                                                |
 | FR-06 | Biết rõ trạng thái lưu và thử lại an toàn                          | Phân biệt chưa lưu, đang lưu, đã lưu và lỗi; mất mạng không báo thành công; thử lại cùng thao tác không tạo thêm khoản chi                                                                                                                               |
+| FR-19 | Nhận ảnh chia sẻ từ app khác — P1                                  | Từ share sheet của app khác, chọn Billet là tới màn hình review với đúng ảnh đó; chưa lưu thì không tạo khoản chi; chưa đăng nhập vẫn giữ ảnh tới khi đăng nhập; đăng xuất hoặc hủy thì ảnh bị xóa khỏi thiết bị; phạm vi nền tảng là Expo               |
 
 ### Nhật ký và tổng hợp
 

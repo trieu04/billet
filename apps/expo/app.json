@@ -31,6 +31,21 @@
         }
       ],
       [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsImageWithMaxCount": 1
+          },
+          "iosAppGroupIdentifier": "group.vn.devt.billet",
+          "iosShareExtensionBundleIdentifier": "vn.devt.billet.share-extension",
+          "androidIntentFilters": ["image/*"],
+          "androidMainActivityAttributes": {
+            "android:launchMode": "singleTask"
+          }
+        }
+      ],
+      "./plugins/with-share-history-guard",
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Billet uses your approximate location only while you use the app, to recognize places where you often spend.",
@@ -44,7 +59,6 @@
         }
       ],
       "expo-status-bar",
-      "expo-apple-authentication",
       "expo-web-browser"
     ],
     "experiments": {
@@ -57,12 +71,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "usesAppleSignIn": true,
-      "bundleIdentifier": "app.billet.mobile"
+      "bundleIdentifier": "vn.devt.billet"
     },
     "android": {
       "blockedPermissions": ["android.permission.RECORD_AUDIO"],
-      "package": "app.billet.mobile"
+      "package": "vn.devt.billet"
     }
   }
 }
