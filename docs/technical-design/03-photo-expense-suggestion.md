@@ -62,7 +62,7 @@ flowchart LR
 
 ### Luồng xử lý
 
-1. **Có ảnh** (camera/picker trả file): client tạo `generation` mới và chạy song song, không chờ nhau và không chặn preview:
+1. **Có ảnh** (camera/picker trả file): client tạo `generation` mới và hiển thị ảnh trên form trước. Khi ảnh đã hiển thị, client mới chạy song song, không chờ nhau:
    - OCR trên file gốc (chữ nhỏ cần độ phân giải) → candidate `ocr`.
    - Nén ảnh → `POST /expense-inferences` → loại ảnh, danh mục, choice cá nhân.
    - Nếu người dùng đã cấp quyền và bật dùng vị trí: tính `placeKey` gửi kèm. Không xin quyền chỉ để gợi ý.
@@ -210,18 +210,18 @@ OCR (P95 ~1,5 s) chạy song song, ngoài đường găng. Client gửi ngân s�
 
 ## 5. Quyết định kỹ thuật
 
-| Quyết định                                       | Lý do và giới hạn chấp nhận                                                                                                                      |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Thay `recognition-jobs` bằng Decision đồng bộ    | Gợi ý chỉ có giá trị trong vài giây đầu; job poll không đạt P95. Chưa client nào dùng job nên gỡ ngay, không cần giai đoạn song song             |
-| Bỏ quota guard, giữ tracking                     | Guard in-process chỉ đúng với một instance và biến lỗi quota thành chờ đợi; với request đồng bộ, fail nhanh tốt hơn                              |
-| Expo dùng development build                      | OCR cần native module. Thêm `expo-dev-client`, dùng prebuild (không commit `ios/`, `android/`); Expo Go và web không có OCR, nhánh OCR tự bỏ qua |
-| OCR và Decision bắt đầu ngay khi có ảnh          | Kết quả thường sẵn khi form mở. Ảnh rời thiết bị trước Use photo; Retake tốn thêm request                                                        |
-| Ảnh nén gửi inline, không dùng media đã upload   | Bỏ reserve + upload khỏi đường găng, không tạo media cho ảnh bị bỏ. Ảnh truyền hai lần khi lưu                                                   |
-| Server sở hữu choice set                         | Output kiểm soát và validate được, gắn với danh mục/choice thật của người dùng                                                                   |
-| Model chỉ phân loại, rule mang số tiền           | Vai trò rõ ràng: OCR đọc, model phân loại, rule cá nhân điền giá trị không in trên ảnh                                                           |
-| Hợp nhất trên client                             | Client giữ trạng thái chỉnh sửa và kết quả OCR; văn bản OCR không cần lên server                                                                 |
-| Học từ expense đã lưu                            | Một nguồn sự thật; sửa/xóa expense tự phản ánh vào rule, không cần event store                                                                   |
-| Một provider mỗi request, so sánh bằng benchmark | Latency dự đoán được; hoán đổi provider bằng cấu hình                                                                                            |
+| Quyết định                                        | Lý do và giới hạn chấp nhận                                                                                                                      |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Thay `recognition-jobs` bằng Decision đồng bộ     | Gợi ý chỉ có giá trị trong vài giây đầu; job poll không đạt P95. Chưa client nào dùng job nên gỡ ngay, không cần giai đoạn song song             |
+| Bỏ quota guard, giữ tracking                      | Guard in-process chỉ đúng với một instance và biến lỗi quota thành chờ đợi; với request đồng bộ, fail nhanh tốt hơn                              |
+| Expo dùng development build                       | OCR cần native module. Thêm `expo-dev-client`, dùng prebuild (không commit `ios/`, `android/`); Expo Go và web không có OCR, nhánh OCR tự bỏ qua |
+| OCR và Decision bắt đầu ngay sau khi ảnh hiển thị | Người dùng thấy ảnh trước, kết quả điền dần vào form. Ảnh rời thiết bị trước Use photo; Retake tốn thêm request                                  |
+| Ảnh nén gửi inline, không dùng media đã upload    | Bỏ reserve + upload khỏi đường găng, không tạo media cho ảnh bị bỏ. Ảnh truyền hai lần khi lưu                                                   |
+| Server sở hữu choice set                          | Output kiểm soát và validate được, gắn với danh mục/choice thật của người dùng                                                                   |
+| Model chỉ phân loại, rule mang số tiền            | Vai trò rõ ràng: OCR đọc, model phân loại, rule cá nhân điền giá trị không in trên ảnh                                                           |
+| Hợp nhất trên client                              | Client giữ trạng thái chỉnh sửa và kết quả OCR; văn bản OCR không cần lên server                                                                 |
+| Học từ expense đã lưu                             | Một nguồn sự thật; sửa/xóa expense tự phản ánh vào rule, không cần event store                                                                   |
+| Một provider mỗi request, so sánh bằng benchmark  | Latency dự đoán được; hoán đổi provider bằng cấu hình                                                                                            |
 
 ## 6. Kiểm chứng và triển khai
 
@@ -250,3 +250,7 @@ Rollback: provider `disabled` → còn OCR và rule; tắt `features` → nhập
 - [Yêu cầu nghiệp vụ](../business-requirements.md): FR-02, FR-04, BR-05, BR-06, NFR-03, NFR-07.
 - [Backend](./01-backend.md).
 - Source: [recognition service](../../apps/server/src/modules/recognition/service.ts), [quota guard](../../apps/server/src/modules/recognition/providers/quota.guard.ts), [category service](../../apps/server/src/modules/category/service.ts), [expense DTO](../../apps/server/src/modules/expense/dto.ts), [export job entity](../../apps/server/src/modules/export/entities/export-job.entity.ts), [Expo quick capture](../../apps/expo/features/expense/screens/quick-capture-screen.tsx).
+
+## Trang quản trị
+
+`/admin` trên web (API `/api/v1/admin/**`, module `admin`) cho tài khoản trong `ADMIN_USER_IDS` xem thống kê và nhật ký inference đã khử định danh, sửa loại ảnh hệ thống và default rule, và thử provider bằng một ảnh. `userId` là tham chiếu duy nhất tới người dùng; JSON không trả số tiền, cửa hàng, vị trí, ghi chú, nhãn choice cá nhân hay tên danh mục riêng. Admin mở được ảnh đã lưu của khoản chi liên kết với inference (không ghi log lượt xem); ảnh gửi cho provider vẫn không được lưu. Playground chỉ dùng lựa chọn hệ thống, không ghi `expense_inferences`. Việc gọi provider được ghi ở `expense_inferences.provider_called`. Chi tiết: `docs/implementation-plans/04-admin-recognition-data.md`.
