@@ -3,12 +3,13 @@ import { ChevronDown, Filter, X } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { Button } from '@/components/button'
 import { Dialog } from '@/components/dialog'
-import { PageHeader, Spinner } from '@/components/ui'
+import { Badge, PageHeader, Spinner } from '@/components/ui'
 import { queryString, useAdminBlobRequest, useAdminRequest } from './api'
 import {
   fieldLabel,
   formatBytes,
   formatConfidence,
+  formatCost,
   formatDateTime,
   formatLatency,
   formatNumber,
@@ -19,7 +20,15 @@ import {
   STATUS_OPTIONS,
   statusLabel,
 } from './format'
-import type { Inference, InferenceDetail, InferencePage, InferenceStatus } from './types'
+import type {
+  Inference,
+  InferenceChoice,
+  InferenceDetail,
+  InferenceInput,
+  InferenceOutput,
+  InferencePage,
+  InferenceStatus,
+} from './types'
 import {
   Cell,
   DataTable,
@@ -133,7 +142,7 @@ export function LogsPage() {
       <PageHeader
         eyebrow="Nhận diện chi tiêu"
         title="Nhật ký inference"
-        description="Từng lần gợi ý từ ảnh. Nhật ký không có thông tin định danh. Ảnh gửi cho provider không được lưu; chỉ xem được ảnh của khoản chi đã lưu."
+        description="Từng lần gợi ý từ ảnh. Danh sách không có thông tin định danh; chi tiết hiển thị các lựa chọn đã gửi cho provider (gồm danh mục và lựa chọn cá nhân của người dùng) và kết quả trả về. Ảnh gửi cho provider không được lưu; chỉ xem được ảnh của khoản chi đã lưu."
       />
 
       <Section title="Bộ lọc">
@@ -366,17 +375,15 @@ function InferenceDetailView({ id }: { id: string }) {
           value={data.providerCalled ? formatLatency(data.latencyMs) : 'Không gọi'}
         />
         <Fact label="Choice set" value={data.choiceSetVersion || '–'} />
-        <Fact
-          label="Choice cá nhân"
-          value={
-            data.personalChoice
-              ? `Có (${formatConfidence(data.personalChoice.confidence)})`
-              : 'Không'
-          }
-        />
         <Fact label="Token vào" value={formatNumber(data.usage?.inputTokens ?? 0)} />
         <Fact label="Token ra" value={formatNumber(data.usage?.outputTokens ?? 0)} />
+        <Fact
+          label="Chi phí"
+          value={data.usage?.costMicroUsd === undefined ? '–' : formatCost(data.usage.costMicroUsd)}
+        />
       </dl>
+      <InputSection input={data.input ?? null} />
+      <OutputSection output={data.output ?? null} status={data.status} reason={data.reason} />
       <div>
         <h3 className="mb-2 text-sm font-bold">Khoản chi liên kết</h3>
         {data.linkedExpenses.length === 0 ? (
@@ -410,6 +417,139 @@ function InferenceDetailView({ id }: { id: string }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+const CHOICE_GROUPS: { key: 'imageTypes' | 'categories' | 'personal'; title: string }[] = [
+  { key: 'imageTypes', title: 'Loại ảnh' },
+  { key: 'categories', title: 'Danh mục' },
+  { key: 'personal', title: 'Lựa chọn cá nhân' },
+]
+
+/** The choice set sent to the provider, one collapsible list per kind. */
+function InputSection({ input }: { input: InferenceInput | null }) {
+  return (
+    <div>
+      <h3 className="mb-1 text-sm font-bold">Input gửi provider</h3>
+      <p className="mb-3 text-xs text-muted">
+        Các lựa chọn provider được đưa ra (không gồm ảnh). Mục được chọn có dấu ✓.
+      </p>
+      {input ? (
+        <div className="space-y-2">
+          <dl>
+            <Fact label="Ngôn ngữ" value={input.locale} />
+          </dl>
+          {CHOICE_GROUPS.map(({ key, title }) => (
+            <ChoiceGroup key={key} title={title} choices={input[key]} />
+          ))}
+        </div>
+      ) : (
+        <EmptyState>Không có dữ liệu input cho inference này.</EmptyState>
+      )}
+    </div>
+  )
+}
+
+function ChoiceGroup({ title, choices }: { title: string; choices: InferenceChoice[] }) {
+  const picked = choices.find((choice) => choice.selected)
+  return (
+    <details className="group rounded-xl border border-line bg-surface open:bg-sunken/30">
+      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 rounded-xl px-3.5 py-2.5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-strong">
+        <ChevronDown className="size-4 shrink-0 transition group-open:rotate-180" aria-hidden />
+        <span>{title}</span>
+        <span className="text-xs font-normal text-muted">
+          {formatNumber(choices.length)} lựa chọn
+        </span>
+        {picked ? (
+          <Badge tone="sage">Đã chọn: {picked.label}</Badge>
+        ) : (
+          <span className="text-xs font-normal text-muted">Không chọn</span>
+        )}
+      </summary>
+      {choices.length === 0 ? (
+        <p className="px-3.5 pb-3 text-sm text-muted">Không có lựa chọn nào.</p>
+      ) : (
+        <ul aria-label={`${title} được đưa ra`} className="space-y-1 px-2 pb-2.5">
+          {choices.map((choice) => (
+            <li
+              key={choice.ref}
+              className={`flex items-start gap-2.5 rounded-lg px-2 py-1.5 text-sm ${
+                choice.selected ? 'bg-sage-soft font-semibold' : ''
+              }`}
+            >
+              <code className="mt-0.5 w-9 shrink-0 text-xs text-muted">{choice.ref}</code>
+              <span className="min-w-0 flex-1">
+                <span className="block break-words">{choice.label}</span>
+                {choice.description ? (
+                  <span className="block break-words text-xs font-normal text-muted">
+                    {choice.description}
+                  </span>
+                ) : null}
+              </span>
+              {choice.selected ? (
+                <span className="shrink-0 text-xs text-sage">
+                  <span aria-hidden>✓ </span>Được chọn
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
+  )
+}
+
+/** The provider's answer, each ref shown with the label it stood for. */
+function OutputSection({
+  output,
+  status,
+  reason,
+}: {
+  output: InferenceOutput | null
+  status: InferenceStatus
+  reason: string | null
+}) {
+  const rows = output
+    ? [
+        { field: 'Loại ảnh', selection: output.imageType },
+        { field: 'Danh mục', selection: output.category },
+        { field: 'Lựa chọn cá nhân', selection: output.personal },
+      ]
+    : []
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-bold">Output của provider</h3>
+      {output ? (
+        <DataTable caption="Output của provider" headers={['Trường', 'Ref', 'Lựa chọn', 'Tin cậy']}>
+          {rows.map(({ field, selection }) => (
+            <tr key={field}>
+              <Cell>{field}</Cell>
+              <Cell>{selection ? <code>{selection.ref}</code> : '–'}</Cell>
+              <Cell>
+                {selection ? (
+                  (selection.label ?? 'Không rõ (không có input)')
+                ) : (
+                  <span className="text-muted">Không chọn</span>
+                )}
+              </Cell>
+              <Cell>
+                {selection ? (
+                  <Meter value={selection.confidence} label={`Độ tin cậy ${field}`} />
+                ) : (
+                  '–'
+                )}
+              </Cell>
+            </tr>
+          ))}
+        </DataTable>
+      ) : (
+        <EmptyState>
+          {status === 'succeeded'
+            ? 'Không có dữ liệu output cho inference này.'
+            : `Provider không trả kết quả dùng được${reason ? ` (${reasonLabel(reason)})` : ''}.`}
+        </EmptyState>
+      )}
     </div>
   )
 }

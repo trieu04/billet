@@ -227,11 +227,15 @@ playground. Access is limited to the accounts in `ADMIN_USER_IDS`, a comma-separ
 ids (not usernames, which anyone can register). Empty means nobody; a change needs a restart. Find
 an id with `SELECT id FROM users WHERE username = '...'`.
 
-JSON responses never contain email, username, amounts, merchants, place keys, captions, media ids,
-or personal choice and user category names; `userId` is the only reference to a person. The one
-exception to that de-identification is
-`GET /api/v1/admin/recognition/inferences/:id/linked-expenses/:index/photo`, which returns the photo
-saved with a linked expense. That photo can show a merchant, an amount, or a face, and views are not
+JSON responses never contain email, username, amounts, merchants, place keys, captions, or media
+ids; `userId` is the only reference to a person. Two exceptions:
+`GET /api/v1/admin/recognition/inferences/:id` returns `input`, the choice set the provider was
+offered (image types, the account's category names and personal choice labels, never the image),
+and `output`, the refs it returned with their labels; and
+`GET /api/v1/admin/recognition/inferences/:id/linked-expenses/:index/photo` returns the photo
+saved with a linked expense. The list endpoint stays de-identified. `input` and `output` are stored
+on the inference row (jsonb), so they are removed with it after 90 days and with the account; rows
+created before they were kept return `null`. That photo can show a merchant, an amount, or a face, and views are not
 logged. Images sent to the provider are never stored, so an inference without a saved expense photo
 has nothing to show. The playground
 uses the real provider and its real cost, stores nothing, and allows 20 requests per minute per

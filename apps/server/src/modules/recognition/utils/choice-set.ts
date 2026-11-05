@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { MAX_PERSONAL_CHOICES_PER_REQUEST } from '../constants'
+import type { InferenceInput, InferenceOutput } from '../entities/expense-inference.entity'
 import type { DecisionChoice, DecisionInput, DecisionOutput } from '../interface'
 
 export interface ImageTypeSource {
@@ -84,6 +85,32 @@ export function assembleChoiceSet(sources: ChoiceSetSources): ChoiceSet {
     .digest('hex')
     .slice(0, 16)
   return { choices, targets, version }
+}
+
+/** What the provider was offered, with the database id behind each ref, for the admin log. */
+export function toInputSnapshot(set: ChoiceSet, locale: string): InferenceInput {
+  const list = (choices: readonly DecisionChoice[]) =>
+    choices.map((choice) => {
+      const target = set.targets.get(choice.ref)
+      const targetId = target?.kind === 'image_type' ? target.key : (target?.id ?? '')
+      return {
+        ref: choice.ref,
+        label: choice.label,
+        ...(choice.description ? { description: choice.description } : {}),
+        targetId,
+      }
+    })
+  return {
+    locale,
+    imageTypes: list(set.choices.imageTypes),
+    categories: list(set.choices.categories),
+    personal: list(set.choices.personal),
+  }
+}
+
+/** The refs of a validated provider output, without usage. */
+export function toOutputSnapshot(output: DecisionOutput): InferenceOutput {
+  return { imageType: output.imageType, category: output.category, personal: output.personal }
 }
 
 /** Same place key first, then most recently selected, then newest. */

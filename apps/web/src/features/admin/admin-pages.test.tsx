@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppRoutes } from '@/app/routes'
@@ -188,6 +188,83 @@ describe('admin pages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Ẩn ảnh khoản chi liên kết 1' }))
     await waitFor(() => expect(screen.queryByRole('img', { name: /Ảnh đã lưu/ })).toBeNull())
+  })
+
+  it('shows the choice set sent to the provider and its output with labels, not ids', async () => {
+    signIn()
+    respondWith((url) => {
+      if (url.endsWith('/admin/me')) return { status: 200, body: { isAdmin: true } }
+      if (url.endsWith('/recognition/inferences/7'))
+        return {
+          status: 200,
+          body: {
+            ...INFERENCE,
+            usage: { inputTokens: 120, outputTokens: 12, costMicroUsd: 250 },
+            imageBytes: 1,
+            choiceSetVersion: 'v',
+            linkedExpenses: [],
+            input: {
+              locale: 'vi-VN',
+              imageTypes: [
+                { ref: 't1', label: 'Hóa đơn', description: 'Phiếu in nhiệt', selected: false },
+                { ref: 't2', label: 'Vé gửi xe', selected: true },
+              ],
+              categories: [{ ref: 'c1', label: 'Di chuyển', selected: true }],
+              personal: [],
+            },
+            output: {
+              imageType: { ref: 't2', label: 'Vé gửi xe', confidence: 0.9 },
+              category: { ref: 'c1', label: 'Di chuyển', confidence: 0.7 },
+              personal: null,
+            },
+          },
+        }
+      return { status: 200, body: { data: [INFERENCE], nextCursor: null, hasMore: false } }
+    })
+    renderAt('/admin/recognition/logs')
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Chi tiết inference 7' }))
+
+    expect(await screen.findByText('Đã chọn: Vé gửi xe')).toBeInTheDocument()
+    const imageTypes = screen.getByRole('list', { name: 'Loại ảnh được đưa ra', hidden: true })
+    expect(within(imageTypes).getByText('Hóa đơn')).toBeInTheDocument()
+    expect(within(imageTypes).getByText('Phiếu in nhiệt')).toBeInTheDocument()
+    expect(within(imageTypes).getAllByText(/Được chọn/)).toHaveLength(1)
+
+    const output = screen.getByRole('table', { name: 'Output của provider' })
+    expect(within(output).getByText('Di chuyển')).toBeInTheDocument()
+    expect(within(output).getByRole('meter', { name: 'Độ tin cậy Danh mục' })).toHaveAttribute(
+      'aria-valuenow',
+      '70',
+    )
+    expect(within(output).getByText('Không chọn')).toBeInTheDocument()
+  })
+
+  it('explains when an inference has no recorded input or output', async () => {
+    signIn()
+    respondWith((url) => {
+      if (url.endsWith('/admin/me')) return { status: 200, body: { isAdmin: true } }
+      if (url.endsWith('/recognition/inferences/7'))
+        return {
+          status: 200,
+          body: {
+            ...INFERENCE,
+            usage: null,
+            imageBytes: 1,
+            choiceSetVersion: '',
+            linkedExpenses: [],
+            input: null,
+            output: null,
+          },
+        }
+      return { status: 200, body: { data: [INFERENCE], nextCursor: null, hasMore: false } }
+    })
+    renderAt('/admin/recognition/logs')
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Chi tiết inference 7' }))
+
+    expect(await screen.findByText('Không có dữ liệu input cho inference này.')).toBeInTheDocument()
+    expect(screen.getByText('Không có dữ liệu output cho inference này.')).toBeInTheDocument()
   })
 
   it('asks before disabling an image type and never offers it for the fallback', async () => {

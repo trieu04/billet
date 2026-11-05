@@ -51,7 +51,32 @@ export type Inference = {
 
 export type InferencePage = { data: Inference[]; nextCursor: string | null; hasMore: boolean }
 
+export type InferenceChoice = {
+  ref: string
+  label: string
+  description?: string
+  selected: boolean
+}
+
+/** What the provider was offered; `null` for inferences recorded before it was kept. */
+export type InferenceInput = {
+  locale: string
+  imageTypes: InferenceChoice[]
+  categories: InferenceChoice[]
+  personal: InferenceChoice[]
+}
+
+export type OutputSelection = { ref: string; label: string | null; confidence: number }
+
+export type InferenceOutput = {
+  imageType: OutputSelection
+  category: OutputSelection | null
+  personal: OutputSelection | null
+}
+
 export type InferenceDetail = Inference & {
+  input?: InferenceInput | null
+  output?: InferenceOutput | null
   usage: Partial<UsageTotals> | null
   imageBytes: number
   choiceSetVersion: string

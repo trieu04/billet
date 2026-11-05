@@ -8,6 +8,8 @@ import { assertDecisionRefs } from '../decision-output'
 import type { InferenceResponseDto } from '../dtos/inference.dto'
 import {
   ExpenseInferenceEntity,
+  type InferenceInput,
+  type InferenceOutput,
   type InferenceSelections,
   type InferenceStatus,
   type InferenceUsage,
@@ -19,7 +21,12 @@ import {
   type DecisionOutput,
   type DecisionProvider,
 } from '../interface'
-import { mapDecisionOutput, type ChoiceSet } from '../utils/choice-set'
+import {
+  mapDecisionOutput,
+  toInputSnapshot,
+  toOutputSnapshot,
+  type ChoiceSet,
+} from '../utils/choice-set'
 import { ChoiceSetService } from './choice-set.service'
 import { DecisionMetricsService } from './decision-metrics.service'
 
@@ -44,6 +51,8 @@ interface Outcome {
   usage: InferenceUsage | null
   latencyMs: number
   called: boolean
+  input: InferenceInput | null
+  output: InferenceOutput | null
 }
 
 /** Result of {@link InferenceService.tryDecision}. */
@@ -172,8 +181,11 @@ export class InferenceService {
     const placeKey = settings.suggestionLocationEnabled ? request.placeKey : null
     const choiceSet = await this.choiceSets.build(userId, placeKey, this.provider.limits.maxChoices)
     const left = remaining(request, budget)
-    if (left < MIN_PROVIDER_BUDGET_MS) return skipped('unavailable', 'deadline', choiceSet.version)
-    if (request.signal.aborted) return skipped('unavailable', 'cancelled', choiceSet.version)
+    const snapshot = toInputSnapshot(choiceSet, request.locale)
+    if (left < MIN_PROVIDER_BUDGET_MS)
+      return skipped('unavailable', 'deadline', choiceSet.version, snapshot)
+    if (request.signal.aborted)
+      return skipped('unavailable', 'cancelled', choiceSet.version, snapshot)
 
     const input: DecisionInput = {
       image: { bytes: request.image, mimeType: 'image/jpeg' },
@@ -183,7 +195,7 @@ export class InferenceService {
     const startedAt = Date.now()
     const result = await this.callProvider(input, left, request.signal)
     const latencyMs = Date.now() - startedAt
-    const base = { choiceSetVersion: choiceSet.version, latencyMs, called: true }
+    const base = { choiceSetVersion: choiceSet.version, latencyMs, called: true, input: snapshot }
     if ('reason' in result)
       return {
         ...base,
@@ -191,6 +203,7 @@ export class InferenceService {
         reason: result.reason,
         selections: null,
         usage: null,
+        output: null,
       }
     return { ...base, ...this.validate(choiceSet, result.output) }
   }
@@ -198,14 +211,26 @@ export class InferenceService {
   private validate(
     choiceSet: ChoiceSet,
     output: DecisionOutput,
-  ): Pick<Outcome, 'status' | 'reason' | 'selections' | 'usage'> {
+  ): Pick<Outcome, 'status' | 'reason' | 'selections' | 'usage' | 'output'> {
     const usage = output.usage ?? null
     try {
       assertDecisionRefs(choiceSet.choices, output)
       const mapped = mapDecisionOutput(choiceSet, output)
-      return { status: 'succeeded', reason: null, selections: mapped, usage }
+      return {
+        status: 'succeeded',
+        reason: null,
+        selections: mapped,
+        usage,
+        output: toOutputSnapshot(output),
+      }
     } catch {
-      return { status: 'unavailable', reason: 'invalid_output', selections: null, usage }
+      return {
+        status: 'unavailable',
+        reason: 'invalid_output',
+        selections: null,
+        usage,
+        output: null,
+      }
     }
   }
 
@@ -272,6 +297,8 @@ export class InferenceService {
         latencyMs: outcome.latencyMs,
         providerCalled: outcome.called,
         usage: outcome.usage,
+        input: outcome.input,
+        output: outcome.output,
       })
       .orIgnore()
       .execute()
@@ -289,7 +316,12 @@ function remaining(request: InferenceRequest, budgetMs: number): number {
   return budgetMs - (Date.now() - request.receivedAt)
 }
 
-function skipped(status: InferenceStatus, reason: string, choiceSetVersion = ''): Outcome {
+function skipped(
+  status: InferenceStatus,
+  reason: string,
+  choiceSetVersion = '',
+  input: InferenceInput | null = null,
+): Outcome {
   return {
     status,
     reason,
@@ -298,6 +330,8 @@ function skipped(status: InferenceStatus, reason: string, choiceSetVersion = '')
     usage: null,
     latencyMs: 0,
     called: false,
+    input,
+    output: null,
   }
 }
 

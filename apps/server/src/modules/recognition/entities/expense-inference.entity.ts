@@ -21,7 +21,34 @@ export interface InferenceUsage {
   costMicroUsd?: number
 }
 
-/** One decision request. Never stores the image, OCR text, or raw provider output; kept 90 days. */
+/** A choice as offered to the provider; `targetId` is the image type key or the database id. */
+export interface InferenceInputChoice {
+  ref: string
+  label: string
+  description?: string
+  targetId: string
+}
+
+/** Snapshot of what the provider was given (never the image), for operators. */
+export interface InferenceInput {
+  locale: string
+  imageTypes: InferenceInputChoice[]
+  categories: InferenceInputChoice[]
+  personal: InferenceInputChoice[]
+}
+
+/** The refs the provider returned, before they were mapped back to ids. */
+export interface InferenceOutput {
+  imageType: { ref: string; confidence: number }
+  category: { ref: string; confidence: number } | null
+  personal: { ref: string; confidence: number } | null
+}
+
+/**
+ * One decision request. Never stores the image, OCR text, or the provider's raw response. The
+ * offered choices (`input`, including the account's category and personal choice labels) and the
+ * returned refs (`output`) are kept for operators; the row is removed after 90 days.
+ */
 @Entity({ name: 'expense_inferences' })
 @Index('uq_expense_inferences_user_request', ['userId', 'clientRequestId'], { unique: true })
 @Index('idx_expense_inferences_created', ['createdAt'])
@@ -39,4 +66,8 @@ export class ExpenseInferenceEntity extends BaseEntity {
   /** Whether the provider was called; `latencyMs` can be 0 even when it was. */
   @Column({ default: false }) providerCalled: boolean
   @Column({ type: 'jsonb', nullable: true }) usage: InferenceUsage | null
+  /** Null for rows created before it was recorded, or when no choice set was built. */
+  @Column({ type: 'jsonb', nullable: true }) input: InferenceInput | null
+  /** Null when the provider was not called or returned no usable output. */
+  @Column({ type: 'jsonb', nullable: true }) output: InferenceOutput | null
 }

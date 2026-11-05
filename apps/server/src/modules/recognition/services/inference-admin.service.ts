@@ -5,6 +5,8 @@ import { CategoryService, type SystemCategory } from '../../category/service'
 import { DAY_MS, INFERENCE_RETENTION_DAYS } from '../constants'
 import type {
   AdminInferenceDto,
+  AdminInferenceInputDto,
+  AdminInferenceOutputDto,
   AdminInferencePageDto,
   AdminInferenceQueryDto,
   AdminSummaryDto,
@@ -201,6 +203,8 @@ export class InferenceAdminService {
 
   async get(id: string): Promise<{
     inference: AdminInferenceDto
+    input: AdminInferenceInputDto | null
+    output: AdminInferenceOutputDto | null
     usage: ExpenseInferenceEntity['usage']
     imageBytes: number
     choiceSetVersion: string
@@ -209,6 +213,8 @@ export class InferenceAdminService {
     if (!row) throw new NotFoundException('Inference not found')
     return {
       inference: toDto(row, await this.labels()),
+      input: toInputDto(row),
+      output: toOutputDto(row),
       usage: row.usage,
       imageBytes: row.imageBytes,
       choiceSetVersion: row.choiceSetVersion,
@@ -245,6 +251,44 @@ function usageTotals(row: UsageRow): AdminUsageTotalsDto {
     inputTokens: Number(row.input_tokens),
     outputTokens: Number(row.output_tokens),
     costMicroUsd: Number(row.cost),
+  }
+}
+
+/** The offered choices with the provider's pick marked. */
+export function toInputDto(row: ExpenseInferenceEntity): AdminInferenceInputDto | null {
+  const { input, output } = row
+  if (!input) return null
+  const mark = (choices: typeof input.imageTypes, picked: string | undefined) =>
+    choices.map(({ ref, label, description }) => ({
+      ref,
+      label,
+      ...(description ? { description } : {}),
+      selected: ref === picked,
+    }))
+  return {
+    locale: input.locale,
+    imageTypes: mark(input.imageTypes, output?.imageType.ref),
+    categories: mark(input.categories, output?.category?.ref),
+    personal: mark(input.personal, output?.personal?.ref),
+  }
+}
+
+/** The provider's answer with each ref resolved to the label it stood for. */
+export function toOutputDto(row: ExpenseInferenceEntity): AdminInferenceOutputDto | null {
+  const { input, output } = row
+  if (!output) return null
+  const resolve = (
+    choices: NonNullable<typeof input>['imageTypes'] | undefined,
+    selection: { ref: string; confidence: number },
+  ) => ({
+    ref: selection.ref,
+    label: choices?.find((choice) => choice.ref === selection.ref)?.label ?? null,
+    confidence: selection.confidence,
+  })
+  return {
+    imageType: resolve(input?.imageTypes, output.imageType),
+    category: output.category ? resolve(input?.categories, output.category) : null,
+    personal: output.personal ? resolve(input?.personal, output.personal) : null,
   }
 }
 

@@ -120,6 +120,38 @@ describe('InferenceService', () => {
     expect(repository.rows[0]).toMatchObject({ imageBytes: 4, usage: output.usage })
   })
 
+  it('stores the offered choices and the returned refs for the admin log', async () => {
+    const provider = new FakeDecisionProvider({ maxImageBytes: 1_048_576, output })
+    const { service, repository } = setup(provider)
+
+    await service.infer('7', request())
+
+    expect(repository.rows[0].input).toEqual({
+      locale: 'vi-VN',
+      imageTypes: [{ ref: 't1', label: 'Vé gửi xe', targetId: 'parking_ticket' }],
+      categories: [{ ref: 'c1', label: 'Di chuyển', targetId: '2' }],
+      personal: [],
+    })
+    expect(repository.rows[0].output).toEqual({
+      imageType: { ref: 't1', confidence: 0.93 },
+      category: { ref: 'c1', confidence: 0.7 },
+      personal: null,
+    })
+  })
+
+  it('keeps the offered choices but no output when the provider fails', async () => {
+    const provider = new FakeDecisionProvider({
+      maxImageBytes: 1_048_576,
+      error: new DecisionProviderError('provider_error'),
+    })
+    const { service, repository } = setup(provider)
+
+    await service.infer('7', request())
+
+    expect(repository.rows[0]).toMatchObject({ status: 'unavailable', output: null })
+    expect(repository.rows[0].input?.categories).toHaveLength(1)
+  })
+
   it('is idempotent per clientRequestId and does not call the provider again', async () => {
     const provider = new FakeDecisionProvider({ maxImageBytes: 1_048_576, output })
     const { service, metrics } = setup(provider)

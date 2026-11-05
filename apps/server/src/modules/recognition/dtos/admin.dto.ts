@@ -123,7 +123,48 @@ export class AdminLinkedExpenseDto {
   @ApiProperty({ type: [AdminFieldProvenanceDto] }) fields: AdminFieldProvenanceDto[]
 }
 
+export class AdminChoiceDto {
+  @ApiProperty({ description: 'Request-scoped code the provider saw, such as `c3`.' }) ref: string
+  @ApiProperty() label: string
+  @ApiPropertyOptional() description?: string
+  @ApiProperty({ description: 'Whether the provider selected this choice.' }) selected: boolean
+}
+
+export class AdminInferenceInputDto {
+  @ApiProperty() locale: string
+  @ApiProperty({ type: [AdminChoiceDto] }) imageTypes: AdminChoiceDto[]
+  @ApiProperty({ type: [AdminChoiceDto] }) categories: AdminChoiceDto[]
+  @ApiProperty({ type: [AdminChoiceDto] }) personal: AdminChoiceDto[]
+}
+
+export class AdminOutputSelectionDto {
+  @ApiProperty() ref: string
+  @ApiProperty({ type: String, nullable: true }) label: string | null
+  @ApiProperty() confidence: number
+}
+
+export class AdminInferenceOutputDto {
+  @ApiProperty({ type: AdminOutputSelectionDto }) imageType: AdminOutputSelectionDto
+  @ApiProperty({ type: AdminOutputSelectionDto, nullable: true })
+  category: AdminOutputSelectionDto | null
+  @ApiProperty({ type: AdminOutputSelectionDto, nullable: true })
+  personal: AdminOutputSelectionDto | null
+}
+
 export class AdminInferenceDetailDto extends AdminInferenceDto {
+  @ApiProperty({
+    type: AdminInferenceInputDto,
+    nullable: true,
+    description:
+      'The choices offered to the provider, including the account’s category and personal choice labels. Null for inferences recorded before this was kept, or when no choice set was built. The photo is never included.',
+  })
+  input: AdminInferenceInputDto | null
+  @ApiProperty({
+    type: AdminInferenceOutputDto,
+    nullable: true,
+    description: 'The provider’s validated answer by ref. Null when it returned none.',
+  })
+  output: AdminInferenceOutputDto | null
   @ApiProperty({ type: AdminUsageDto, nullable: true }) usage: AdminUsageDto | null
   @ApiProperty() imageBytes: number
   @ApiProperty() choiceSetVersion: string

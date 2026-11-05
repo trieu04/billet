@@ -48,12 +48,18 @@ export class AdminRecognitionStatsController {
   }
 
   @Get('inferences/:id')
-  @ApiOperation({ summary: 'Get one de-identified inference record and its saved field outcomes' })
+  @ApiOperation({
+    summary:
+      'Get one inference record with the choices offered to the provider, its output, and saved field outcomes',
+  })
   @ApiOkResponse({ type: AdminInferenceDetailDto })
   async get(@Param('id', ParseBigIntPipe) id: string): Promise<AdminInferenceDetailDto> {
-    const { inference, usage, imageBytes, choiceSetVersion } = await this.inferences.get(id)
+    const { inference, input, output, usage, imageBytes, choiceSetVersion } =
+      await this.inferences.get(id)
     return {
       ...inference,
+      input,
+      output,
       usage,
       imageBytes,
       choiceSetVersion,

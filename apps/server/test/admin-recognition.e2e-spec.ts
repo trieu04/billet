@@ -302,6 +302,13 @@ describeWithDatabase('Admin recognition (e2e, database)', () => {
       for (const value of Object.values(SENTINELS)) expect(text).not.toContain(value)
     }
 
+    /** The detail shows the choice labels the provider was offered, but no expense or account content. */
+    function expectNoExpenseContent(body: unknown): void {
+      const text = JSON.stringify(body)
+      const { choice: _choice, category: _category, ...content } = SENTINELS
+      for (const value of Object.values(content)) expect(text).not.toContain(value)
+    }
+
     it('counts volume, usage, and outcomes without user content', async () => {
       const { body } = await as(admin, '/admin/recognition/summary').expect(200)
       expect(body.total).toBeGreaterThanOrEqual(2)
@@ -400,6 +407,38 @@ describeWithDatabase('Admin recognition (e2e, database)', () => {
       await as(admin, '/admin/recognition/inferences?limit=101').expect(400)
     })
 
+    it('returns the offered choices and the output by label in the detail', async () => {
+      const { body } = await as(admin, `/admin/recognition/inferences/${inferenceId}`).expect(200)
+      expect(body.input.locale).toBe('vi-VN')
+      expect(body.input.categories).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ label: SENTINELS.category, selected: true }),
+          expect.objectContaining({ label: 'Di chuyển', selected: false }),
+        ]),
+      )
+      expect(body.input.personal).toEqual([
+        expect.objectContaining({ ref: 'p1', label: SENTINELS.choice, selected: true }),
+      ])
+      expect(
+        body.input.imageTypes.filter((choice: { selected: boolean }) => choice.selected),
+      ).toHaveLength(1)
+      expect(body.output).toEqual({
+        imageType: { ref: 't1', label: expect.any(String), confidence: 0.9 },
+        category: {
+          ref: expect.stringMatching(/^c\d+$/),
+          label: SENTINELS.category,
+          confidence: 0.8,
+        },
+        personal: { ref: 'p1', label: SENTINELS.choice, confidence: 0.85 },
+      })
+      // Database ids behind the refs stay out of the response.
+      expect(JSON.stringify(body)).not.toContain('targetId')
+      // The skipped request offered nothing and has no output.
+      const skipped = await as(admin, `/admin/recognition/inferences/${skippedId}`).expect(200)
+      expect(skipped.body.input).toBeNull()
+      expect(skipped.body.output).toBeNull()
+    })
+
     it('returns field outcomes in the detail without references or content', async () => {
       const { body } = await as(admin, `/admin/recognition/inferences/${inferenceId}`).expect(200)
       expect(body.usage).toEqual({ inputTokens: 100, outputTokens: 10, costMicroUsd: 25 })
@@ -416,7 +455,7 @@ describeWithDatabase('Admin recognition (e2e, database)', () => {
       const text = JSON.stringify(body)
       expect(text).not.toContain('ruleId')
       expect(text).not.toContain('choiceId')
-      expectNoSentinels(body)
+      expectNoExpenseContent(body)
       await as(admin, '/admin/recognition/inferences/999999999999').expect(404)
     })
 
@@ -486,7 +525,7 @@ describeWithDatabase('Admin recognition (e2e, database)', () => {
           true,
           false,
         ])
-        expectNoSentinels(body)
+        expectNoExpenseContent(body)
 
         const response = await as(admin, photoPath(0)).expect(200)
         expect(response.headers['content-type']).toBe('image/jpeg')
