@@ -1,6 +1,8 @@
 import { Apple, Chrome, LoaderCircle } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Logo } from '@/components/logo'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { postLoginPath } from './return-path'
 import { authRequest, type AuthResponse } from './api'
 import { passwordLogin, useWebSession } from './session'
 import { appleSignIn, googleSignIn } from './social'
@@ -10,6 +12,8 @@ type Mode = 'login' | 'register' | 'verify-register' | 'forgot' | 'reset'
 export function AuthPage({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const session = useWebSession()
   const navigate = useNavigate()
+  const location = useLocation()
+  const returnPath = postLoginPath(location.state)
   const [mode, setMode] = useState<Mode>(initialMode)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -21,7 +25,7 @@ export function AuthPage({ initialMode = 'login' }: { initialMode?: 'login' | 'r
     code: '',
   })
 
-  if (session.token) return <Navigate to="/journal" replace />
+  if (session.token) return <Navigate to={returnPath} replace />
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -74,7 +78,7 @@ export function AuthPage({ initialMode = 'login' }: { initialMode?: 'login' | 'r
 
   const finish = (response: AuthResponse) => {
     session.authenticate(response)
-    navigate('/journal', { replace: true })
+    navigate(returnPath, { replace: true })
   }
 
   const social = async (provider: 'google' | 'apple') => {
@@ -107,7 +111,7 @@ export function AuthPage({ initialMode = 'login' }: { initialMode?: 'login' | 'r
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f5f0e8] px-5 py-10 text-stone-900">
       <section className="w-full max-w-md rounded-[28px] border border-stone-200 bg-[#fffdf9] p-7 shadow-[0_20px_60px_rgba(67,48,33,.10)] sm:p-9">
-        <p className="text-sm font-bold uppercase tracking-[0.24em] text-[#8a4a2e]">Billet</p>
+        <Logo />
         <h1 className="mt-4 text-3xl font-semibold tracking-tight">{title}</h1>
         <p className="mt-2 text-sm leading-6 text-stone-500">
           {mode === 'verify-register' || mode === 'reset'

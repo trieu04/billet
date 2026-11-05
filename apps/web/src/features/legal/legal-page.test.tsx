@@ -1,15 +1,24 @@
 import { render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
+import { WebSessionProvider } from '@/features/auth/session'
 import { PrivacyPage, TermsPage } from './legal-page'
+
+function renderPage(page: ReactNode) {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <WebSessionProvider>{page}</WebSessionProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
 
 describe('legal pages', () => {
   it('shows the terms and their effective date', () => {
-    render(
-      <MemoryRouter>
-        <TermsPage />
-      </MemoryRouter>,
-    )
+    renderPage(<TermsPage />)
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Điều khoản sử dụng')
     expect(screen.getByText('Có hiệu lực từ ngày 30 tháng 10 năm 2026')).toBeInTheDocument()
@@ -24,11 +33,7 @@ describe('legal pages', () => {
   })
 
   it('explains data processing without claiming that data is sold', () => {
-    render(
-      <MemoryRouter>
-        <PrivacyPage />
-      </MemoryRouter>,
-    )
+    renderPage(<PrivacyPage />)
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Chính sách quyền riêng tư')
     expect(screen.getByText(/Billet không bán dữ liệu cá nhân/)).toBeInTheDocument()

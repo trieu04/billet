@@ -3,6 +3,29 @@
 
 @theme {
   --font-sans: 'Inter Variable', sans-serif;
+
+  /* Billet palette: warm paper, espresso ink, coral accent. */
+  --color-paper: #f7f2ea;
+  --color-surface: #fffdf9;
+  --color-sunken: #efe8dc;
+  --color-line: #e4dacd;
+  --color-line-strong: #cfc3b6;
+  --color-ink: #251c17;
+  --color-ink-soft: #3c2f28;
+  --color-muted: #62554c;
+  --color-faint: #8a7b70;
+  --color-coral: #ef764f;
+  --color-coral-strong: #bd4d2b;
+  --color-coral-soft: #fbe3d9;
+  --color-sage: #2d7b62;
+  --color-sage-soft: #dcebe3;
+  --color-honey: #f6c85f;
+  --color-honey-soft: #fbefc9;
+  --color-danger: #a3281c;
+  --color-danger-soft: #fdf1ef;
+
+  --shadow-card: 0 1px 2px rgb(37 28 23 / 0.04), 0 8px 24px -12px rgb(37 28 23 / 0.12);
+  --shadow-float: 0 24px 60px -20px rgb(37 28 23 / 0.35);
 }
 
 @layer base {
@@ -13,8 +36,14 @@
     margin: 0;
     min-width: 320px;
     font-family: var(--font-sans);
-    background: #f7f2ea;
-    color: #251c17;
+    background: var(--color-paper);
+    color: var(--color-ink);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
   button,
   a {

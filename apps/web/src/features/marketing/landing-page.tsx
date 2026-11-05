@@ -7,6 +7,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useWebSession } from '@/features/auth/session'
 import { SiteShell } from './site-shell'
 
 const steps = [
@@ -28,6 +29,8 @@ const steps = [
 ]
 
 export function LandingPage() {
+  const { token, user } = useWebSession()
+  const signedIn = Boolean(token)
   return (
     <SiteShell>
       <main>
@@ -45,22 +48,43 @@ export function LandingPage() {
                 đủ rõ để hiểu chính mình ngày mai.
               </p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  to="/register"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#251c17] px-7 py-4 font-bold text-white transition hover:bg-[#bd4d2b]"
-                >
-                  Bắt đầu miễn phí <ArrowRight className="size-5" aria-hidden />
-                </Link>
-                <a
-                  href="#how-it-works"
-                  className="inline-flex items-center justify-center rounded-full border border-[#251c17]/15 bg-white/50 px-7 py-4 font-bold transition hover:bg-white"
-                >
-                  Xem cách hoạt động
-                </a>
+                {signedIn ? (
+                  <>
+                    <Link
+                      to="/journal"
+                      className="inline-flex items-center justify-center gap-2 rounded-full bg-[#251c17] px-7 py-4 font-bold text-white transition hover:bg-[#bd4d2b]"
+                    >
+                      Mở ứng dụng <ArrowRight className="size-5" aria-hidden />
+                    </Link>
+                    <Link
+                      to="/journal/new"
+                      className="inline-flex items-center justify-center rounded-full border border-[#251c17]/15 bg-white/50 px-7 py-4 font-bold transition hover:bg-white"
+                    >
+                      Thêm chi tiêu mới
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to="/register"
+                      className="inline-flex items-center justify-center gap-2 rounded-full bg-[#251c17] px-7 py-4 font-bold text-white transition hover:bg-[#bd4d2b]"
+                    >
+                      Bắt đầu miễn phí <ArrowRight className="size-5" aria-hidden />
+                    </Link>
+                    <a
+                      href="#how-it-works"
+                      className="inline-flex items-center justify-center rounded-full border border-[#251c17]/15 bg-white/50 px-7 py-4 font-bold transition hover:bg-white"
+                    >
+                      Xem cách hoạt động
+                    </a>
+                  </>
+                )}
               </div>
               <p className="mt-5 flex items-center gap-2 text-sm text-[#62554c]">
-                <Check className="size-4 text-[#2d7b62]" aria-hidden /> Nhập số tiền thủ công, luôn
-                do bạn kiểm soát
+                <Check className="size-4 text-[#2d7b62]" aria-hidden />
+                {signedIn
+                  ? `Bạn đang đăng nhập với ${user?.email ?? 'tài khoản của mình'}`
+                  : 'Nhập số tiền thủ công, luôn do bạn kiểm soát'}
               </p>
             </div>
             <JournalPreview />
@@ -147,16 +171,19 @@ export function LandingPage() {
         <section className="px-5 pb-20 sm:px-8 sm:pb-28">
           <div className="mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] bg-[#ef764f] px-7 py-14 text-center text-[#2f160d] sm:px-14 sm:py-20">
             <h2 className="mx-auto max-w-3xl text-4xl font-black tracking-[-0.045em] sm:text-6xl">
-              Bắt đầu viết câu chuyện tiền bạc của bạn.
+              {signedIn
+                ? 'Hôm nay bạn có khoảnh khắc nào đáng nhớ?'
+                : 'Bắt đầu viết câu chuyện tiền bạc của bạn.'}
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-lg leading-8 text-[#5f2a19]">
               Một bức ảnh, một con số, vài giây — vậy là đủ cho hôm nay.
             </p>
             <Link
-              to="/register"
+              to={signedIn ? '/journal' : '/register'}
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#251c17] px-7 py-4 font-bold text-white"
             >
-              Tạo tài khoản <ArrowRight className="size-5" aria-hidden />
+              {signedIn ? 'Mở ứng dụng' : 'Tạo tài khoản'}{' '}
+              <ArrowRight className="size-5" aria-hidden />
             </Link>
           </div>
         </section>

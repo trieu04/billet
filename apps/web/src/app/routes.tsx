@@ -1,6 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { HealthPage } from '@/features/health/health-page'
+import { CategoriesPage } from '@/features/categories/categories-page'
+import { ExpenseFormPage } from '@/features/journal/expense-form-page'
 import { JournalPage } from '@/features/journal/journal-page'
+import { SettingsPage } from '@/features/settings/settings-page'
+import { StatsPage } from '@/features/stats/stats-page'
+import { AppShell } from './app-shell'
 import { AuthPage } from '@/features/auth/auth-page'
 import { RequireSession } from '@/features/auth/session'
 import { LandingPage } from '@/features/marketing/landing-page'
@@ -15,13 +20,19 @@ export function AppRoutes() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route
-        path="/journal"
         element={
           <RequireSession>
-            <JournalPage />
+            <AppShell />
           </RequireSession>
         }
-      />
+      >
+        <Route path="/journal" element={<JournalPage />} />
+        <Route path="/journal/new" element={<ExpenseFormPage />} />
+        <Route path="/journal/:id" element={<ExpenseFormPage />} />
+        <Route path="/stats" element={<StatsPage />} />
+        <Route path="/categories" element={<CategoriesPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
       <Route path="/health" element={<HealthPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

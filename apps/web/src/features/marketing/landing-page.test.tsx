@@ -1,15 +1,25 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
+import { WebSessionProvider } from '@/features/auth/session'
 import { LandingPage } from './landing-page'
+
+function renderLanding() {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <WebSessionProvider>
+          <LandingPage />
+        </WebSessionProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
 
 describe('LandingPage', () => {
   it('introduces Billet and links to account creation', () => {
-    render(
-      <MemoryRouter>
-        <LandingPage />
-      </MemoryRouter>,
-    )
+    renderLanding()
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       'Tiền của bạn cũng có một câu chuyện.',
@@ -25,11 +35,7 @@ describe('LandingPage', () => {
   })
 
   it('exposes mobile navigation from the menu control', () => {
-    render(
-      <MemoryRouter>
-        <LandingPage />
-      </MemoryRouter>,
-    )
+    renderLanding()
 
     const menu = screen.getByRole('button', { name: 'Mở menu' })
     fireEvent.click(menu)
