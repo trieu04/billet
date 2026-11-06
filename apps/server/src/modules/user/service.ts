@@ -1,15 +1,28 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common'
+import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
 import { DataSource, Repository } from 'typeorm'
+import { OBJECT_STORAGE, type ObjectStorage } from '../../common/storage/interface'
 import { UserEntity } from './entities/user.entity'
 import { UserSettingsEntity } from './entities/user-settings.entity'
 import type {
+  AccountDeletionRequestResponseDto,
   ProfileResponseDto,
   UpdateProfileDto,
   UpdateSettingsDto,
   UserResponseDto,
   UserSettingsResponseDto,
 } from './dto'
+
+const ACCOUNT_DELETION_PURPOSE = 'account-deletion'
+const ACCOUNT_DELETION_TTL_SECONDS = 300
 
 export interface CreateUserInput {
   username: string
@@ -23,11 +36,15 @@ export interface CreateUserInput {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name)
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
     @InjectRepository(UserSettingsEntity) private readonly settings: Repository<UserSettingsEntity>,
     private readonly dataSource: DataSource,
+    @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
+    private readonly jwt: JwtService,
   ) {}
 
   async create(input: CreateUserInput): Promise<UserEntity> {
@@ -113,6 +130,10 @@ export class UsersService {
     return user
   }
 
+  isActive(id: string): Promise<boolean> {
+    return this.users.existsBy({ id })
+  }
+
   async updateProfile(userId: string, input: UpdateProfileDto): Promise<ProfileResponseDto> {
     const user = await this.findById(userId)
     user.displayName = input.displayName.trim()
@@ -154,6 +175,51 @@ export class UsersService {
       ),
     ])
     return { ...this.toResponse(user), settings, expenseCount: Number(count[0]?.count ?? 0) }
+  }
+
+  async requestAccountDeletion(userId: string): Promise<AccountDeletionRequestResponseDto> {
+    const confirmationCode = await this.jwt.signAsync(
+      { sub: userId, purpose: ACCOUNT_DELETION_PURPOSE },
+      { expiresIn: ACCOUNT_DELETION_TTL_SECONDS },
+    )
+    return { confirmationCode, expiresIn: ACCOUNT_DELETION_TTL_SECONDS }
+  }
+
+  async deleteAccount(userId: string, confirmationCode: string): Promise<void> {
+    await this.verifyDeletionCode(userId, confirmationCode)
+    const [media, exports] = await Promise.all([
+      this.dataSource.query<{ storage_key: string; thumbnail_key: string | null }[]>(
+        `SELECT storage_key, thumbnail_key FROM media_assets WHERE user_id = $1`,
+        [userId],
+      ),
+      this.dataSource.query<{ storage_key: string }[]>(
+        `SELECT storage_key FROM export_jobs WHERE user_id = $1 AND storage_key IS NOT NULL`,
+        [userId],
+      ),
+    ])
+    const result = await this.users.delete(userId)
+    if (!result.affected) throw new NotFoundException('User not found')
+    const keys = [
+      ...media.flatMap(({ storage_key, thumbnail_key }) =>
+        [`media/${storage_key}`, thumbnail_key ? `media/${thumbnail_key}` : null].filter(
+          (key): key is string => key !== null,
+        ),
+      ),
+      ...exports.map(({ storage_key }) => `exports/${storage_key}`),
+    ]
+    const results = await Promise.allSettled(keys.map((key) => this.storage.delete(key)))
+    results.forEach((outcome, index) => {
+      if (outcome.status === 'rejected')
+        this.logger.warn(`Failed to delete stored object ${keys[index]}: ${String(outcome.reason)}`)
+    })
+  }
+
+  private async verifyDeletionCode(userId: string, code: string): Promise<void> {
+    const payload = await this.jwt
+      .verifyAsync<{ sub?: string; purpose?: string }>(code)
+      .catch(() => null)
+    if (payload?.purpose !== ACCOUNT_DELETION_PURPOSE || payload.sub !== userId)
+      throw new BadRequestException('Invalid or expired confirmation code')
   }
 
   private settingsResponse(settings: UserSettingsEntity): UserSettingsResponseDto {

@@ -32,6 +32,8 @@ type SessionContextValue = {
     displayName?: string,
   ): Promise<void>
   logout(): Promise<void>
+  requestAccountDeletion(): Promise<string>
+  deleteAccount(confirmationCode: string): Promise<void>
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null)
@@ -83,6 +85,27 @@ export function SessionProvider({ children }: PropsWithChildren) {
     setToken(null)
     setUser(null)
   }, [])
+
+  const requestAccountDeletion = useCallback(async () => {
+    if (!token) throw new Error('Phiên đăng nhập đã hết hạn.')
+    const { confirmationCode } = await apiRequest<{ confirmationCode: string }>(
+      '/profile/deletion-request',
+      { method: 'POST', token },
+    )
+    return confirmationCode
+  }, [token])
+
+  const deleteAccount = useCallback(
+    async (confirmationCode: string) => {
+      if (!token) throw new Error('Phiên đăng nhập đã hết hạn.')
+      await apiRequest('/profile', { method: 'DELETE', token, body: { confirmationCode } })
+      await saveToken(null)
+      await saveRefreshToken(null)
+      setToken(null)
+      setUser(null)
+    },
+    [token],
+  )
 
   useEffect(() => {
     void (async () => {
@@ -169,8 +192,28 @@ export function SessionProvider({ children }: PropsWithChildren) {
   )
 
   const value = useMemo(
-    () => ({ token, user, ready, login, register, socialLogin, logout }),
-    [login, logout, ready, register, socialLogin, token, user],
+    () => ({
+      token,
+      user,
+      ready,
+      login,
+      register,
+      socialLogin,
+      logout,
+      requestAccountDeletion,
+      deleteAccount,
+    }),
+    [
+      deleteAccount,
+      login,
+      logout,
+      ready,
+      register,
+      requestAccountDeletion,
+      socialLogin,
+      token,
+      user,
+    ],
   )
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }

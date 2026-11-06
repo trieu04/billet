@@ -26,6 +26,8 @@ import { cardShadow } from '@/features/ui/card'
 import { AnimatedPressable, useEntranceAnimation, useReducedMotion } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
 
+import { DeleteAccountModal } from './delete-account-modal'
+
 const currentMonthNumber = new Date().getMonth() + 1
 const daysRemaining =
   new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() -
@@ -33,7 +35,7 @@ const daysRemaining =
   1
 
 export function ProfileScreen() {
-  const { logout, token } = useSession()
+  const { deleteAccount, logout, requestAccountDeletion, token } = useSession()
   const biometric = useBiometricLock()
   const load = useCallback(async (token: string) => {
     const profile = await apiRequest<Profile>('/profile', { token })
@@ -46,6 +48,7 @@ export function ProfileScreen() {
   const { data, error, refresh } = useApiResource(load)
   const reducedMotion = useReducedMotion()
   const [progressAnimation] = useState(() => new Animated.Value(0))
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const identityEntrance = useEntranceAnimation(30, 8)
   const cardsEntrance = useEntranceAnimation(100, 10)
   const profile = data?.profile
@@ -312,6 +315,20 @@ export function ProfileScreen() {
             <Text style={styles.logout}>Đăng xuất</Text>
           </AnimatedPressable>
         </View>
+        <AnimatedPressable
+          accessibilityHint="Xóa vĩnh viễn tài khoản và toàn bộ dữ liệu Billet"
+          accessibilityRole="button"
+          onPress={() => setDeleteOpen(true)}
+          style={styles.deleteAccount}
+        >
+          <Text style={styles.deleteAccountText}>Xóa tài khoản</Text>
+        </AnimatedPressable>
+        <DeleteAccountModal
+          confirmDelete={deleteAccount}
+          onCancel={() => setDeleteOpen(false)}
+          requestCode={requestAccountDeletion}
+          visible={deleteOpen}
+        />
         {!biometric.loading && !biometric.available ? (
           <Text style={styles.biometricHint}>
             Thiết bị chưa thiết lập sinh trắc nên khóa ứng dụng đang tắt.
@@ -423,6 +440,14 @@ const styles = StyleSheet.create({
     width: 40,
   },
   content: { paddingBottom: 48 },
+  deleteAccount: {
+    alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  deleteAccountText: { color: '#B23B32', fontFamily: fonts.medium, fontSize: 14 },
   flex: { flex: 1 },
   logout: { color: '#B23B32', fontFamily: fonts.semibold, fontSize: 16 },
   moments: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 14, marginTop: 6 },

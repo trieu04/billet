@@ -57,8 +57,11 @@ Authenticated notification endpoints:
 
 Expense journal endpoints:
 
-- `GET|PATCH /api/v1/profile`, `GET|PATCH /api/v1/profile/settings`, and
-  `GET /api/v1/profile/settings/options`
+- `GET|PATCH|DELETE /api/v1/profile`, `GET|PATCH /api/v1/profile/settings`, and
+  `GET /api/v1/profile/settings/options`. Account deletion is two-step:
+  `POST /api/v1/profile/deletion-request` returns a 5-minute `confirmationCode` without deleting
+  anything, then `DELETE /api/v1/profile` with `{"confirmationCode":"..."}` permanently removes the
+  account, its related data, stored media and exports, and invalidates existing tokens.
 - `GET /api/v1/categories`
 - `POST|GET /api/v1/expenses`, `GET|PATCH|DELETE /api/v1/expenses/:id`
 - `GET /api/v1/expenses/calendar`, `GET /api/v1/expenses/calendar/history`

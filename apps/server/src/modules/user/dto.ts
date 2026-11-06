@@ -80,6 +80,21 @@ export class UpdateProfileDto {
   displayName: string
 }
 
+export class AccountDeletionRequestResponseDto {
+  @ApiProperty({ description: 'Short-lived, single-purpose code to pass to DELETE /profile' })
+  confirmationCode: string
+  @ApiProperty({ example: 300, description: 'Seconds until the code expires' })
+  expiresIn: number
+}
+
+export class DeleteAccountDto {
+  @ApiProperty({ description: 'Code returned by POST /profile/deletion-request' })
+  @IsString()
+  @MaxLength(2048)
+  @Matches(/\S/, { message: 'confirmationCode must not be blank' })
+  confirmationCode: string
+}
+
 export class SettingsOptionsResponseDto {
   @ApiProperty({ enum: ['VND', 'USD', 'EUR', 'JPY'], isArray: true })
   currencies: string[]

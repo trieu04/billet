@@ -17,6 +17,9 @@ export class LocalObjectStorage implements ObjectStorage {
   open(key: string) {
     return createReadStream(this.path(key))
   }
+  async delete(key: string) {
+    await fs.rm(this.path(key), { force: true })
+  }
   private path(key: string) {
     if (!isValidStorageKey(key)) throw new Error('Invalid storage key')
     return join(this.root, key)

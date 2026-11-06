@@ -1,9 +1,28 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common'
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common'
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger'
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import type { AuthUser } from '../auth/interface'
 import {
+  AccountDeletionRequestResponseDto,
+  DeleteAccountDto,
   ProfileResponseDto,
   SettingsOptionsResponseDto,
   UpdateProfileDto,
@@ -33,6 +52,34 @@ export class UserController {
   @ApiOkResponse({ type: ProfileResponseDto })
   updateProfile(@CurrentUser() user: AuthUser, @Body() input: UpdateProfileDto) {
     return this.users.updateProfile(user.id, input)
+  }
+  @Post('deletion-request')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Request account deletion',
+    description:
+      'Starts the two-step account deletion. Returns a short-lived confirmation code; nothing is deleted yet.',
+  })
+  @ApiOkResponse({ type: AccountDeletionRequestResponseDto })
+  requestAccountDeletion(
+    @CurrentUser() user: AuthUser,
+  ): Promise<AccountDeletionRequestResponseDto> {
+    return this.users.requestAccountDeletion(user.id)
+  }
+  @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete the account',
+    description:
+      'Permanently deletes the authenticated account and its related data, including active sessions. Requires the confirmationCode returned by POST /profile/deletion-request.',
+  })
+  @ApiNoContentResponse({ description: 'Account and related data deleted' })
+  @ApiBadRequestResponse({ description: 'Missing, invalid, expired, or foreign confirmation code' })
+  async deleteAccount(
+    @CurrentUser() user: AuthUser,
+    @Body() input: DeleteAccountDto,
+  ): Promise<void> {
+    await this.users.deleteAccount(user.id, input.confirmationCode)
   }
   @Get('settings')
   @ApiOperation({
