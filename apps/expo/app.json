@@ -67,7 +67,8 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static"
+      "output": "static",
+      "favicon": "./assets/icons/favicon.png"
     },
     "ios": {
       "supportsTablet": true,
@@ -75,7 +76,13 @@
     },
     "android": {
       "blockedPermissions": ["android.permission.RECORD_AUDIO"],
-      "package": "vn.devt.billet"
-    }
+      "package": "vn.devt.billet",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icons/adaptive-icon-foreground.png",
+        "monochromeImage": "./assets/icons/adaptive-icon-monochrome.png",
+        "backgroundColor": "#FFFCF7"
+      }
+    },
+    "icon": "./assets/icons/icon.png"
   }
 }
