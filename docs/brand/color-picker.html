@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Billet color picker</title>
+    <style>
+      :root {
+        --ui-bg: #f7f3ec;
+        --ui-ink: #2a2521;
+        --ui-muted: #6b625a;
+        --ui-line: #e6dccf;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px 64px;
+        background: var(--ui-bg);
+        color: var(--ui-ink);
+        font:
+          15px/1.5 -apple-system,
+          system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 19px;
+        font-weight: 600;
+        margin: 36px 0 12px;
+        padding-top: 20px;
+        border-top: 1px solid var(--ui-line);
+      }
+      h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 16px 0 8px;
+        color: var(--ui-muted);
+      }
+      .hint {
+        font-size: 13px;
+        color: var(--ui-muted);
+        margin: 0 0 12px;
+        max-width: 760px;
+      }
+      button,
+      select,
+      input[type='text'] {
+        font: inherit;
+        font-size: 13px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid #d6ccbf;
+        background: #fff;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      button[aria-pressed='true'] {
+        border-color: var(--ui-ink);
+        background: #efe2cf;
+      }
+      :focus-visible {
+        outline: 2px solid #e3705a;
+        outline-offset: 2px;
+      }
+      input[type='color'] {
+        width: 40px;
+        height: 34px;
+        padding: 2px;
+        border: 1px solid #d6ccbf;
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+      }
+      input[type='range'] {
+        width: 100%;
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      }
+      .card {
+        background: #fff;
+        border: 1px solid var(--ui-line);
+        border-radius: 12px;
+        padding: 14px;
+      }
+      .anchor {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .anchor input[type='text'] {
+        width: 92px;
+        font-family: ui-monospace, monospace;
+        text-transform: uppercase;
+      }
+      .anchor b {
+        display: block;
+        font-size: 14px;
+      }
+      .anchor small {
+        color: var(--ui-muted);
+        font-size: 12px;
+      }
+      .ramp {
+        display: grid;
+        grid-template-columns: 110px repeat(11, minmax(0, 1fr));
+        gap: 3px;
+        align-items: stretch;
+        margin-bottom: 6px;
+      }
+      .ramp .name {
+        font-size: 13px;
+        align-self: center;
+      }
+      .sw {
+        height: 46px;
+        border-radius: 6px;
+        font:
+          10px/1.2 ui-monospace,
+          monospace;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 4px;
+        position: relative;
+      }
+      .sw.pin::after {
+        content: '';
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th {
+        text-align: left;
+        font-weight: 600;
+        color: var(--ui-muted);
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--ui-line);
+      }
+      td {
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--ui-line);
+        vertical-align: middle;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .dot {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        border: 1px solid rgb(0 0 0 / 0.08);
+        flex: none;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 6px;
+        white-space: nowrap;
+      }
+      .ok {
+        background: #dcebe3;
+        color: #1d5a46;
+      }
+      .mid {
+        background: #fbefc9;
+        color: #6b4d06;
+      }
+      .bad {
+        background: #fdf1ef;
+        color: #a3281c;
+      }
+      .info {
+        background: #efe8dc;
+        color: #62554c;
+      }
+      .slider {
+        display: grid;
+        grid-template-columns: 150px 1fr 48px;
+        gap: 10px;
+        align-items: center;
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+      .slider output {
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+      .cats {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      }
+      .cat {
+        border: 1px solid var(--ui-line);
+        border-radius: 10px;
+        padding: 8px;
+        background: #fff;
+      }
+      .cat .pair {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 6px;
+      }
+      .cat .pair div {
+        flex: 1;
+        height: 34px;
+        border-radius: 6px;
+        font-size: 11px;
+        display: flex;
+        align-items: flex-end;
+        padding: 3px 5px;
+      }
+      .cat input[type='range'] {
+        margin-top: 4px;
+      }
+      .phones {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center;
+      }
+      .phone {
+        width: 340px;
+        border-radius: 34px;
+        padding: 18px 16px 22px;
+        background: var(--t-canvas);
+        color: var(--t-text);
+        border: 6px solid #1b1714;
+      }
+      .phone .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 6px 4px 14px;
+      }
+      .phone .avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--t-sunken);
+        border: 1px solid var(--t-line);
+      }
+      .p-card {
+        background: var(--t-surface);
+        border: 1px solid var(--t-line);
+        border-radius: 18px;
+        padding: 10px;
+        margin-bottom: 12px;
+      }
+      .p-photo {
+        height: 150px;
+        border-radius: 12px;
+        background: var(--t-sunken);
+        display: flex;
+        align-items: flex-end;
+        padding: 10px;
+        position: relative;
+        overflow: hidden;
+      }
+      .p-photo .shape {
+        position: absolute;
+        border-radius: 50%;
+      }
+      .p-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 10px;
+        gap: 8px;
+      }
+      .p-amount {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .p-sub {
+        font-size: 12px;
+        color: var(--t-text-secondary);
+      }
+      .p-chip {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 999px;
+        color: var(--t-text);
+      }
+      .p-btn {
+        display: block;
+        width: 100%;
+        border: 0;
+        border-radius: 14px;
+        padding: 13px;
+        font-size: 15px;
+        font-weight: 650;
+        background: var(--t-accent);
+        color: var(--t-on-accent);
+        margin-bottom: 8px;
+      }
+      .p-btn2 {
+        display: block;
+        width: 100%;
+        border-radius: 14px;
+        padding: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        background: transparent;
+        color: var(--t-accent-text);
+        border: 1px solid var(--t-line);
+        margin-bottom: 12px;
+      }
+      .p-bar {
+        display: flex;
+        height: 14px;
+        border-radius: 7px;
+        overflow: hidden;
+        margin: 8px 0;
+      }
+      .p-legend {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px 12px;
+        font-size: 12px;
+        color: var(--t-text-secondary);
+      }
+      .p-legend span {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+        margin-right: 6px;
+      }
+      .p-toast {
+        border-radius: 12px;
+        padding: 9px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        margin-top: 8px;
+      }
+      .p-link {
+        color: var(--t-accent-text);
+        font-weight: 650;
+        font-size: 13px;
+      }
+      .tabs {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+      }
+      pre {
+        background: #fff;
+        border: 1px solid var(--ui-line);
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 12px;
+        overflow: auto;
+        max-height: 420px;
+        margin: 0;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+      @media (max-width: 640px) {
+        .ramp {
+          grid-template-columns: 70px repeat(11, minmax(0, 1fr));
+        }
+        .sw {
+          font-size: 0;
+          height: 34px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Billet · bảng màu</h1>
+      <p class="hint">
+        Bốn màu thương hiệu sinh ra các thang màu (OKLCH). Token ngữ nghĩa chọn một bậc trong thang
+        cho chế độ sáng và tối, kèm kiểm tra tương phản WCAG. Chấm nhỏ ở góc ô màu đánh dấu bậc được
+        ghim đúng mã màu thương hiệu.
+      </p>
+      <div class="row">
+        <button id="reset">Khôi phục đề xuất</button>
+        <span class="hint" style="margin: 0">Lần chỉnh cuối được lưu trong trình duyệt này.</span>
+      </div>
+
+      <h2>1 · Màu thương hiệu</h2>
+      <div class="grid" id="anchors"></div>
+
+      <h2>2 · Màu trạng thái</h2>
+      <p class="hint">
+        Chỉ chọn sắc độ (hue); độ sáng và độ rực lấy theo san hô để ba màu trạng thái cùng một họ
+        với thương hiệu.
+      </p>
+      <div class="grid" id="semantic"></div>
+
+      <h2>3 · Thang màu</h2>
+      <div id="ramps"></div>
+
+      <h2>4 · Token ngữ nghĩa</h2>
+      <p class="hint">
+        Chọn bậc cho từng token. Cột tương phản so token với nền đi kèm ở cả hai chế độ: AA ≥ 4.5,
+        AA chữ lớn ≥ 3.
+      </p>
+      <div style="overflow-x: auto"><table id="tokens"></table></div>
+
+      <h2>5 · Màu danh mục</h2>
+      <p class="hint">
+        Màu người dùng gán cho danh mục chi tiêu. Mọi màu dùng chung độ sáng và độ rực nên không màu
+        nào lấn át; chỉnh sắc độ từng màu. Chữ trên màu danh mục dùng màu chữ chính.
+      </p>
+      <div class="grid" style="margin-bottom: 12px">
+        <div class="card">
+          <h3 style="margin-top: 0">Chế độ sáng</h3>
+          <div class="slider">
+            <label for="catL">Độ sáng</label
+            ><input type="range" id="catL" min="0.7" max="0.95" step="0.01" /><output
+              id="catLo"
+            ></output>
+          </div>
+          <div class="slider">
+            <label for="catC">Độ rực</label
+            ><input type="range" id="catC" min="0.02" max="0.16" step="0.005" /><output
+              id="catCo"
+            ></output>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top: 0">Chế độ tối</h3>
+          <div class="slider">
+            <label for="catLd">Độ sáng</label
+            ><input type="range" id="catLd" min="0.3" max="0.6" step="0.01" /><output
+              id="catLdo"
+            ></output>
+          </div>
+          <div class="slider">
+            <label for="catCd">Độ rực</label
+            ><input type="range" id="catCd" min="0.02" max="0.14" step="0.005" /><output
+              id="catCdo"
+            ></output>
+          </div>
+        </div>
+      </div>
+      <div class="cats" id="cats"></div>
+
+      <h2>6 · Xem trước</h2>
+      <div class="phones" id="phones"></div>
+
+      <h2>7 · Xuất</h2>
+      <div class="tabs">
+        <button data-fmt="css" aria-pressed="true">CSS (web)</button>
+        <button data-fmt="swift">Swift (iOS)</button>
+        <button data-fmt="kotlin">Kotlin (Android)</button>
+        <button data-fmt="json">JSON</button>
+        <button id="copy">Sao chép</button>
+        <span id="copied" role="status" class="hint" style="margin: 0"></span>
+      </div>
+      <pre id="out"></pre>
+    </main>
+    <script>
+      // ---------- Màu: sRGB ⇄ OKLab/OKLCH ----------
+      const lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+      const delin = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055)
+      function hexToRgb(h) {
+        h = h.replace('#', '')
+        return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+      }
+      function rgbToHex(rgb) {
+        return (
+          '#' +
+          rgb
+            .map((v) =>
+              Math.round(Math.min(1, Math.max(0, v)) * 255)
+                .toString(16)
+                .padStart(2, '0'),
+            )
+            .join('')
+            .toUpperCase()
+        )
+      }
+      function hexToOklch(hex) {
+        const [r, g, b] = hexToRgb(hex).map(lin)
+        const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+        const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+        const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+        const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s
+        const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
+        const B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+        return { L, C: Math.hypot(A, B), H: ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360 }
+      }
+      function oklchToRgb(L, C, H) {
+        const a = C * Math.cos((H * Math.PI) / 180),
+          b = C * Math.sin((H * Math.PI) / 180)
+        const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
+        const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
+        const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3
+        return [
+          4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+          -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+          -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+        ]
+      }
+      const inGamut = (rgb) => rgb.every((v) => v >= -0.0005 && v <= 1.0005)
+      function oklchToHex(L, C, H) {
+        let lo = 0,
+          hi = C
+        if (!inGamut(oklchToRgb(L, C, H))) {
+          for (let i = 0; i < 20; i++) {
+            const mid = (lo + hi) / 2
+            if (inGamut(oklchToRgb(L, mid, H))) lo = mid
+            else hi = mid
+          }
+          C = lo
+        }
+        return rgbToHex(oklchToRgb(L, C, H).map(delin))
+      }
+      function luminance(hex) {
+        const [r, g, b] = hexToRgb(hex).map(lin)
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+      }
+      function contrast(a, b) {
+        const x = luminance(a),
+          y = luminance(b)
+        return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
+      }
+      const isHex = (v) => /^#?[0-9a-f]{6}$/i.test(v)
+      const norm = (v) => ('#' + v.replace('#', '')).toUpperCase()
+
+      // ---------- Mặc định đề xuất ----------
+      const STOPS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950']
+      const STOP_L = [0.985, 0.955, 0.915, 0.86, 0.75, 0.64, 0.52, 0.44, 0.36, 0.28, 0.2]
+      const CAT_SEED = [
+        '#F4B89C',
+        '#F6C85F',
+        '#B7C9AB',
+        '#9CC5D8',
+        '#C9B6E4',
+        '#E8A5B8',
+        '#D9B48F',
+        '#A7D3C4',
+      ]
+      const CAT_NAMES = [
+        'Ăn uống',
+        'Cà phê',
+        'Đi chợ',
+        'Di chuyển',
+        'Giải trí',
+        'Mua sắm',
+        'Hóa đơn',
+        'Sức khỏe',
+      ]
+      const DEFAULTS = {
+        anchors: { cream: '#FFFCF7', sand: '#EFE2CF', coral: '#E3705A', ink: '#2A2521' },
+        hues: { success: 160, warning: 80, danger: 20 },
+        cat: {
+          L: 0.84,
+          C: 0.075,
+          Ld: 0.45,
+          Cd: 0.065,
+          hues: CAT_SEED.map((h) => Math.round(hexToOklch(h).H)),
+        },
+        tokens: {
+          canvas: ['neutral', '100', '950'],
+          surface: ['neutral', '50', '900'],
+          sunken: ['neutral', '200', '800'],
+          line: ['neutral', '300', '800'],
+          text: ['neutral', '900', '50'],
+          textSecondary: ['neutral', '600', '400'],
+          textMuted: ['neutral', '500', '500'],
+          accent: ['coral', '500', '400'],
+          onAccent: ['neutral', '900', '900'],
+          accentText: ['coral', '700', '300'],
+          accentSoft: ['coral', '100', '800'],
+          success: ['success', '700', '300'],
+          successSoft: ['success', '100', '800'],
+          warning: ['warning', '700', '300'],
+          warningSoft: ['warning', '100', '800'],
+          danger: ['danger', '700', '300'],
+          dangerSoft: ['danger', '100', '800'],
+        },
+      }
+      const TOKEN_INFO = {
+        canvas: { label: 'Nền trang', vs: ['text'] },
+        surface: { label: 'Thẻ, sheet', vs: ['text'] },
+        sunken: { label: 'Nền chìm, ô nhập', vs: ['text'] },
+        line: { label: 'Đường kẻ', vs: ['surface'], min: 1.2, note: 'trang trí' },
+        text: { label: 'Chữ chính', vs: ['surface', 'canvas'] },
+        textSecondary: { label: 'Chữ phụ', vs: ['surface', 'canvas'] },
+        textMuted: { label: 'Chú thích, placeholder', vs: ['surface'], min: 3 },
+        accent: { label: 'San hô · nút chính', vs: ['onAccent'] },
+        onAccent: { label: 'Chữ trên nút chính', vs: ['accent'] },
+        accentText: { label: 'Chữ/link san hô', vs: ['surface', 'canvas'] },
+        accentSoft: { label: 'Nền san hô nhạt', vs: ['accentText'] },
+        success: { label: 'Thành công', vs: ['surface', 'successSoft'] },
+        successSoft: { label: 'Nền thành công', vs: ['success'] },
+        warning: { label: 'Cảnh báo', vs: ['surface', 'warningSoft'] },
+        warningSoft: { label: 'Nền cảnh báo', vs: ['warning'] },
+        danger: { label: 'Lỗi, xóa', vs: ['surface', 'dangerSoft'] },
+        dangerSoft: { label: 'Nền lỗi', vs: ['danger'] },
+      }
+      const RAMP_NAMES = {
+        neutral: 'Trung tính',
+        coral: 'San hô',
+        success: 'Thành công',
+        warning: 'Cảnh báo',
+        danger: 'Lỗi',
+      }
+      const ANCHOR_INFO = {
+        cream: ['Kem', 'Nền thẻ sáng, nền icon'],
+        sand: ['Cát', 'Nền chìm, khung ảnh'],
+        coral: ['San hô', 'Nhấn: nút chính, chấm logo'],
+        ink: ['Mực', 'Chữ chính, nền thẻ tối'],
+      }
+
+      const KEY = 'billet.color-picker.v1'
+      const clone = (o) => JSON.parse(JSON.stringify(o))
+      let S = clone(DEFAULTS)
+      try {
+        const saved = JSON.parse(localStorage.getItem(KEY) || 'null')
+        if (saved)
+          S = {
+            ...S,
+            ...saved,
+            anchors: { ...S.anchors, ...saved.anchors },
+            tokens: { ...S.tokens, ...saved.tokens },
+          }
+      } catch {}
+      let fmt = 'css'
+      const $ = (id) => document.getElementById(id)
+      const r2 = (v) => Math.round(v * 100) / 100
+
+      // ---------- Sinh thang màu ----------
+      function chromaRamp(seedHex, hueOverride) {
+        const o = hexToOklch(seedHex)
+        const H = hueOverride ?? o.H
+        const out = {}
+        let pinned = null
+        STOPS.forEach((s, i) => {
+          const L = STOP_L[i]
+          const k = Math.max(0.12, 1 - Math.abs(L - o.L) * (L > o.L ? 2.2 : 1.5))
+          out[s] = oklchToHex(L, o.C * k, H)
+        })
+        if (hueOverride == null) {
+          let best = 0
+          STOP_L.forEach((L, i) => {
+            if (Math.abs(L - o.L) < Math.abs(STOP_L[best] - o.L)) best = i
+          })
+          out[STOPS[best]] = norm(seedHex)
+          pinned = [STOPS[best]]
+        }
+        return { stops: out, pinned: pinned || [] }
+      }
+      function neutralRamp() {
+        const ink = hexToOklch(S.anchors.ink),
+          sand = hexToOklch(S.anchors.sand)
+        const warmth = Math.max(ink.C, sand.C * 0.8)
+        const out = {}
+        STOPS.forEach((s, i) => {
+          const L = STOP_L[i]
+          const H = L > 0.6 ? sand.H : ink.H
+          out[s] = oklchToHex(L, warmth * (1 - Math.abs(L - 0.6) * 0.8), H)
+        })
+        const pinned = []
+        for (const key of ['cream', 'sand', 'ink']) {
+          const L0 = hexToOklch(S.anchors[key]).L
+          let best = 0
+          STOP_L.forEach((L, i) => {
+            if (Math.abs(L - L0) < Math.abs(STOP_L[best] - L0)) best = i
+          })
+          out[STOPS[best]] = norm(S.anchors[key])
+          pinned.push(STOPS[best])
+        }
+        return { stops: out, pinned }
+      }
+      function semanticRamp(hue) {
+        const c = hexToOklch(S.anchors.coral)
+        return chromaRamp(oklchToHex(c.L, c.C * 0.8, hue), hue)
+      }
+      function buildRamps() {
+        return {
+          neutral: neutralRamp(),
+          coral: chromaRamp(S.anchors.coral),
+          success: semanticRamp(S.hues.success),
+          warning: semanticRamp(S.hues.warning),
+          danger: semanticRamp(S.hues.danger),
+        }
+      }
+      function resolve(R) {
+        const light = {},
+          dark = {}
+        for (const [k, [ramp, l, d]] of Object.entries(S.tokens)) {
+          light[k] = R[ramp].stops[l]
+          dark[k] = R[ramp].stops[d]
+        }
+        return { light, dark }
+      }
+      function categories() {
+        return S.cat.hues.map((h, i) => ({
+          name: CAT_NAMES[i],
+          light: oklchToHex(S.cat.L, S.cat.C, h),
+          dark: oklchToHex(S.cat.Ld, S.cat.Cd, h),
+          hue: h,
+        }))
+      }
+
+      // ---------- Vẽ các phần điều khiển ----------
+      function badge(ratio, min = 4.5) {
+        const cls = ratio >= Math.max(min, 4.5) ? 'ok' : ratio >= Math.min(min, 3) ? 'mid' : 'bad'
+        const label =
+          cls === 'ok' ? 'AA' : cls === 'mid' ? (min <= 3 ? 'Đạt' : 'AA lớn') : 'Không đạt'
+        return `<span class="badge ${cls}">${r2(ratio).toFixed(2)} · ${label}</span>`
+      }
+      function textOn(hex) {
+        return luminance(hex) > 0.35 ? '#2A2521' : '#FFFCF7'
+      }
+
+      function drawAnchors() {
+        $('anchors').innerHTML = Object.entries(ANCHOR_INFO)
+          .map(
+            ([k, [name, use]]) =>
+              `<div class="card anchor"><input type="color" id="c-${k}" value="${S.anchors[k]}" aria-label="${name}" /><div style="flex:1"><b>${name}</b><small>${use}</small></div><input type="text" id="t-${k}" value="${S.anchors[k]}" aria-label="Mã ${name}" maxlength="7" /></div>`,
+          )
+          .join('')
+        for (const k of Object.keys(ANCHOR_INFO)) {
+          $('c-' + k).oninput = (e) => {
+            S.anchors[k] = norm(e.target.value)
+            $('t-' + k).value = S.anchors[k]
+            update()
+          }
+          $('t-' + k).onchange = (e) => {
+            if (isHex(e.target.value)) {
+              S.anchors[k] = norm(e.target.value)
+              $('c-' + k).value = S.anchors[k].toLowerCase()
+            } else e.target.value = S.anchors[k]
+            update()
+          }
+        }
+      }
+      function drawSemantic() {
+        $('semantic').innerHTML = ['success', 'warning', 'danger']
+          .map(
+            (k) =>
+              `<div class="card"><div class="slider" style="grid-template-columns:90px 1fr 40px;margin:0"><label for="hue-${k}">${RAMP_NAMES[k]}</label><input type="range" id="hue-${k}" min="0" max="359" step="1" value="${S.hues[k]}" /><output id="hue-${k}o">${S.hues[k]}°</output></div></div>`,
+          )
+          .join('')
+        for (const k of ['success', 'warning', 'danger'])
+          $('hue-' + k).oninput = (e) => {
+            S.hues[k] = +e.target.value
+            $('hue-' + k + 'o').textContent = S.hues[k] + '°'
+            update()
+          }
+      }
+      function drawRamps(R) {
+        $('ramps').innerHTML = Object.entries(R)
+          .map(
+            ([k, r]) =>
+              `<div class="ramp"><div class="name">${RAMP_NAMES[k]}</div>${STOPS.map((s) => {
+                const hex = r.stops[s]
+                return `<div class="sw${r.pinned.includes(s) ? ' pin' : ''}" style="background:${hex};color:${textOn(hex)}" title="${k}-${s} ${hex}"><span>${s}</span><span>${hex.slice(1)}</span></div>`
+              }).join('')}</div>`,
+          )
+          .join('')
+      }
+      function drawTokens(T) {
+        const opts = (ramp, cur) =>
+          STOPS.map((s) => `<option${s === cur ? ' selected' : ''}>${s}</option>`).join('')
+        const check = (mode, k) => {
+          const info = TOKEN_INFO[k],
+            t = T[mode]
+          return info.vs
+            .map(
+              (v) =>
+                `<div style="margin:2px 0" title="so với ${v}">${badge(contrast(t[k], t[v]), info.min)} <span style="color:var(--ui-muted);font-size:11px">${v}</span></div>`,
+            )
+            .join('')
+        }
+        let html =
+          '<tr><th>Token</th><th>Thang</th><th>Sáng</th><th>Tương phản</th><th>Tối</th><th>Tương phản</th></tr>'
+        for (const [k, [ramp, l, d]] of Object.entries(S.tokens)) {
+          html += `<tr><td><b>${k}</b><div style="color:var(--ui-muted);font-size:12px">${TOKEN_INFO[k].label}</div></td>
+            <td><select data-tok="${k}" data-part="0" aria-label="Thang của ${k}">${Object.keys(
+              RAMP_NAMES,
+            )
+              .map(
+                (r) =>
+                  `<option value="${r}"${r === ramp ? ' selected' : ''}>${RAMP_NAMES[r]}</option>`,
+              )
+              .join('')}</select></td>
+            <td><span class="chip"><span class="dot" style="background:${T.light[k]}"></span><select data-tok="${k}" data-part="1" aria-label="Bậc sáng của ${k}">${opts(ramp, l)}</select></span></td>
+            <td>${check('light', k)}</td>
+            <td><span class="chip"><span class="dot" style="background:${T.dark[k]}"></span><select data-tok="${k}" data-part="2" aria-label="Bậc tối của ${k}">${opts(ramp, d)}</select></span></td>
+            <td>${check('dark', k)}</td></tr>`
+        }
+        $('tokens').innerHTML = html
+        document.querySelectorAll('[data-tok]').forEach(
+          (el) =>
+            (el.onchange = () => {
+              S.tokens[el.dataset.tok][+el.dataset.part] = el.value
+              update()
+            }),
+        )
+      }
+      function drawCatControls() {
+        for (const [id, k, f] of [
+          ['catL', 'L', 2],
+          ['catC', 'C', 3],
+          ['catLd', 'Ld', 2],
+          ['catCd', 'Cd', 3],
+        ]) {
+          $(id).value = S.cat[k]
+          $(id + 'o').textContent = (+S.cat[k]).toFixed(f)
+          $(id).oninput = (e) => {
+            S.cat[k] = +e.target.value
+            $(id + 'o').textContent = S.cat[k].toFixed(f)
+            update()
+          }
+        }
+      }
+      function drawCats(C, T) {
+        $('cats').innerHTML = C.map(
+          (c, i) =>
+            `<div class="cat"><div class="pair"><div style="background:${c.light};color:${T.light.text}">${c.light.slice(1)}</div><div style="background:${c.dark};color:${T.dark.text}">${c.dark.slice(1)}</div></div><div style="font-size:12px;display:flex;justify-content:space-between"><span>${c.name}</span><span style="color:var(--ui-muted)">${c.hue}°</span></div><input type="range" min="0" max="359" step="1" value="${c.hue}" data-cat="${i}" aria-label="Sắc độ ${c.name}" /><div style="font-size:11px;margin-top:2px">${badge(contrast(c.light, T.light.text))}</div></div>`,
+        ).join('')
+        document.querySelectorAll('[data-cat]').forEach(
+          (el) =>
+            (el.oninput = () => {
+              S.cat.hues[+el.dataset.cat] = +el.value
+              update(true)
+            }),
+        )
+      }
+
+      // ---------- Logo đã chốt ----------
+      function wordmark(ink, coral) {
+        const w = 18,
+          r = 50 - w / 2,
+          L = w / 2,
+          T = 100 + w / 2,
+          B = 200 - w / 2
+        const bowl = `M50 ${T}A${r} ${r} 0 0 1 ${50 + r} 150A${r} ${r} 0 0 1 50 ${B}H${L}V${T + r}A${r} ${r} 0 0 1 ${L + r} ${T}Z`
+        let s = `<path d="${bowl}" stroke-linejoin="miter"/><path d="M${L} 60V150"/><circle cx="50" cy="150" r="${(50 - w) * 0.55}" fill="${coral}" stroke="none"/>`
+        const G = 14 + w * 0.55
+        let x = 100 + G
+        const xi = x + w / 2,
+          dr = w * 0.58,
+          dy = 100 - w * 0.55 - 8
+        s += `<path d="M${xi} 100V200"/><rect x="${xi - dr}" y="${dy - dr}" width="${dr * 2}" height="${dr * 2}" fill="${ink}" stroke="none"/>`
+        x += w + G
+        for (let k = 0; k < 2; k++) {
+          s += `<path d="M${x + w / 2} 60V200"/>`
+          x += w + G
+        }
+        const R = 48 - w / 2,
+          cx = x + 48
+        s += `<path d="M${cx - R} 150H${cx + R}A${R} ${R} 0 1 0 ${cx + R * Math.cos(0.72)} ${150 + R * Math.sin(0.72)}"/>`
+        x += 96 + G * 0.7
+        const xs = x + 18,
+          rr = 24
+        s += `<path d="M${xs} 72V${200 - w / 2 - rr}A${rr} ${rr} 0 0 0 ${xs + rr} ${200 - w / 2}H${x + 60}"/><path d="M${x - 2} ${100 + w / 2}H${x + 58}"/>`
+        x += 60
+        return `<svg viewBox="-10 40 ${x + 20} 175" height="26" role="img" aria-label="billet"><g fill="none" stroke="${ink}" stroke-width="${w}" stroke-linecap="butt">${s}</g></svg>`
+      }
+
+      // ---------- Xem trước ----------
+      function phone(mode, T, C) {
+        const t = T[mode]
+        const vars = Object.entries(t)
+          .map(([k, v]) => `--t-${k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase())}:${v}`)
+          .join(';')
+        const cat = (i) => (mode === 'light' ? C[i].light : C[i].dark)
+        const shares = [34, 18, 15, 12, 9, 7, 5]
+        return `<div class="phone" style="${vars}" aria-label="Xem trước chế độ ${mode === 'light' ? 'sáng' : 'tối'}">
+          <div class="top">${wordmark(t.text, t.accent)}<div class="avatar"></div></div>
+          <div class="p-card">
+            <div class="p-photo" style="background:${cat(0)}">
+              <div class="shape" style="width:120px;height:120px;right:-20px;top:-30px;background:${cat(1)}"></div>
+              <div class="shape" style="width:70px;height:70px;left:30px;top:24px;background:${cat(7)}"></div>
+              <span class="p-chip" style="position:relative;background:${t.surface}">Ăn uống</span>
+            </div>
+            <div class="p-row"><div><div class="p-amount">−45.000 ₫</div><div class="p-sub">Bánh mì góc phố · 07:42</div></div><a class="p-link" href="#" onclick="return false">Sửa</a></div>
+          </div>
+          <button class="p-btn">Ghi khoản chi</button>
+          <button class="p-btn2">Chọn ảnh có sẵn</button>
+          <div class="p-card">
+            <div class="p-row" style="margin-top:0"><b style="font-size:14px">Tháng 11</b><span class="p-sub">2.480.000 ₫</span></div>
+            <div class="p-bar">${shares.map((v, i) => `<div style="width:${v}%;background:${cat(i)}"></div>`).join('')}</div>
+            <div class="p-legend">${shares
+              .slice(0, 6)
+              .map(
+                (v, i) =>
+                  `<div><span style="background:${cat(i)}"></span>${C[i].name} · ${v}%</div>`,
+              )
+              .join('')}</div>
+          </div>
+          <div class="p-toast" style="background:${t.successSoft};color:${t.success}">Đã lưu khoản chi</div>
+          <div class="p-toast" style="background:${t.warningSoft};color:${t.warning}">Sắp vượt ngân sách cà phê</div>
+          <div class="p-toast" style="background:${t.dangerSoft};color:${t.danger}">Không tải được ảnh. Thử lại</div>
+        </div>`
+      }
+
+      // ---------- Xuất ----------
+      const kebab = (k) => k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase())
+      const hex0x = (h) => '0x' + h.slice(1)
+      function exportText(R, T, C) {
+        if (fmt === 'css') {
+          const ramps = Object.entries(R)
+            .map(([k, r]) => STOPS.map((s) => `  --${k}-${s}: ${r.stops[s]};`).join('\n'))
+            .join('\n')
+          const tok = (m) =>
+            Object.entries(T[m])
+              .map(([k, v]) => `    --color-${kebab(k)}: ${v};`)
+              .join('\n')
+          const cats = C.map((c, i) => `  --category-${i + 1}: ${c.light};`).join('\n')
+          const catsD = C.map((c, i) => `    --category-${i + 1}: ${c.dark};`).join('\n')
+          return `:root {\n${ramps}\n${tok('light').replace(/^ {2}/gm, '')}\n${cats}\n}\n\n@media (prefers-color-scheme: dark) {\n  :root {\n${tok('dark')}\n${catsD}\n  }\n}\n`
+        }
+        if (fmt === 'swift') {
+          const lines = Object.keys(T.light).map(
+            (k) =>
+              `    static let ${k} = Color(light: ${hex0x(T.light[k])}, dark: ${hex0x(T.dark[k])})`,
+          )
+          const cats = C.map(
+            (c) => `        Color(light: ${hex0x(c.light)}, dark: ${hex0x(c.dark)}),`,
+          )
+          return `import SwiftUI\n\nenum AppTheme {\n${lines.join('\n')}\n\n    static let categories: [Color] = [\n${cats.join('\n')}\n    ]\n}\n`
+        }
+        if (fmt === 'kotlin') {
+          const pascal = (k) => k[0].toUpperCase() + k.slice(1)
+          const L = Object.keys(T.light).map(
+            (k) => `    val ${k} = Color(0xFF${T.light[k].slice(1)})`,
+          )
+          const D = Object.keys(T.dark).map(
+            (k) => `    val ${k} = Color(0xFF${T.dark[k].slice(1)})`,
+          )
+          return `package com.billet.ui.theme\n\nimport androidx.compose.ui.graphics.Color\n\nobject BilletLight {\n${L.join('\n')}\n    val categories = listOf(${C.map((c) => `Color(0xFF${c.light.slice(1)})`).join(', ')})\n}\n\nobject BilletDark {\n${D.join('\n')}\n    val categories = listOf(${C.map((c) => `Color(0xFF${c.dark.slice(1)})`).join(', ')})\n}\n`
+        }
+        return JSON.stringify(
+          {
+            anchors: S.anchors,
+            ramps: Object.fromEntries(Object.entries(R).map(([k, r]) => [k, r.stops])),
+            tokens: T,
+            tokenStops: S.tokens,
+            categories: C,
+          },
+          null,
+          2,
+        )
+      }
+
+      let last
+      function update(skipCatControls) {
+        const R = buildRamps(),
+          T = resolve(R),
+          C = categories()
+        drawRamps(R)
+        drawTokens(T)
+        if (!skipCatControls) drawCats(C, T)
+        else
+          document.querySelectorAll('.cat').forEach((el, i) => {
+            const pair = el.querySelectorAll('.pair div')
+            pair[0].style.background = C[i].light
+            pair[0].textContent = C[i].light.slice(1)
+            pair[1].style.background = C[i].dark
+            pair[1].textContent = C[i].dark.slice(1)
+            el.querySelector('span:last-child').textContent = C[i].hue + '°'
+            el.lastElementChild.innerHTML = badge(contrast(C[i].light, T.light.text))
+          })
+        $('phones').innerHTML = phone('light', T, C) + phone('dark', T, C)
+        last = { R, T, C }
+        $('out').textContent = exportText(R, T, C)
+        try {
+          localStorage.setItem(KEY, JSON.stringify(S))
+        } catch {}
+      }
+
+      document.querySelectorAll('[data-fmt]').forEach(
+        (b) =>
+          (b.onclick = () => {
+            fmt = b.dataset.fmt
+            document
+              .querySelectorAll('[data-fmt]')
+              .forEach((x) => x.setAttribute('aria-pressed', x === b))
+            $('out').textContent = exportText(last.R, last.T, last.C)
+          }),
+      )
+      $('copy').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText($('out').textContent)
+          $('copied').textContent = 'Đã sao chép'
+        } catch {
+          $('copied').textContent = 'Không sao chép được, hãy chọn và copy trong khung bên dưới'
+        }
+      }
+      $('reset').onclick = () => {
+        S = clone(DEFAULTS)
+        drawAnchors()
+        drawSemantic()
+        drawCatControls()
+        update()
+      }
+
+      drawAnchors()
+      drawSemantic()
+      drawCatControls()
+      update()
+    </script>
+  </body>
+</html>

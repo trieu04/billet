@@ -12,6 +12,8 @@ Billet là nhật ký chi tiêu bằng hình ảnh: ghi nhanh, giữ ngữ cản
 | [Implementation Plan — Gợi ý chi tiêu từ ảnh](./implementation-plans/03-photo-expense-suggestion.md) | Các giai đoạn triển khai, file bị ảnh hưởng, kiểm tra và issue đề xuất cho thiết kế 03               | Kế hoạch; chưa triển khai                        |
 | [Technical Design — Nhận ảnh chia sẻ từ app khác](./technical-design/05-share-intake.md)             | Share target trên Expo, share inbox cục bộ, luồng vào màn hình review và quyền riêng tư của biên lai | Đã triển khai local; chờ kiểm chứng thiết bị     |
 | [Implementation Plan — Nhận ảnh chia sẻ từ app khác](./implementation-plans/05-share-intake.md)      | Spike thiết bị, các giai đoạn triển khai, file bị ảnh hưởng và issue đề xuất cho thiết kế 05         | Đã triển khai local; chờ kiểm chứng thiết bị     |
+| [Logo Billet](./brand/logo.md)                                                                       | Wordmark đã chốt, logo vuông đang chọn, bảng màu và picker HTML                                      | Đã chốt                                          |
+| [Bảng màu Billet](./brand/colors.md)                                                                 | Thang màu OKLCH, token sáng/tối, màu danh mục và color picker                                        | Đề xuất; chưa áp dụng vào app                    |
 | [Mẫu Technical Design](./technical-design/00-template.md)                                            | Khung tài liệu cho thiết kế mới                                                                      | Template                                         |
 
 Hướng dẫn thiết lập, chạy, Docker, cấu hình và phát hành nằm trong [Development guide](./development-guide.md).

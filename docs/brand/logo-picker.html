@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Billet logo picker</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 32px 16px;
+        background: #f7f3ec;
+        color: #2a2521;
+        font:
+          15px/1.5 -apple-system,
+          system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0 0 8px;
+      }
+      h2 {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 32px 0 12px;
+        padding-top: 20px;
+        border-top: 1px solid #e6dccf;
+      }
+      h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 20px 0 8px;
+        color: #6b625a;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin: 0 0 12px;
+      }
+      .lbl {
+        font-size: 13px;
+        color: #6b625a;
+        min-width: 150px;
+      }
+      button {
+        font: inherit;
+        font-size: 13px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        border: 1px solid #d6ccbf;
+        background: #fff;
+        color: inherit;
+        cursor: pointer;
+      }
+      button[aria-pressed='true'] {
+        border-color: #2a2521;
+        background: #efe2cf;
+      }
+      button:focus-visible,
+      input:focus-visible {
+        outline: 2px solid #e3705a;
+        outline-offset: 2px;
+      }
+      input[type='range'] {
+        flex: 1;
+        min-width: 160px;
+      }
+      output {
+        min-width: 36px;
+        font-variant-numeric: tabular-nums;
+      }
+      .controls {
+        padding: 4px 0;
+      }
+      .stage {
+        border-radius: 12px;
+        padding: 32px 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 24px;
+        margin-top: 8px;
+      }
+      .icons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 28px 20px;
+        border-radius: 12px;
+        margin-top: 8px;
+      }
+      .icons span {
+        display: block;
+        text-align: center;
+        font-size: 11px;
+        margin-top: 4px;
+      }
+      .hint {
+        font-size: 12px;
+        color: #6b625a;
+        margin: 0 0 12px;
+      }
+      pre {
+        background: #fff;
+        border: 1px solid #e6dccf;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 13px;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Billet · logo</h1>
+      <p class="hint">
+        Một bộ thông số chung cho chữ b của wordmark và app icon. Độ dày nét và đầu nét áp dụng cho
+        cả chữ. Độ cao nét đứng và cân bằng thị giác chỉ áp dụng cho logo vuông; wordmark giữ nét
+        đứng cao 140.
+      </p>
+
+      <div class="controls">
+        <div class="row">
+          <span class="lbl">Preset</span>
+          <button data-p="final">Đã chốt</button>
+          <button data-p="round">Tròn (Figma)</button>
+          <button data-p="flatfoot">Chân vuông</button>
+          <button data-p="square">Vuông bên trái</button>
+        </div>
+        <h3>Chữ b</h3>
+        <div class="row">
+          <label class="lbl" for="w">Độ dày nét</label>
+          <input type="range" id="w" min="8" max="32" step="1" />
+          <output id="wo" for="w"></output>
+        </div>
+        <div class="row">
+          <span class="lbl">Đầu nét</span>
+          <button data-cap="round">Tròn</button>
+          <button data-cap="square">Vuông</button>
+        </div>
+        <div class="row">
+          <label class="lbl" for="q2">Bo bụng b · góc phần tư 2</label>
+          <input type="range" id="q2" min="0" max="50" step="1" />
+          <output id="q2o" for="q2"></output>
+        </div>
+        <div class="row">
+          <label class="lbl" for="q3">Bo bụng b · góc phần tư 3</label>
+          <input type="range" id="q3" min="0" max="50" step="1" />
+          <output id="q3o" for="q3"></output>
+        </div>
+        <div class="row">
+          <span class="lbl">Chấm san hô ở wordmark</span>
+          <button data-dot="lens">Trong bụng b</button>
+          <button data-dot="period">Dấu chấm cuối</button>
+          <button data-dot="both">Cả hai</button>
+        </div>
+      </div>
+
+      <h2>Logo dài (wordmark)</h2>
+      <div id="wm-light" class="stage" style="background: #fffcf7; border: 1px solid #e6dccf"></div>
+      <div id="wm-dark" class="stage" style="background: #2a2521"></div>
+
+      <h2>Logo vuông (app icon)</h2>
+      <h3>Chữ b trong icon</h3>
+      <div class="row">
+        <label class="lbl" for="h">Độ cao nét đứng</label>
+        <input type="range" id="h" min="110" max="190" step="1" />
+        <output id="ho" for="h"></output>
+      </div>
+      <h3>Cân bằng thị giác</h3>
+      <p class="hint">
+        Căn giữa theo trọng tâm khối mực thay vì khung bao, nhích lên trên tâm hình học một chút, và
+        bù kích thước để chữ b trông to bằng nhau khi đổi độ cao hoặc bo góc.
+      </p>
+      <div class="row">
+        <label class="lbl" for="ob">Căn giữa theo trọng tâm</label>
+        <input type="range" id="ob" min="0" max="100" step="5" />
+        <output id="obo" for="ob"></output>
+      </div>
+      <div class="row">
+        <label class="lbl" for="lift">Nhích lên tâm thị giác</label>
+        <input type="range" id="lift" min="0" max="5" step="0.5" />
+        <output id="lifto" for="lift"></output>
+      </div>
+      <div class="row">
+        <label class="lbl" for="os">Bù kích thước</label>
+        <input type="range" id="os" min="0" max="100" step="5" />
+        <output id="oso" for="os"></output>
+      </div>
+      <div class="row">
+        <span class="lbl">Đường gióng</span>
+        <button id="guides" aria-pressed="false">Hiện tâm và trọng tâm</button>
+      </div>
+      <div id="light" class="icons" style="background: #efe2cf; color: #5f5e5a"></div>
+      <div id="dark" class="icons" style="background: #14110f; color: #efe2cf"></div>
+
+      <h2>Lockup</h2>
+      <div
+        id="lockup-light"
+        class="stage"
+        style="background: #fffcf7; border: 1px solid #e6dccf"
+      ></div>
+      <div id="lockup-dark" class="stage" style="background: #2a2521"></div>
+
+      <h2>Thông số</h2>
+      <div class="row">
+        <button id="copy">Sao chép thông số</button>
+        <span id="copied" role="status" style="font-size: 13px; color: #6b625a"></span>
+      </div>
+      <pre id="spec"></pre>
+    </main>
+    <script>
+      const CREAM = '#FFFCF7',
+        INK = '#2A2521',
+        SAND = '#EFE2CF',
+        CORAL = '#E3705A'
+      const $ = (id) => document.getElementById(id)
+      const n = (v) => Math.round(v * 100) / 100
+      const KEY = 'billet.logo-picker.v3'
+
+      const BASE = {
+        strokeWidth: 15,
+        cap: 'round',
+        stemHeight: 140,
+        quadrant2: 50,
+        quadrant3: 50,
+        coralDot: 'lens',
+        opticalCenter: 60,
+        opticalLift: 2,
+        opticalSize: 70,
+      }
+      const P = {
+        final: {
+          strokeWidth: 18,
+          cap: 'square',
+          stemHeight: 132,
+          quadrant2: 50,
+          quadrant3: 0,
+          coralDot: 'lens',
+          opticalCenter: 100,
+          opticalLift: 0,
+          opticalSize: 50,
+        },
+        round: { ...BASE },
+        flatfoot: { ...BASE, quadrant3: 0 },
+        square: { ...BASE, cap: 'square', quadrant2: 0, quadrant3: 0 },
+      }
+      const BASE_SCALE = 0.5
+      const SAFE = 84
+      let S = { ...P.final }
+      let showGuides = false
+      try {
+        const saved = JSON.parse(localStorage.getItem(KEY) || 'null')
+        if (saved) S = { ...S, ...saved }
+      } catch {}
+
+      // Đơn vị: baseline y=200, x-height 100 (bụng b từ y=100 đến 200, x=0 đến 100).
+      // Bo góc tính theo mép ngoài; 50 = cung tròn đầy, 0 = góc vuông.
+      function geometry(st) {
+        const { strokeWidth: w, cap, stemHeight: H, quadrant2, quadrant3 } = st
+        const r = 50 - w / 2
+        const L = w / 2,
+          T = 100 + w / 2,
+          B = 200 - w / 2
+        const a = Math.max(0, Math.min(r, quadrant2 - w / 2))
+        const c = Math.max(0, Math.min(r, quadrant3 - w / 2))
+        const bowl = `M50 ${T}A${r} ${r} 0 0 1 ${50 + r} 150A${r} ${r} 0 0 1 50 ${B}H${L + c}${c ? `A${c} ${c} 0 0 1 ${L} ${B - c}` : ''}V${T + a}${a ? `A${a} ${a} 0 0 1 ${L + a} ${T}` : ''}Z`
+        const top = 200 - H
+        const stemStart = cap === 'round' ? top + w / 2 : top
+        return { w, cap, bowl, L, top, stemStart, lens: (50 - w) * 0.55 }
+      }
+
+      // Chữ b dùng chung cho wordmark và icon (vẽ bằng stroke trong nhóm có stroke-width = w).
+      function bGlyph(g, ink, lens) {
+        let s = `<path d="${g.bowl}" stroke-linejoin="miter"/><path d="M${g.L} ${g.stemStart}V150" stroke-linecap="butt"/>`
+        if (g.cap === 'round')
+          s += `<circle cx="${g.L}" cy="${g.stemStart}" r="${g.w / 2}" fill="${ink}" stroke="none"/>`
+        if (lens) s += `<circle cx="50" cy="150" r="${n(g.lens)}" fill="${CORAL}" stroke="none"/>`
+        return s
+      }
+
+      // ---------- Wordmark ----------
+      // Wordmark giữ nét đứng cố định; độ cao nét đứng chỉ áp dụng cho logo vuông.
+      const WORDMARK_STEM_HEIGHT = 140
+      function word(ink, maxWidth) {
+        const g = geometry({ ...S, stemHeight: WORDMARK_STEM_HEIGHT })
+        const { w, cap } = g,
+          dot = S.coralDot,
+          rc = cap === 'round'
+        const G = 14 + w * 0.55
+        const t = (v) => (rc ? v + w / 2 : v),
+          bt = (v) => (rc ? v - w / 2 : v)
+        let s = bGlyph(g, ink, dot !== 'period'),
+          x = 100 + G
+        const xi = x + w / 2
+        const dotR = w * 0.58
+        const dotY = 100 - w * 0.55 - 8
+        s += `<path d="M${xi} ${t(100)}V${bt(200)}"/>`
+        s += rc
+          ? `<circle cx="${xi}" cy="${dotY}" r="${dotR}" fill="${ink}" stroke="none"/>`
+          : `<rect x="${xi - dotR}" y="${dotY - dotR}" width="${dotR * 2}" height="${dotR * 2}" fill="${ink}" stroke="none"/>`
+        x += w + G
+        for (let k = 0; k < 2; k++) {
+          s += `<path d="M${x + w / 2} ${t(g.top)}V${bt(200)}"/>`
+          x += w + G
+        }
+        const R = 48 - w / 2,
+          cx = x + 48,
+          a = 0.72
+        s += `<path d="M${cx - R} 150H${cx + R}A${R} ${R} 0 1 0 ${n(cx + R * Math.cos(a))} ${n(150 + R * Math.sin(a))}"/>`
+        x += 96 + G * 0.7
+        const xs = x + 18,
+          rr = 24
+        const tTop = 100 - (200 - g.top - 100) * 0.7
+        s += `<path d="M${xs} ${t(tTop)}V${200 - w / 2 - rr}A${rr} ${rr} 0 0 0 ${xs + rr} ${200 - w / 2}H${bt(x + 60)}"/><path d="M${t(x - 2)} ${100 + w / 2}H${bt(x + 58)}"/>`
+        x += 60
+        if (dot !== 'lens') {
+          const pr = w * 0.7
+          x += G * 0.5
+          s += `<circle cx="${x + pr}" cy="${200 - pr}" r="${pr}" fill="${CORAL}" stroke="none"/>`
+          x += pr * 2
+        }
+        const vy = Math.min(g.top, dotY - dotR) - 10
+        return `<svg viewBox="-10 ${n(vy)} ${n(x + 20)} ${n(215 - vy)}" width="100%" style="max-width:${maxWidth}px" role="img" aria-label="billet wordmark"><g fill="none" stroke="${ink}" stroke-width="${w}" stroke-linecap="${rc ? 'round' : 'butt'}">${s}</g></svg>`
+      }
+
+      // ---------- Icon: đo khối mực và diện tích bóng bằng canvas ----------
+      const K = 3
+      const cv = document.createElement('canvas')
+      cv.width = 100 * K
+      cv.height = 200 * K
+      const ctx = cv.getContext('2d', { willReadFrequently: true })
+      function paint(g, fillCounter) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.clearRect(0, 0, cv.width, cv.height)
+        ctx.setTransform(K, 0, 0, K, 0, 0)
+        ctx.fillStyle = ctx.strokeStyle = '#000'
+        ctx.lineWidth = g.w
+        ctx.lineJoin = 'miter'
+        const bowl = new Path2D(g.bowl)
+        if (fillCounter) ctx.fill(bowl)
+        ctx.stroke(bowl)
+        ctx.lineCap = 'butt'
+        ctx.beginPath()
+        ctx.moveTo(g.L, g.stemStart)
+        ctx.lineTo(g.L, 150)
+        ctx.stroke()
+        if (g.cap === 'round') {
+          ctx.beginPath()
+          ctx.arc(g.L, g.stemStart, g.w / 2, 0, Math.PI * 2)
+          ctx.fill()
+        }
+        if (!fillCounter) {
+          ctx.beginPath()
+          ctx.arc(50, 150, g.lens, 0, Math.PI * 2)
+          ctx.fill()
+        }
+        return ctx.getImageData(0, 0, cv.width, cv.height).data
+      }
+      function measure(st) {
+        const g = geometry(st)
+        let m = 0,
+          mx = 0,
+          my = 0
+        const ink = paint(g, false)
+        for (let i = 3, p = 0; i < ink.length; i += 4, p++) {
+          const al = ink[i]
+          if (!al) continue
+          m += al
+          mx += al * (p % cv.width)
+          my += al * Math.floor(p / cv.width)
+        }
+        let area = 0
+        const sil = paint(g, true)
+        for (let i = 3; i < sil.length; i += 4) area += sil[i]
+        return { g, cx: mx / m / K, cy: my / m / K, area }
+      }
+      const REF_AREA = measure(P.round).area
+
+      function layout(st) {
+        const M = measure(st)
+        const s = st.opticalCenter / 100
+        const bx = 50,
+          by = (M.g.top + 200) / 2
+        const px = bx + s * (M.cx - bx)
+        const py = by + s * (M.cy - by)
+        let sc = BASE_SCALE * Math.pow(REF_AREA / M.area, 0.5 * (st.opticalSize / 100))
+        sc = Math.min(sc, SAFE / 100, SAFE / (200 - M.g.top))
+        return { M, sc, tx: 50 - px * sc, ty: 50 - st.opticalLift - py * sc }
+      }
+
+      function icon(px, ink, bg, Lay, guides) {
+        const {
+          M: { g, cx, cy },
+          sc,
+          tx,
+          ty,
+        } = Lay
+        let gd = ''
+        if (guides) {
+          const gx = n(tx + cx * sc),
+            gy = n(ty + cy * sc)
+          gd = `<g stroke-width="0.4" fill="none"><path d="M50 0V100M0 50H100" stroke="#3b82f6"/><rect x="${n(tx)}" y="${n(ty + g.top * sc)}" width="${n(100 * sc)}" height="${n((200 - g.top) * sc)}" stroke="#3b82f6" stroke-dasharray="1.5 1.5"/><circle cx="${gx}" cy="${gy}" r="1.6" fill="#16a34a" stroke="none"/></g>`
+        }
+        return `<svg width="${px}" height="${px}" viewBox="0 0 100 100" role="img" aria-label="app icon ${px}px"><rect width="100" height="100" rx="23" fill="${bg}"/><g transform="translate(${n(tx)} ${n(ty)}) scale(${n(sc)})" fill="none" stroke="${ink}" stroke-width="${g.w}">${bGlyph(g, ink, true)}</g>${gd}</svg>`
+      }
+
+      // ---------- Vẽ ----------
+      function draw() {
+        $('wm-light').innerHTML = word(INK, 480)
+        $('wm-dark').innerHTML = word(CREAM, 480)
+
+        const Lay = layout(S)
+        const sizes = [180, 96, 60, 32, 20]
+        $('light').innerHTML = sizes
+          .map(
+            (p) =>
+              `<div>${icon(p, INK, CREAM, Lay, showGuides && p === 180)}<span>${p}px</span></div>`,
+          )
+          .join('')
+        $('dark').innerHTML = sizes
+          .map((p) => `<div>${icon(p, CREAM, INK, Lay, false)}<span>${p}px</span></div>`)
+          .join('')
+        $('lockup-light').innerHTML =
+          `${icon(88, INK, SAND, Lay, false)}<div style="flex:0 1 300px">${word(INK, 300)}</div>`
+        $('lockup-dark').innerHTML =
+          `${icon(88, INK, CREAM, Lay, false)}<div style="flex:0 1 300px">${word(CREAM, 300)}</div>`
+
+        const bind = [
+          ['w', 'strokeWidth'],
+          ['h', 'stemHeight'],
+          ['q2', 'quadrant2'],
+          ['q3', 'quadrant3'],
+          ['ob', 'opticalCenter'],
+          ['lift', 'opticalLift'],
+          ['os', 'opticalSize'],
+        ]
+        for (const [id, k] of bind) {
+          $(id).value = S[k]
+          $(id + 'o').textContent = S[k] + (id === 'ob' || id === 'os' ? '%' : '')
+        }
+        document
+          .querySelectorAll('[data-cap]')
+          .forEach((e) => e.setAttribute('aria-pressed', e.dataset.cap === S.cap))
+        document
+          .querySelectorAll('[data-dot]')
+          .forEach((e) => e.setAttribute('aria-pressed', e.dataset.dot === S.coralDot))
+        $('guides').setAttribute('aria-pressed', showGuides)
+
+        $('spec').textContent = JSON.stringify(
+          {
+            ...S,
+            iconLayout: {
+              scale: n(Lay.sc),
+              translateX: n(Lay.tx),
+              translateY: n(Lay.ty),
+              viewBox: '0 0 100 100',
+            },
+            units: 'x-height 100; bụng b 100×100; bo góc theo mép ngoài, 50 = tròn đầy',
+          },
+          null,
+          2,
+        )
+        try {
+          localStorage.setItem(KEY, JSON.stringify(S))
+        } catch {}
+      }
+
+      const bindRange = (id, k) =>
+        ($(id).oninput = () => {
+          S[k] = +$(id).value
+          draw()
+        })
+      bindRange('w', 'strokeWidth')
+      bindRange('h', 'stemHeight')
+      bindRange('q2', 'quadrant2')
+      bindRange('q3', 'quadrant3')
+      bindRange('ob', 'opticalCenter')
+      bindRange('lift', 'opticalLift')
+      bindRange('os', 'opticalSize')
+      document.querySelectorAll('[data-p]').forEach(
+        (e) =>
+          (e.onclick = () => {
+            S = { ...P[e.dataset.p] }
+            draw()
+          }),
+      )
+      document.querySelectorAll('[data-cap]').forEach(
+        (e) =>
+          (e.onclick = () => {
+            S.cap = e.dataset.cap
+            draw()
+          }),
+      )
+      document.querySelectorAll('[data-dot]').forEach(
+        (e) =>
+          (e.onclick = () => {
+            S.coralDot = e.dataset.dot
+            draw()
+          }),
+      )
+      $('guides').onclick = () => {
+        showGuides = !showGuides
+        draw()
+      }
+      $('copy').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText($('spec').textContent)
+          $('copied').textContent = 'Đã sao chép'
+        } catch {
+          $('copied').textContent = 'Không sao chép được, hãy chọn và copy trong khung bên dưới'
+        }
+      }
+      draw()
+    </script>
+  </body>
+</html>
