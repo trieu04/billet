@@ -43,6 +43,10 @@ Trạng thái: đã chốt wordmark và logo vuông. Cập nhật: 2026-11-07. B
 - Cân bằng thị giác: căn giữa hoàn toàn theo trọng tâm khối mực (`100%`), không nhích lên (`0`), bù kích thước `50%` theo diện tích bóng chữ b.
 - Vị trí đã tính: `scale 0.49`, `translate(29.54, −21.03)` trong `viewBox 0 0 100 100`.
 
+## Áp dụng
+
+Icon của Expo và web được sinh từ thông số trên bằng `apps/expo/scripts/generate-app-icons.mjs`, ghi vào `apps/expo/assets/icons` và `apps/web/public`. Wordmark nằm ở `apps/web/src/components/logo.tsx` và `apps/expo/features/ui/wordmark.tsx`. Android adaptive icon thu logo còn `0.7` để nét đứng không bị mặt nạ launcher cắt.
+
 ## Picker
 
 [logo-picker.html](./logo-picker.html) mở sẵn preset "Đã chốt". Picker dùng một bộ thông số chung cho wordmark và app icon: độ dày nét, đầu nét và bo bụng b áp dụng cho cả hai. Độ cao nét đứng và cân bằng thị giác chỉ áp dụng cho logo vuông; wordmark giữ nét đứng cao `140`.

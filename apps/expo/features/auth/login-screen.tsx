@@ -15,6 +15,7 @@ import {
 } from 'react-native'
 
 import { colors, fonts } from '@/features/ui/theme'
+import { Wordmark } from '@/features/ui/wordmark'
 import { useSession } from './session'
 
 WebBrowser.maybeCompleteAuthSession()
@@ -68,7 +69,7 @@ export function LoginScreen() {
   return (
     <ScrollView contentContainerStyle={styles.safe} keyboardShouldPersistTaps="handled">
       <View style={styles.card}>
-        <Text style={styles.eyebrow}>BILLET</Text>
+        <Wordmark />
         <Text style={styles.title}>Chào mừng trở lại</Text>
         <TextInput
           accessibilityLabel="Tên đăng nhập, email hoặc số điện thoại"
@@ -212,7 +213,6 @@ const styles = StyleSheet.create({
   card: { gap: 14, maxWidth: 440, width: '100%' },
   divider: { alignItems: 'center', flexDirection: 'row', gap: 12 },
   error: { color: '#B3433C', fontFamily: fonts.regular, fontSize: 13 },
-  eyebrow: { color: colors.link, fontFamily: fonts.bold, fontSize: 13, letterSpacing: 2 },
   input: {
     backgroundColor: colors.card,
     borderColor: colors.line,

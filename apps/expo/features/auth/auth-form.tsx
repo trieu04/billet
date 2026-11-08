@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native'
 import { colors, fonts } from '@/features/ui/theme'
+import { Wordmark } from '@/features/ui/wordmark'
 
 export function AuthForm({
   title,
@@ -19,7 +20,7 @@ export function AuthForm({
   return (
     <ScrollView contentContainerStyle={styles.safe} keyboardShouldPersistTaps="handled">
       <View style={styles.card}>
-        <Text style={styles.eyebrow}>BILLET</Text>
+        <Wordmark />
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
         {children}
@@ -72,7 +73,6 @@ const styles = StyleSheet.create({
   buttonText: { color: '#3A1D0E', fontFamily: fonts.semibold, fontSize: 16 },
   card: { gap: 14, maxWidth: 440, width: '100%' },
   dim: { opacity: 0.6 },
-  eyebrow: { color: colors.link, fontFamily: fonts.bold, fontSize: 13, letterSpacing: 2 },
   input: {
     backgroundColor: colors.card,
     borderColor: colors.line,
