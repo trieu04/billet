@@ -1,2 +1,0 @@
--keepattributes *Annotation*
--keepclassmembers class app.billet.mobile.core.model.** { <fields>; }

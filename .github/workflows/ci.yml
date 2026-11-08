@@ -21,8 +21,6 @@ jobs:
       server: ${{ steps.filter.outputs.server }}
       web: ${{ steps.filter.outputs.web }}
       expo: ${{ steps.filter.outputs.expo }}
-      ios: ${{ steps.filter.outputs.ios }}
-      android: ${{ steps.filter.outputs.android }}
     steps:
       - uses: actions/checkout@v4
       - id: filter
@@ -36,8 +34,6 @@ jobs:
               - '.changeset/**'
               - 'scripts/**'
               - 'apps/*/package.json'
-              - 'apps/android/version.properties'
-              - 'apps/ios/project.yml'
             workspace:
               - '.npmrc'
               - '.oxfmtignore'
@@ -52,10 +48,6 @@ jobs:
               - 'apps/web/**'
             expo:
               - 'apps/expo/**'
-            ios:
-              - 'apps/ios/**'
-            android:
-              - 'apps/android/**'
 
   validate-common:
     name: Validate shared repository
@@ -82,9 +74,6 @@ jobs:
       - name: Validate release metadata
         if: (needs.changes.outputs.release == 'true' || needs.changes.outputs.workspace == 'true') && github.head_ref != 'changeset-release/main' && github.ref_name != 'changeset-release/main'
         run: pnpm release:check
-      - name: Validate versioned native applications
-        if: needs.changes.outputs.release == 'true' && (github.head_ref == 'changeset-release/main' || github.ref_name == 'changeset-release/main')
-        run: node scripts/sync-ios-version.mjs --check && node scripts/sync-android-version.mjs --check
 
   validate-server:
     name: Validate server
@@ -151,40 +140,3 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-
-  validate-ios:
-    name: Validate iOS
-    needs: changes
-    if: needs.changes.outputs.ios == 'true'
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install XcodeGen
-        run: brew install xcodegen
-      - name: Generate Xcode project
-        working-directory: apps/ios
-        run: xcodegen generate
-      - name: Build native iOS app
-        working-directory: apps/ios
-        run: xcodebuild -project Billet.xcodeproj -scheme Billet -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
-
-  validate-android:
-    name: Validate Android
-    needs: changes
-    if: needs.changes.outputs.android == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: platform-tools
-      - uses: gradle/actions/setup-gradle@v4
-      - name: Install Android SDK
-        run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
-      - name: Test, lint, and build native Android app
-        working-directory: apps/android
-        run: ./gradlew testDebugUnitTest lintDebug assembleDebug

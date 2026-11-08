@@ -1,6 +1,4 @@
 packages:
-  - apps/android
-  - apps/ios
   - apps/server
   - apps/web
 

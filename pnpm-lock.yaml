@@ -173,10 +173,6 @@ importers:
         specifier: ^0.73.0
         version: 0.73.0
 
-  apps/android: {}
-
-  apps/ios: {}
-
   apps/server:
     dependencies:
       '@nestjs/common':

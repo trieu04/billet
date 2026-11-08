@@ -32,6 +32,4 @@ Hướng dẫn thiết lập, chạy, Docker, cấu hình và phát hành nằm 
 ## Hướng dẫn theo app
 
 - [Server](../apps/server/README.md): chạy API, cấu hình, module và OpenAPI; [realtime contract](../apps/server/src/modules/realtime/README.md).
-- [iOS](../apps/ios/README.md): generate/build/test native app.
-- [Android](../apps/android/README.md): build/test native app.
 - [Development guide](./development-guide.md): workspace, web, Docker, cổng dịch vụ, cấu hình và versioning. Expo được giữ làm client legacy.

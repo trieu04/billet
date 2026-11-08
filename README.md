@@ -12,16 +12,14 @@ Feature scope and acceptance criteria are maintained in the [business requiremen
 
 ## Project structure
 
-| Location       | Role                                                       |
-| -------------- | ---------------------------------------------------------- |
-| `apps/server`  | NestJS API backed by PostgreSQL and private media storage  |
-| `apps/web`     | Vite + React web app                                       |
-| `apps/ios`     | Native SwiftUI iOS app                                     |
-| `apps/android` | Native Kotlin / Jetpack Compose Android app                |
-| `apps/expo`    | Preserved legacy Expo Router client, managed independently |
-| `docs`         | Requirements, technical designs, and development guidance  |
+| Location      | Role                                                       |
+| ------------- | ---------------------------------------------------------- |
+| `apps/server` | NestJS API backed by PostgreSQL and private media storage  |
+| `apps/web`    | Vite + React web app                                       |
+| `apps/expo`   | Preserved legacy Expo Router client, managed independently |
+| `docs`        | Requirements, technical designs, and development guidance  |
 
-The API and web app use a pnpm workspace. Native apps use their platform toolchains; each app keeps its own version and changelog.
+The API and web app use a pnpm workspace. Each app keeps its own version and changelog.
 
 ## Documentation
 
