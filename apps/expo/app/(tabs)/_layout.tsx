@@ -1,7 +1,9 @@
 import { Tabs } from 'expo-router/js-tabs'
 import { type Animated, Dimensions, Easing } from 'react-native'
 
+import { AccountButton } from '@/features/profile/components/account-button'
 import { BottomTabBar } from '@/features/ui/bottom-tab-bar'
+import { TabHeader } from '@/features/ui/tab-header'
 import { tabRoutes } from '@/features/ui/tab-routes'
 import { colors } from '@/features/ui/theme'
 
@@ -34,7 +36,16 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.canvas },
         ...slideTransition,
       }}
-      tabBar={({ state }) => <BottomTabBar active={tabRoutes[state.index]?.key ?? 'journal'} />}
+      // The header lives here, outside the scenes, so only the content slides beneath it.
+      tabBar={({ state }) => {
+        const active = tabRoutes[state.index]?.key ?? 'journal'
+        return (
+          <>
+            <TabHeader action={<AccountButton />} active={active} />
+            <BottomTabBar active={active} />
+          </>
+        )
+      }}
     >
       <Tabs.Screen name="calendar" />
       <Tabs.Screen name="index" />

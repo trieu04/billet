@@ -15,12 +15,13 @@ import {
   View,
   type ViewInstance,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { apiRequest } from '@/features/api/client'
 import { formatMoney } from '@/features/api/format'
 import type { Category, Expense } from '@/features/api/types'
 import { CategoryPicker } from '@/features/category/components/category-picker'
+import { headerHeight } from '@/features/ui/header-metrics'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
@@ -86,6 +87,7 @@ export function ExpenseEditForm({
   const [leaving, setLeaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const keyboardVisible = useKeyboardVisible()
+  const insets = useSafeAreaInsets()
   const { blurred, contentRef, focused, scrollProps, scrollRef } = useKeepFocusedVisible()
   const amountRef = useRef<TextInputInstance>(null)
   const captionRef = useRef<TextInputInstance>(null)
@@ -233,7 +235,7 @@ export function ExpenseEditForm({
             : []
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
+    <SafeAreaView edges={['bottom']} style={styles.safe}>
       <ExpenseFormHeader
         closeLabel="Hủy chỉnh sửa"
         onClose={close}
@@ -253,7 +255,11 @@ export function ExpenseEditForm({
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
-          <View ref={contentRef} collapsable={false} style={styles.content}>
+          <View
+            ref={contentRef}
+            collapsable={false}
+            style={[styles.content, { paddingTop: headerHeight(insets.top) + 8 }]}
+          >
             <View ref={heroBlock} collapsable={false} style={styles.photo}>
               {photo}
               <PhotoExpenseEditor

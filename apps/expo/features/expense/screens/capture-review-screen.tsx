@@ -18,7 +18,7 @@ import {
   View,
   type ViewInstance,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { apiRequest } from '@/features/api/client'
 import { formatMoney } from '@/features/api/format'
@@ -50,6 +50,7 @@ import {
 } from '../components/suggestion-chip'
 import { useKeepFocusedVisible } from '../use-keep-focused-visible'
 import { useLocationField } from '../use-location-field'
+import { headerHeight } from '@/features/ui/header-metrics'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
@@ -80,6 +81,7 @@ export function CaptureReviewScreen() {
     useCaptureFlow()
   const { completeSharedImage } = useShareInbox()
   const keyboardVisible = useKeyboardVisible()
+  const insets = useSafeAreaInsets()
   const { blurred, contentRef, focused, scrollProps, scrollRef } = useKeepFocusedVisible()
   const loadCategories = useCallback(
     (accessToken: string) => apiRequest<Category[]>('/categories', { token: accessToken }),
@@ -468,7 +470,7 @@ export function CaptureReviewScreen() {
   const categorySuggestion = fieldSuggestion('categoryId')
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
+    <SafeAreaView edges={['bottom']} style={styles.safe}>
       <StatusBar style="dark" />
       <ExpenseFormHeader
         closeLabel="Tùy chọn thoát"
@@ -489,7 +491,11 @@ export function CaptureReviewScreen() {
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
-          <View ref={contentRef} collapsable={false} style={styles.content}>
+          <View
+            ref={contentRef}
+            collapsable={false}
+            style={[styles.content, { paddingTop: headerHeight(insets.top) + 8 }]}
+          >
             <View ref={heroBlock} collapsable={false} style={styles.hero}>
               <View ref={photoRef} collapsable={false} style={styles.photo}>
                 {imageUri ? (

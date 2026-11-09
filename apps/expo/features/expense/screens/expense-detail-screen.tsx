@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, Alert, Animated, StyleSheet, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AuthenticatedImage } from '@/features/api/authenticated-image'
 import { apiRequest } from '@/features/api/client'
@@ -18,6 +18,8 @@ import {
 } from '@/features/expense/components/expense-edit-form'
 import { PhotoExpenseOverlay } from '@/features/expense/components/photo-expense-overlay'
 import { Receipt } from '@/features/expense/components/receipt'
+import { StackHeader } from '@/features/ui/blur-header'
+import { headerHeight } from '@/features/ui/header-metrics'
 import { AnimatedPressable, useEntranceAnimation } from '@/features/ui/motion'
 import { expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
@@ -25,6 +27,7 @@ import { colors, fonts } from '@/features/ui/theme'
 export function ExpenseDetailScreen() {
   const params = useLocalSearchParams<{ id?: string }>()
   const { token } = useSession()
+  const insets = useSafeAreaInsets()
   const { removeCapture } = useCaptureFlow()
   const load = useCallback(
     async (accessToken: string) => {
@@ -110,33 +113,37 @@ export function ExpenseDetailScreen() {
 
   return (
     <SafeAreaView edges={[]} style={styles.safe}>
+      <StackHeader>
+        <AnimatedPressable
+          accessibilityLabel="Quay lại Journal"
+          onPress={() => router.back()}
+          pressedScale={0.94}
+          style={styles.back}
+        >
+          <Text style={styles.backGlyph}>‹</Text>
+          <Text style={styles.navAction}>Journal</Text>
+        </AnimatedPressable>
+        <Text accessibilityRole="header" style={styles.navTitle}>
+          Chi tiết
+        </Text>
+        <AnimatedPressable
+          accessibilityRole="button"
+          onPress={() => edit()}
+          pressedScale={0.94}
+          style={styles.editButton}
+        >
+          <Text style={[styles.navAction, styles.editText]}>Sửa</Text>
+        </AnimatedPressable>
+      </StackHeader>
       <Animated.ScrollView
-        contentContainerStyle={styles.screenContent}
-        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + 32,
+          paddingTop: headerHeight(insets.top),
+        }}
+        contentInsetAdjustmentBehavior="never"
         showsVerticalScrollIndicator={false}
         style={[styles.screen, screenEntrance]}
       >
-        <View style={styles.nav}>
-          <AnimatedPressable
-            accessibilityLabel="Quay lại Journal"
-            onPress={() => router.back()}
-            pressedScale={0.94}
-            style={styles.back}
-          >
-            <Text style={styles.backGlyph}>‹</Text>
-            <Text style={styles.navAction}>Journal</Text>
-          </AnimatedPressable>
-          <Text style={styles.navTitle}>Chi tiết</Text>
-          <AnimatedPressable
-            accessibilityRole="button"
-            onPress={() => edit()}
-            pressedScale={0.94}
-            style={styles.editButton}
-          >
-            <Text style={[styles.navAction, styles.editText]}>Sửa</Text>
-          </AnimatedPressable>
-        </View>
-
         <View style={styles.photoFrame}>
           <View style={styles.photo}>
             <PhotoMedia expense={expense} token={token} />
@@ -209,8 +216,13 @@ function formatTimestamp(value: Date) {
 }
 
 const styles = StyleSheet.create({
-  back: { alignItems: 'center', flexDirection: 'row', height: 40, width: 112 },
-  backGlyph: { color: colors.link, fontFamily: fonts.regular, fontSize: 22, marginRight: 5 },
+  back: { alignItems: 'center', flexDirection: 'row', height: 44, width: 112 },
+  backGlyph: {
+    color: colors.link,
+    fontFamily: fonts.regular,
+    fontSize: 22,
+    marginRight: 5,
+  },
   center: {
     alignItems: 'center',
     backgroundColor: colors.canvas,
@@ -235,7 +247,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     overflow: 'hidden',
   },
-  editButton: { alignItems: 'flex-end', height: 40, justifyContent: 'center', width: 80 },
+  editButton: { alignItems: 'flex-end', height: 44, justifyContent: 'center', width: 80 },
   editText: { fontFamily: fonts.semibold },
   error: {
     color: '#B3433C',
@@ -247,14 +259,6 @@ const styles = StyleSheet.create({
   errorButton: { paddingHorizontal: 20, paddingVertical: 12 },
   errorButtonText: { color: colors.link, fontFamily: fonts.semibold, fontSize: 15 },
   loadingText: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 14 },
-  nav: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    height: 40,
-    justifyContent: 'space-between',
-    marginHorizontal: 12,
-    marginTop: 52,
-  },
   navAction: { color: colors.link, fontFamily: fonts.regular, fontSize: 17 },
   navTitle: { color: colors.text, fontFamily: fonts.semibold, fontSize: 17 },
   photo: {
@@ -264,11 +268,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
   },
-  photoFrame: { marginTop: 16, paddingHorizontal: 16 },
+  photoFrame: { paddingHorizontal: 16 },
   photoImage: { alignItems: 'center', height: '100%', justifyContent: 'center', width: '100%' },
   placeholder: { color: colors.textSecondary, fontFamily: fonts.medium, fontSize: 16 },
   safe: { backgroundColor: colors.canvas, flex: 1 },
   screen: { flex: 1 },
-  screenContent: { paddingBottom: 32 },
   value: { color: colors.text, fontFamily: fonts.medium, fontSize: 16 },
 })

@@ -16,7 +16,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { ApiError, apiRequest } from '@/features/api/client'
 import type { Category, DecisionChoice, ExpenseRule, Profile, Settings } from '@/features/api/types'
@@ -28,6 +28,8 @@ import {
   type LocationPermission,
   useRefreshSuggestionSnapshot,
 } from '@/features/suggestion'
+import { StackHeader } from '@/features/ui/blur-header'
+import { headerHeight } from '@/features/ui/header-metrics'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
 
@@ -63,6 +65,7 @@ type SuggestionData = {
 const CONFLICT_MESSAGE = 'Mục này vừa được thay đổi ở nơi khác. Billet đã tải lại danh sách.'
 
 export function SuggestionSettingsScreen() {
+  const insets = useSafeAreaInsets()
   const { token } = useSession()
   const refreshSnapshot = useRefreshSuggestionSnapshot()
   const load = useCallback(async (accessToken: string): Promise<SuggestionData> => {
@@ -240,8 +243,8 @@ export function SuggestionSettingsScreen() {
   })()
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
+    <SafeAreaView edges={['bottom']} style={styles.safe}>
+      <StackHeader>
         <AnimatedPressable
           accessibilityLabel="Quay lại"
           accessibilityRole="button"
@@ -254,13 +257,18 @@ export function SuggestionSettingsScreen() {
           Gợi ý tự động
         </Text>
         <View style={styles.back} />
-      </View>
+      </StackHeader>
       {resource.loading && !data ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.link} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingTop: headerHeight(insets.top) + 4 }]}
+          contentInsetAdjustmentBehavior="never"
+          keyboardShouldPersistTaps="handled"
+          scrollIndicatorInsets={{ top: headerHeight(insets.top) - insets.top }}
+        >
           {resource.error ? (
             <AnimatedPressable accessibilityRole="button" onPress={() => void resource.refresh()}>
               <InlineMessage text={`${resource.error} · Thử lại`} />
@@ -1023,5 +1031,5 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 17 },
   switchRow: { alignItems: 'center', flexDirection: 'row', gap: 12, minHeight: 78, padding: 16 },
-  title: { color: colors.text, fontFamily: fonts.bold, fontSize: 18 },
+  title: { color: colors.text, fontFamily: fonts.semibold, fontSize: 17 },
 })

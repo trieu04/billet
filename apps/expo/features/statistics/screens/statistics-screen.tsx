@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, ScrollView, type ScrollViewInstance, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect } from 'expo-router'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Circle } from 'react-native-svg'
 
-import { AccountButton } from '@/features/profile/components/account-button'
 import { cardShadow } from '@/features/ui/card'
+import { headerHeight } from '@/features/ui/header-metrics'
 import { AnimatedPressable, useEntranceAnimation, useReducedMotion } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
 import { apiRequest } from '@/features/api/client'
@@ -20,6 +20,7 @@ const palette = [colors.peach, colors.sage, colors.lavender, colors.butter]
 export function StatisticsScreen() {
   const [period, setPeriod] = useState<StatisticsPeriod>('Hôm nay')
   const [rangeAnchor, setRangeAnchor] = useState(() => new Date())
+  const insets = useSafeAreaInsets()
   const firstFocus = useRef(true)
   const scrollRef = useRef<ScrollViewInstance>(null)
   const reducedMotion = useReducedMotion()
@@ -79,15 +80,11 @@ export function StatisticsScreen() {
   return (
     <SafeAreaView edges={[]} style={styles.safe}>
       <ScrollView
-        contentContainerStyle={styles.content}
-        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={[styles.content, { paddingTop: headerHeight(insets.top) }]}
+        contentInsetAdjustmentBehavior="never"
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Thống kê</Text>
-          <AccountButton />
-        </View>
         <View accessibilityRole="tablist" style={styles.periods}>
           {statisticsPeriods.map((item) => (
             <AnimatedPressable
@@ -334,15 +331,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 40,
     marginHorizontal: 16,
-    marginTop: 20,
     padding: 2,
-  },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginHorizontal: 20,
-    marginTop: 62,
   },
   safe: { backgroundColor: colors.canvas, flex: 1 },
   summary: {
@@ -359,7 +348,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 17,
   },
-  title: { color: colors.text, fontFamily: fonts.bold, fontSize: 34, letterSpacing: -0.5 },
   total: { color: colors.text, fontFamily: fonts.amount, fontSize: 38, letterSpacing: -1 },
   todayCard: { gap: 14, justifyContent: 'center', paddingTop: 20 },
   todayCount: {

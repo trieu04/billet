@@ -13,7 +13,7 @@ import {
   Text,
   View,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { apiRequest } from '@/features/api/client'
 import { formatMoney, localMonth } from '@/features/api/format'
@@ -22,7 +22,9 @@ import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
 import { useBiometricLock } from '@/features/settings/biometric-lock'
 import { deviceTimezone, updateSettings } from '@/features/settings/settings-api'
+import { StackHeader } from '@/features/ui/blur-header'
 import { cardShadow } from '@/features/ui/card'
+import { headerHeight } from '@/features/ui/header-metrics'
 import { AnimatedPressable, useEntranceAnimation, useReducedMotion } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
 
@@ -37,6 +39,7 @@ const daysRemaining =
 export function ProfileScreen() {
   const { deleteAccount, logout, requestAccountDeletion, token } = useSession()
   const biometric = useBiometricLock()
+  const insets = useSafeAreaInsets()
   const load = useCallback(async (token: string) => {
     const profile = await apiRequest<Profile>('/profile', { token })
     const budget = await apiRequest<Budget>(
@@ -143,20 +146,30 @@ export function ProfileScreen() {
 
   return (
     <SafeAreaView edges={[]} style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
-        <View style={styles.header}>
-          <AnimatedPressable
-            accessibilityLabel="Quay lại"
-            accessibilityRole="button"
-            hitSlop={4}
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as Href))}
-            pressedScale={0.92}
-            style={styles.back}
-          >
-            <Feather color={colors.text} name="chevron-left" size={24} />
-          </AnimatedPressable>
-          <Text style={styles.title}>Hồ sơ</Text>
-        </View>
+      <StackHeader>
+        <AnimatedPressable
+          accessibilityLabel="Quay lại"
+          accessibilityRole="button"
+          hitSlop={4}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as Href))}
+          pressedScale={0.92}
+          style={styles.back}
+        >
+          <Feather color={colors.text} name="chevron-left" size={24} />
+        </AnimatedPressable>
+        <Text accessibilityRole="header" style={styles.title}>
+          Hồ sơ
+        </Text>
+        <View style={styles.headerSpacer} />
+      </StackHeader>
+      <ScrollView
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + 48,
+          paddingTop: headerHeight(insets.top),
+        }}
+        contentInsetAdjustmentBehavior="never"
+        scrollIndicatorInsets={{ top: headerHeight(insets.top) - insets.top }}
+      >
         <AnimatedPressable
           accessibilityHint="Mở để chỉnh sửa thông tin hồ sơ"
           accessibilityRole="button"
@@ -395,7 +408,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     minHeight: 148,
     marginHorizontal: 16,
-    marginTop: 8,
     padding: 18,
   },
   budgetAmount: { color: colors.text, fontFamily: fonts.amount, fontSize: 30, marginTop: 7 },
@@ -418,7 +430,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 96,
     marginHorizontal: 16,
-    marginTop: 20,
     padding: 18,
   },
   identityText: { flex: 1, marginLeft: 16 },
@@ -439,7 +450,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 40,
   },
-  content: { paddingBottom: 48 },
   deleteAccount: {
     alignItems: 'center',
     minHeight: 48,
@@ -469,10 +479,10 @@ const styles = StyleSheet.create({
   },
   rowLabel: { color: colors.text, fontFamily: fonts.regular, fontSize: 16 },
   rowValue: { alignItems: 'center', flexDirection: 'row', gap: 5 },
-  header: { gap: 10, marginHorizontal: 20, marginTop: 54 },
+  headerSpacer: { width: 40 },
   safe: { backgroundColor: colors.canvas, flex: 1 },
   sectionLabel: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 14 },
-  title: { color: colors.text, fontFamily: fonts.bold, fontSize: 34, letterSpacing: -0.5 },
+  title: { color: colors.text, fontFamily: fonts.semibold, fontSize: 17 },
   track: {
     backgroundColor: '#EADFCF',
     borderRadius: 6,

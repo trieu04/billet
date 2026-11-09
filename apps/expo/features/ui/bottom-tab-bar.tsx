@@ -23,31 +23,13 @@ import { colors, fonts } from '@/features/ui/theme'
 
 type TabIcon = keyof typeof Ionicons.glyphMap
 
-const tabs: Array<{
-  icon: TabIcon
-  selectedIcon: TabIcon
-  key: TabKey
-  label: string
-}> = [
-  {
-    icon: 'grid-outline',
-    selectedIcon: 'grid',
-    key: 'grid',
-    label: 'Bảng',
-  },
-  {
-    icon: 'albums-outline',
-    selectedIcon: 'albums',
-    key: 'journal',
-    label: 'Nhật ký',
-  },
-  {
-    icon: 'stats-chart-outline',
-    selectedIcon: 'stats-chart',
-    key: 'statistics',
-    label: 'Thống kê',
-  },
-]
+const tabIcons: Record<TabKey, { icon: TabIcon; selectedIcon: TabIcon }> = {
+  grid: { icon: 'grid-outline', selectedIcon: 'grid' },
+  journal: { icon: 'albums-outline', selectedIcon: 'albums' },
+  statistics: { icon: 'stats-chart-outline', selectedIcon: 'stats-chart' },
+}
+
+const tabs = tabRoutes.map((route) => ({ ...route, ...tabIcons[route.key] }))
 
 const barHeight = 64
 const barPadding = 4

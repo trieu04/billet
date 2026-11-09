@@ -21,7 +21,7 @@ import type { Category, ExpenseList } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
 import { ExpenseTicket, mergeSavedCaptures, useCaptureFlow } from '@/features/expense'
-import { AccountButton } from '@/features/profile/components/account-button'
+import { headerHeight } from '@/features/ui/header-metrics'
 import { AnimatedPressable, useEntranceAnimation } from '@/features/ui/motion'
 import { expenseCardWidth, expensePhotoAspectRatio } from '@/features/ui/media'
 import { colors, fonts } from '@/features/ui/theme'
@@ -92,19 +92,10 @@ export function JournalScreen() {
     <SafeAreaView edges={[]} style={styles.safe}>
       <ScrollView
         ref={scrollRef}
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 12 }]}
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={[styles.content, { paddingTop: headerHeight(insets.top) }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.heading}>
-          <View>
-            <Text style={styles.date}>
-              {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'full' }).format(today)}
-            </Text>
-            <Text style={styles.title}>Nhật ký</Text>
-          </View>
-          <AccountButton />
-        </View>
         <Animated.View style={[styles.moments, momentsEntrance]}>
           {loading && expenses.length === 0 ? <ActivityIndicator color={colors.link} /> : null}
           {error ? (
@@ -212,8 +203,7 @@ const styles = StyleSheet.create({
     width: 168,
   },
   captureText: { color: '#2A1206', fontFamily: fonts.semibold, fontSize: 16 },
-  content: { gap: 11, paddingBottom: 190, paddingHorizontal: 16, paddingTop: 42 },
-  date: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 13, marginLeft: 4 },
+  content: { paddingBottom: 190, paddingHorizontal: 16 },
   dayCount: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12 },
   dayHeader: {
     alignItems: 'flex-end',
@@ -236,13 +226,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   error: { color: '#B3433C', fontFamily: fonts.medium, fontSize: 14, textAlign: 'center' },
-  heading: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    height: 57,
-    justifyContent: 'space-between',
-    marginLeft: 4,
-  },
   overline: {
     color: colors.textSecondary,
     fontFamily: fonts.semibold,
@@ -250,8 +233,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     marginLeft: 4,
   },
-  moments: { gap: 20, marginTop: 25 },
+  moments: { gap: 20 },
   safe: { backgroundColor: colors.canvas, flex: 1 },
   shelfContent: { gap: 12, paddingRight: 28 },
-  title: { color: colors.text, fontFamily: fonts.bold, fontSize: 34, letterSpacing: -0.5 },
 })

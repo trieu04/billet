@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AuthenticatedImage } from '@/features/api/authenticated-image'
 import { apiRequest } from '@/features/api/client'
@@ -21,7 +21,7 @@ import { formatMoney, localDate, localMonth } from '@/features/api/format'
 import type { Calendar, CalendarHistory } from '@/features/api/types'
 import { useApiResource } from '@/features/api/use-api-resource'
 import { useSession } from '@/features/auth/session'
-import { AccountButton } from '@/features/profile/components/account-button'
+import { headerHeight, weekdayBarHeight } from '@/features/ui/header-metrics'
 import { expenseThumbnailAspectRatio } from '@/features/ui/media'
 import { AnimatedPressable } from '@/features/ui/motion'
 import { colors, fonts } from '@/features/ui/theme'
@@ -32,7 +32,6 @@ import {
   type CalendarPhoto,
 } from './calendar-model'
 
-const weekdays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
 const heat = ['#F6CDB9', '#EFA282', '#E36A55', '#C93A3A', '#8F1D24']
 const todayKey = localDate()
 const fallbackSummaryPhotos: CalendarPhoto[] = gradients.map((gradient) => ({
@@ -45,6 +44,8 @@ export function CalendarScreen() {
   const currentMonth = localMonth()
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Ho_Chi_Minh'
   const { width } = useWindowDimensions()
+  const insets = useSafeAreaInsets()
+  const pinnedTop = headerHeight(insets.top)
   const boardWidth = Math.min(width - 32, 430)
   const scrollRef = useRef<ScrollViewInstance>(null)
   const positionedAtCurrentMonth = useRef(false)
@@ -95,35 +96,10 @@ export function CalendarScreen() {
 
   return (
     <SafeAreaView edges={[]} style={styles.safe}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Bảng</Text>
-        <AccountButton />
-      </View>
-      <View style={styles.legend}>
-        <Text style={styles.legendText}>Mỗi chấm là một khoản</Text>
-        <Text style={styles.legendText}>·</Text>
-        <Text style={styles.legendText}>Ít</Text>
-        <View style={styles.heatScale}>
-          {heat.map((color, index) => (
-            <View
-              key={color}
-              style={[styles.heatDot, { backgroundColor: color, marginLeft: index ? -6 : 0 }]}
-            />
-          ))}
-        </View>
-        <Text style={styles.legendText}>Nhiều</Text>
-      </View>
-      <View style={[styles.weekdays, { width: boardWidth }]}>
-        {weekdays.map((day) => (
-          <Text key={day} style={styles.weekday}>
-            {day}
-          </Text>
-        ))}
-      </View>
-
       <ScrollView
         accessibilityLabel="Các tháng trong nhật ký"
-        contentContainerStyle={styles.monthsContent}
+        contentContainerStyle={[styles.monthsContent, { paddingTop: pinnedTop + weekdayBarHeight }]}
+        contentInsetAdjustmentBehavior="never"
         onContentSizeChange={(_width, height) => setContentHeight(height)}
         onLayout={(event: LayoutChangeEvent) => setViewportHeight(event.nativeEvent.layout.height)}
         ref={scrollRef}
@@ -394,25 +370,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   futureDay: { backgroundColor: '#E9E2D7', borderRadius: 10, opacity: 0.72 },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    height: 41,
-    justifyContent: 'space-between',
-    marginHorizontal: 20,
-    marginTop: 54,
-  },
-  heatDot: { borderColor: colors.card, borderRadius: 6, borderWidth: 1, height: 12, width: 12 },
-  heatScale: { flexDirection: 'row' },
-  legend: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    height: 14,
-    marginLeft: 20,
-    marginTop: 7,
-  },
-  legendText: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12 },
   loading: { marginTop: 40 },
   month: { color: colors.text, fontFamily: fonts.semibold, fontSize: 16 },
   monthBoard: {
@@ -439,9 +396,8 @@ const styles = StyleSheet.create({
     gap: 18,
     paddingBottom: 184,
     paddingHorizontal: 16,
-    paddingTop: 5,
   },
-  monthsViewport: { flex: 1, marginTop: 5 },
+  monthsViewport: { flex: 1 },
   monthTotal: { color: colors.text, fontFamily: fonts.amount, fontSize: 15 },
   photoStack: { alignSelf: 'center', height: 38, position: 'relative' },
   layeredPhotoStack: { width: 41 },
@@ -489,20 +445,5 @@ const styles = StyleSheet.create({
     width: 32,
   },
   summaryPhotos: { height: 36, position: 'relative', width: 52 },
-  title: { color: colors.text, fontFamily: fonts.bold, fontSize: 34, letterSpacing: -0.5 },
   week: { flexDirection: 'row', gap: 5 },
-  weekday: {
-    color: colors.textSecondary,
-    flex: 1,
-    fontFamily: fonts.medium,
-    fontSize: 11,
-    textAlign: 'center',
-  },
-  weekdays: {
-    alignSelf: 'center',
-    flexDirection: 'row',
-    gap: 5,
-    marginTop: 14,
-    paddingHorizontal: 12,
-  },
 })
